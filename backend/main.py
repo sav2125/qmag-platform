@@ -22,8 +22,12 @@ app = FastAPI(title="Qullamaggie Platform", version="1.0.0")
 _extra_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"] + _extra_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://qmag-platform-1.onrender.com",
+    ] + _extra_origins,
+    allow_origin_regex=r"https://.*\.(vercel\.app|onrender\.com)",
     allow_methods=["*"],
     allow_headers=["*"],
 )
