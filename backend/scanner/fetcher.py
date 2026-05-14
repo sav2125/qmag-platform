@@ -32,7 +32,8 @@ def fetch_ohlcv(symbol: str, period_days: int = 365) -> pd.DataFrame | None:
             return None
         df.columns = [c.lower() for c in df.columns]
         df = df[["open", "high", "low", "close", "volume"]].dropna()
-        df.index = pd.to_datetime(df.index).tz_localize(None)
+        idx = pd.to_datetime(df.index)
+        df.index = idx.tz_convert(None) if idx.tz is not None else idx
         _cache[key] = (now, df)
         return df
     except Exception as e:
