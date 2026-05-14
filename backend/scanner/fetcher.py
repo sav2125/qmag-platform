@@ -1,17 +1,62 @@
-"""OHLCV data fetcher using yfinance with an in-memory cache."""
+"""OHLCV data fetcher.
+
+Primary (cloud): Financial Modeling Prep API — set FMP_API_KEY env var.
+Fallback (local): yfinance — works on localhost, blocked by Yahoo on cloud IPs.
+"""
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timedelta
-from functools import lru_cache
 
+import httpx
 import pandas as pd
-import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
 _cache: dict[str, tuple[datetime, pd.DataFrame]] = {}
 CACHE_TTL_HOURS = 4
+
+FMP_BASE = "https://financialmodelingprep.com/api/v3"
+
+
+def _fetch_fmp(symbol: str, start: str, end: str, api_key: str) -> pd.DataFrame | None:
+    """Fetch OHLCV from Financial Modeling Prep."""
+    url = f"{FMP_BASE}/historical-price-full/{symbol}"
+    try:
+        r = httpx.get(url, params={"from": start, "to": end, "apikey": api_key}, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        rows = data.get("historical") or data.get(symbol, {}).get("historical", [])
+        if not rows:
+            return None
+        df = pd.DataFrame(rows)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.set_index("date").sort_index()
+        df = df[["open", "high", "low", "close", "volume"]].dropna()
+        df.columns = [c.lower() for c in df.columns]
+        return df
+    except Exception as e:
+        logger.warning("FMP fetch(%s): %s", symbol, e)
+        return None
+
+
+def _fetch_yfinance(symbol: str, start: str, end: str) -> pd.DataFrame | None:
+    """Fetch OHLCV from yfinance (works locally, blocked on cloud IPs)."""
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(start=start, end=end)
+        if df is None or df.empty:
+            return None
+        df.columns = [c.lower() for c in df.columns]
+        df = df[["open", "high", "low", "close", "volume"]].dropna()
+        idx = pd.to_datetime(df.index)
+        df.index = idx.tz_convert(None) if idx.tz is not None else idx
+        return df
+    except Exception as e:
+        logger.warning("yfinance fetch(%s): %s", symbol, e)
+        return None
 
 
 def fetch_ohlcv(symbol: str, period_days: int = 365) -> pd.DataFrame | None:
@@ -23,22 +68,20 @@ def fetch_ohlcv(symbol: str, period_days: int = 365) -> pd.DataFrame | None:
         if (now - ts).total_seconds() < CACHE_TTL_HOURS * 3600:
             return df
 
-    try:
-        end = now
-        start = end - timedelta(days=period_days)
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
-        if df.empty:
-            return None
-        df.columns = [c.lower() for c in df.columns]
-        df = df[["open", "high", "low", "close", "volume"]].dropna()
-        idx = pd.to_datetime(df.index)
-        df.index = idx.tz_convert(None) if idx.tz is not None else idx
-        _cache[key] = (now, df)
-        return df
-    except Exception as e:
-        logger.warning("fetch_ohlcv(%s): %s", symbol, e)
+    end = now.strftime("%Y-%m-%d")
+    start = (now - timedelta(days=period_days)).strftime("%Y-%m-%d")
+
+    api_key = os.getenv("FMP_API_KEY", "")
+    if api_key:
+        df = _fetch_fmp(symbol, start, end, api_key)
+    else:
+        df = _fetch_yfinance(symbol, start, end)
+
+    if df is None or len(df) < 20:
         return None
+
+    _cache[key] = (now, df)
+    return df
 
 
 def fetch_batch(symbols: list[str], period_days: int = 365) -> dict[str, pd.DataFrame]:
