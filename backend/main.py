@@ -98,6 +98,32 @@ def health():
     return {"status": "ok", "date": date.today().isoformat()}
 
 
+@app.get("/debug/fetch")
+def debug_fetch(symbol: str = "NVDA"):
+    """Test yfinance data fetch and one pattern detector."""
+    from scanner.fetcher import fetch_ohlcv
+    from scanner.patterns import detect_pp
+    from scanner.rs_rank import rs_score
+
+    try:
+        spy = fetch_ohlcv("SPY")
+        df = fetch_ohlcv(symbol)
+        if df is None:
+            return {"error": "fetch returned None", "symbol": symbol}
+        rs = rs_score(df["close"], spy["close"] if spy is not None else None)
+        hit = detect_pp(df)
+        return {
+            "symbol": symbol,
+            "rows": len(df),
+            "last_close": float(df["close"].iloc[-1]),
+            "rs_raw": rs["rs_raw"],
+            "pp_detected": hit is not None,
+            "index_tz": str(df.index.dtype),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/scan", response_model=list[ScanResult])
 def scan(
     universe: str = Query("sp500", description="sp500 | tech | watchlist"),
