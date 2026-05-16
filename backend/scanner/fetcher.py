@@ -3,11 +3,20 @@
 Primary (cloud): Alpaca Markets API — set ALPACA_API_KEY + ALPACA_API_SECRET env vars.
   Free paper trading account at alpaca.markets — no credit card, 200 req/min.
 Fallback (local): yfinance — works on localhost, blocked by Yahoo on cloud IPs.
+
+Rate limiting: Alpaca free tier allows 200 req/min. We use:
+  - A shared httpx.Client for connection pooling
+  - A threading.Semaphore to cap concurrent requests
+  - Exponential backoff + full jitter on 429 / 5xx / network errors
+  - Retry-After header respected on 429 responses
 """
 from __future__ import annotations
 
 import logging
 import os
+import random
+import threading
+import time
 from datetime import datetime, timedelta
 
 import httpx
@@ -20,9 +29,27 @@ CACHE_TTL_HOURS = 4
 
 ALPACA_DATA_URL = "https://data.alpaca.markets/v2/stocks/{symbol}/bars"
 
+# Shared client — reuses TCP connections across threads
+_http_client = httpx.Client(timeout=15, limits=httpx.Limits(max_connections=20))
+
+# Semaphore: cap concurrent Alpaca requests to stay under 200 req/min.
+# At ~400ms avg latency, 8 workers ≈ 20 req/sec = 1200 req/min — way over.
+# 4 concurrent × ~400ms ≈ 10 req/sec = 600 req/min. Still over but 429 backoff handles the rest.
+# Adjust _ALPACA_CONCURRENCY down to 2 if you hit 429s frequently.
+_ALPACA_CONCURRENCY = int(os.getenv("ALPACA_CONCURRENCY", "4"))
+_alpaca_sem = threading.Semaphore(_ALPACA_CONCURRENCY)
+
+_MAX_RETRIES = 4
+_BASE_DELAY  = 1.0   # seconds
+
+
+def _backoff(attempt: int, base: float = _BASE_DELAY, cap: float = 60.0) -> float:
+    """Full jitter exponential backoff: sleep = random(0, min(cap, base * 2^attempt))."""
+    return random.uniform(0, min(cap, base * (2 ** attempt)))
+
 
 def _fetch_alpaca(symbol: str, start: str, end: str, api_key: str, api_secret: str) -> pd.DataFrame | None:
-    """Fetch adjusted OHLCV from Alpaca Markets (free paper account)."""
+    """Fetch adjusted OHLCV from Alpaca with retries, backoff, and jitter."""
     url = ALPACA_DATA_URL.format(symbol=symbol)
     headers = {
         "APCA-API-KEY-ID": api_key,
@@ -33,26 +60,57 @@ def _fetch_alpaca(symbol: str, start: str, end: str, api_key: str, api_secret: s
         "start": start,
         "end": end,
         "adjustment": "all",   # split + dividend adjusted
-        "feed": "iex",         # free feed; use "sip" if you have a paid data plan
+        "feed": "iex",         # free feed; use "sip" with a paid data plan
         "limit": 10000,
     }
-    try:
-        r = httpx.get(url, headers=headers, params=params, timeout=15)
-        r.raise_for_status()
-        bars = r.json().get("bars") or []
-        if not bars:
+
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            with _alpaca_sem:
+                r = _http_client.get(url, headers=headers, params=params)
+
+            if r.status_code == 429:
+                # Respect Retry-After if provided, else use backoff
+                retry_after = float(r.headers.get("Retry-After", _backoff(attempt)))
+                jitter = random.uniform(0, retry_after * 0.25)
+                wait = retry_after + jitter
+                logger.warning("Alpaca 429 on %s — waiting %.1fs (attempt %d)", symbol, wait, attempt + 1)
+                time.sleep(wait)
+                continue
+
+            if r.status_code >= 500:
+                wait = _backoff(attempt)
+                logger.warning("Alpaca %d on %s — retry in %.1fs", r.status_code, symbol, wait)
+                time.sleep(wait)
+                continue
+
+            r.raise_for_status()
+            bars = r.json().get("bars") or []
+            if not bars:
+                return None
+
+            df = pd.DataFrame(bars)
+            df["t"] = pd.to_datetime(df["t"]).dt.tz_convert(None).dt.normalize()
+            df = df.rename(columns={"t": "date", "o": "open", "h": "high",
+                                     "l": "low", "c": "close", "v": "volume"})
+            df = df.set_index("date").sort_index()
+            df = df[~df.index.duplicated(keep="last")]
+            df = df[["open", "high", "low", "close", "volume"]].dropna()
+            return df
+
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError) as e:
+            if attempt < _MAX_RETRIES:
+                wait = _backoff(attempt)
+                logger.warning("Alpaca network error on %s (%s) — retry in %.1fs", symbol, e, wait)
+                time.sleep(wait)
+            else:
+                logger.error("Alpaca fetch(%s) failed after %d retries: %s", symbol, _MAX_RETRIES, e)
+
+        except Exception as e:
+            logger.warning("Alpaca fetch(%s): %s", symbol, e)
             return None
-        df = pd.DataFrame(bars)
-        df["t"] = pd.to_datetime(df["t"]).dt.tz_convert(None).dt.normalize()
-        df = df.rename(columns={"t": "date", "o": "open", "h": "high",
-                                 "l": "low", "c": "close", "v": "volume"})
-        df = df.set_index("date").sort_index()
-        df = df[~df.index.duplicated(keep="last")]
-        df = df[["open", "high", "low", "close", "volume"]].dropna()
-        return df
-    except Exception as e:
-        logger.warning("Alpaca fetch(%s): %s", symbol, e)
-        return None
+
+    return None
 
 
 def _fetch_yfinance(symbol: str, start: str, end: str) -> pd.DataFrame | None:
