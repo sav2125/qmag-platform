@@ -341,10 +341,76 @@ SMALLCAP_MOMENTUM = [
 
 
 # ---------------------------------------------------------------------------
+# S&P 500 full constituents — fetched from Wikipedia, cached 24 h
+# ---------------------------------------------------------------------------
+
+# GitHub-hosted CSV of current S&P 500 constituents (datasets/s-and-p-500-companies repo).
+# This CSV is updated within a few days of any index change and is reliably accessible
+# from cloud hosts (unlike Wikipedia which blocks server IPs).
+_SP500_CSV_URL = (
+    "https://raw.githubusercontent.com/datasets/s-and-p-500-companies"
+    "/main/data/constituents.csv"
+)
+_sp500_cache: dict = {"symbols": [], "ts": None}
+
+
+def _fetch_sp500_github() -> list[str]:
+    """Fetch the full S&P 500 constituent list from a public GitHub CSV (~503 tickers).
+
+    Dots in tickers (e.g. BRK.B) are converted to hyphens (BRK-B) to match
+    the Alpaca / internal convention.
+
+    Returns an empty list on any failure so callers can fall back gracefully.
+    """
+    try:
+        import io as _io
+        r = _http_client.get(_SP500_CSV_URL, follow_redirects=True)
+        r.raise_for_status()
+        df = pd.read_csv(_io.StringIO(r.text))
+        symbols = (
+            df["Symbol"]
+            .str.replace(".", "-", regex=False)
+            .str.strip()
+            .tolist()
+        )
+        logger.info("GitHub S&P 500 CSV fetch: %d symbols", len(symbols))
+        return symbols
+    except Exception as exc:
+        logger.warning("_fetch_sp500_github failed: %s", exc)
+        return []
+
+
+def get_sp500_symbols() -> list[str]:
+    """Return the full S&P 500 constituent list, refreshed every 24 hours.
+
+    Falls back to the hardcoded SP500_SAMPLE (~100 stocks) if Wikipedia
+    is unreachable.
+    """
+    global _sp500_cache  # noqa: PLW0603
+
+    now = datetime.utcnow()
+    cached_ts = _sp500_cache["ts"]
+    if cached_ts is not None and (now - cached_ts) < timedelta(hours=24):
+        return _sp500_cache["symbols"]
+
+    symbols = _fetch_sp500_github()
+    if not symbols:
+        logger.info("get_sp500_symbols: using static fallback (%d symbols)", len(SP500_SAMPLE))
+        symbols = SP500_SAMPLE
+
+    _sp500_cache["symbols"] = symbols
+    _sp500_cache["ts"] = now
+    return symbols
+
+
+# ---------------------------------------------------------------------------
 # Derived sets used for universe filtering
 # ---------------------------------------------------------------------------
 
-# Large-cap universe: union of S&P 500 sample and Nasdaq 100.
+# Large-cap universe: full S&P 500 + Nasdaq 100 (populated at first call to
+# get_universe_symbols so the cache can be populated once at startup).
+# We seed it with the static sample now; get_universe_symbols("largecap") will
+# refresh from the live SP500 list at runtime.
 _KNOWN_LARGE: set[str] = set(SP500_SAMPLE + NASDAQ100)
 
 # Mid-cap universe: all symbols in the S&P 400 list.
@@ -450,17 +516,17 @@ def get_universe_symbols(name: str) -> list[str]:
     """Return a list of symbols for the named universe.
 
     Supported names:
-      "sp500"     — ~100-stock S&P 500 sample
+      "sp500"     — Full S&P 500 constituents (~503 stocks, from Wikipedia)
       "nasdaq100" — QQQ / Nasdaq 100 components
-      "midcap"    — S&P 400 mid-cap constituents (~400 symbols)
+      "midcap"    — S&P 400 mid-cap constituents (~369 symbols)
       "smallcap"  — All live symbols excluding large- and mid-cap sets
-      "largecap"  — Union of SP500_SAMPLE and NASDAQ100
+      "largecap"  — Full S&P 500 + Nasdaq 100
       "all"       — Full live universe from Alpaca (or static fallback)
       "tech"      — 30-stock tech subset of NASDAQ100
-      default     — SP500_SAMPLE
+      default     — Full S&P 500
     """
     if name == "sp500":
-        return SP500_SAMPLE
+        return get_sp500_symbols()
 
     if name == "nasdaq100":
         return NASDAQ100
@@ -468,14 +534,18 @@ def get_universe_symbols(name: str) -> list[str]:
     if name == "midcap":
         return MIDCAP_GROWTH
 
+    if name == "largecap":
+        # Refresh _KNOWN_LARGE with the live S&P 500 list before filtering.
+        live_sp500 = get_sp500_symbols()
+        return list(set(live_sp500 + NASDAQ100))
+
     if name == "smallcap":
         # Pull the broadest available universe and strip out large/mid caps
         # so we get genuine small-cap names only.
+        live_sp500 = get_sp500_symbols()
+        known_large = set(live_sp500 + NASDAQ100)
         all_syms = get_all_us_symbols()
-        return [s for s in all_syms if s not in _KNOWN_LARGE and s not in _KNOWN_MID]
-
-    if name == "largecap":
-        return list(_KNOWN_LARGE)
+        return [s for s in all_syms if s not in known_large and s not in _KNOWN_MID]
 
     if name == "all":
         return get_all_us_symbols()
@@ -490,4 +560,4 @@ def get_universe_symbols(name: str) -> list[str]:
         return [s for s in NASDAQ100 if s in _TECH_SET]
 
     # Default fallback
-    return SP500_SAMPLE
+    return get_sp500_symbols()

@@ -10,7 +10,7 @@ const UNIVERSES = [
   { value: "midcap",     label: "Mid Cap (S&P 400 — 369 stocks)" },
   { value: "smallcap",   label: "Small Cap (Russell 2000 derived)" },
   { value: "nasdaq100",  label: "Nasdaq 100" },
-  { value: "sp500",      label: "S&P 500 sample (100 stocks)" },
+  { value: "sp500",      label: "S&P 500 (all ~503 stocks)" },
   { value: "tech",       label: "Tech Leaders (30 stocks)" },
   { value: "watchlist",  label: "My Watchlist" },
 ];
