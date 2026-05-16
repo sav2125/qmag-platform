@@ -1,6 +1,6 @@
 """OHLCV data fetcher.
 
-Primary (cloud): Financial Modeling Prep API — set FMP_API_KEY env var.
+Primary (cloud): Tiingo API — set TIINGO_API_KEY env var.
 Fallback (local): yfinance — works on localhost, blocked by Yahoo on cloud IPs.
 """
 from __future__ import annotations
@@ -17,27 +17,36 @@ logger = logging.getLogger(__name__)
 _cache: dict[str, tuple[datetime, pd.DataFrame]] = {}
 CACHE_TTL_HOURS = 4
 
-FMP_BASE = "https://financialmodelingprep.com/api/v3"
+TIINGO_BASE = "https://api.tiingo.com/tiingo/daily"
 
 
-def _fetch_fmp(symbol: str, start: str, end: str, api_key: str) -> pd.DataFrame | None:
-    """Fetch OHLCV from Financial Modeling Prep."""
-    url = f"{FMP_BASE}/historical-price-full/{symbol}"
+def _fetch_tiingo(symbol: str, start: str, end: str, api_key: str) -> pd.DataFrame | None:
+    """Fetch OHLCV from Tiingo."""
+    url = f"{TIINGO_BASE}/{symbol}/prices"
+    headers = {"Content-Type": "application/json"}
     try:
-        r = httpx.get(url, params={"from": start, "to": end, "apikey": api_key}, timeout=15)
+        r = httpx.get(
+            url,
+            params={"startDate": start, "endDate": end, "token": api_key},
+            headers=headers,
+            timeout=15,
+        )
         r.raise_for_status()
-        data = r.json()
-        rows = data.get("historical") or data.get(symbol, {}).get("historical", [])
+        rows = r.json()
         if not rows:
             return None
         df = pd.DataFrame(rows)
-        df["date"] = pd.to_datetime(df["date"])
+        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
         df = df.set_index("date").sort_index()
+        # Use adjusted prices for accurate pattern detection
+        df = df.rename(columns={
+            "adjOpen": "open", "adjHigh": "high",
+            "adjLow": "low", "adjClose": "close", "adjVolume": "volume",
+        })
         df = df[["open", "high", "low", "close", "volume"]].dropna()
-        df.columns = [c.lower() for c in df.columns]
         return df
     except Exception as e:
-        logger.warning("FMP fetch(%s): %s", symbol, e)
+        logger.warning("Tiingo fetch(%s): %s", symbol, e)
         return None
 
 
@@ -71,11 +80,8 @@ def fetch_ohlcv(symbol: str, period_days: int = 365) -> pd.DataFrame | None:
     end = now.strftime("%Y-%m-%d")
     start = (now - timedelta(days=period_days)).strftime("%Y-%m-%d")
 
-    api_key = os.getenv("FMP_API_KEY", "")
-    if api_key:
-        df = _fetch_fmp(symbol, start, end, api_key)
-    else:
-        df = _fetch_yfinance(symbol, start, end)
+    api_key = os.getenv("TIINGO_API_KEY", "")
+    df = _fetch_tiingo(symbol, start, end, api_key) if api_key else _fetch_yfinance(symbol, start, end)
 
     if df is None or len(df) < 20:
         return None
@@ -112,8 +118,8 @@ def get_universe_symbols(name: str) -> list[str]:
         return SP500_SAMPLE
     if name == "tech":
         return [s for s in SP500_SAMPLE if s in {
-            "AAPL","MSFT","NVDA","GOOGL","META","AVGO","ADBE","CRM","QCOM","TXN",
-            "INTC","AMD","AMAT","LRCX","NOW","PANW","SNPS","KLAC","MRVL","FTNT",
-            "ORCL","IBM","CSCO","MU","INTU","ON","DELL","HPQ","WDC","STX",
+            "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AVGO", "ADBE", "CRM", "QCOM", "TXN",
+            "INTC", "AMD", "AMAT", "LRCX", "NOW", "PANW", "SNPS", "KLAC", "MRVL", "FTNT",
+            "ORCL", "IBM", "CSCO", "MU", "INTU", "ON", "DELL", "HPQ", "WDC", "STX",
         }]
     return SP500_SAMPLE
