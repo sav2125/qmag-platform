@@ -36,10 +36,15 @@ def _fetch_tiingo(symbol: str, start: str, end: str, api_key: str) -> pd.DataFra
         if not rows:
             return None
         df = pd.DataFrame(rows)
-        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
+        # Parse dates — Tiingo returns tz-aware ISO strings
+        dates = pd.to_datetime(df["date"])
+        if dates.dt.tz is not None:
+            dates = dates.dt.tz_convert(None)
+        df["date"] = dates.dt.normalize()
         df = df.set_index("date").sort_index()
-        df = df[~df.index.duplicated(keep="last")]  # drop duplicate dates
-        # Use adjusted prices for accurate pattern detection
+        df = df[~df.index.duplicated(keep="last")]
+        # Drop raw (unadjusted) OHLCV before renaming adjusted columns
+        df = df.drop(columns=["open", "high", "low", "close", "volume"], errors="ignore")
         df = df.rename(columns={
             "adjOpen": "open", "adjHigh": "high",
             "adjLow": "low", "adjClose": "close", "adjVolume": "volume",
