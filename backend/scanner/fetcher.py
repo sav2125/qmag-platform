@@ -36,8 +36,9 @@ def _fetch_tiingo(symbol: str, start: str, end: str, api_key: str) -> pd.DataFra
         if not rows:
             return None
         df = pd.DataFrame(rows)
-        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).dt.normalize()
         df = df.set_index("date").sort_index()
+        df = df[~df.index.duplicated(keep="last")]  # drop duplicate dates
         # Use adjusted prices for accurate pattern detection
         df = df.rename(columns={
             "adjOpen": "open", "adjHigh": "high",
