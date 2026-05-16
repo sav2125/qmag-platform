@@ -143,6 +143,7 @@ def scan(
     min_pct_change: float = Query(0.0, ge=0, le=50, description="Min daily % change"),
     above_ema21: bool = Query(False, description="Require price above EMA21"),
     above_ema50: bool = Query(False, description="Require price above EMA50"),
+    max_base_bars: int = Query(500, ge=10, le=1500, description="Max TB base length in bars (~5 bars/week)"),
 ):
     from scanner.engine import scan as run_scan
 
@@ -166,7 +167,7 @@ def scan(
                 futs = {
                     ex.submit(
                         _process_symbol, s, setup, spy_close, min_rs, 1.0, 0,
-                        min_adr, min_pct_change, above_ema21, above_ema50,
+                        min_adr, min_pct_change, above_ema21, above_ema50, max_base_bars,
                     ): s
                     for s in symbols_override
                 }
@@ -187,6 +188,7 @@ def scan(
                 min_pct_change=min_pct_change,
                 require_above_ema21=above_ema21,
                 require_above_ema50=above_ema50,
+                max_base_bars=max_base_bars,
             )
     except Exception as e:
         logger.exception("Scan error")

@@ -41,8 +41,11 @@ def _process_symbol(
     min_pct_change: float,
     require_above_ema21: bool,
     require_above_ema50: bool,
+    max_base_bars: int = 500,
 ) -> Setup | None:
-    df = fetch_ohlcv(symbol)
+    # Fetch enough history to cover the max base length + buffer
+    period_days = max(730, int(max_base_bars * 1.4) + 60)
+    df = fetch_ohlcv(symbol, period_days=period_days)
     if df is None or len(df) < 60:
         return None
 
@@ -90,7 +93,7 @@ def _process_symbol(
                 continue
 
         try:
-            hit = detect(df)
+            hit = detect(df, max_base_bars=max_base_bars) if detect == detect_tb else detect(df)
         except Exception as e:
             logger.debug("%s detector error on %s: %s", detect.__name__, symbol, e)
             continue
@@ -127,6 +130,7 @@ def scan(
     min_pct_change: float = 0.0,
     require_above_ema21: bool = False,
     require_above_ema50: bool = False,
+    max_base_bars: int = 500,
 ) -> list[Setup]:
     symbols = get_universe_symbols(universe)
 
@@ -143,6 +147,7 @@ def scan(
                 min_rs, min_price, min_vol,
                 min_adr, min_pct_change,
                 require_above_ema21, require_above_ema50,
+                max_base_bars,
             ): sym
             for sym in symbols
         }

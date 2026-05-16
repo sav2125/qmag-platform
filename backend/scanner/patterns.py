@@ -147,9 +147,9 @@ def detect_ep(df: pd.DataFrame) -> Setup | None:
 
 # ── Tight Base Breakout ────────────────────────────────────────────────────────
 
-def detect_tb(df: pd.DataFrame) -> Setup | None:
+def detect_tb(df: pd.DataFrame, max_base_bars: int = 500) -> Setup | None:
     """Flat base ≤8% range, resistance tested ≥2×, volume breakout.
-    Supports short bases (10 bars) through multi-year bases (500 bars).
+    Supports short bases (10 bars) through multi-year bases (configurable).
     Longer bases get a confidence bonus — they tend to be more explosive.
     """
     if len(df) < 30:
@@ -161,7 +161,7 @@ def detect_tb(df: pd.DataFrame) -> Setup | None:
     volume = df["volume"]
     vol_ma = volume.rolling(50).mean()
 
-    max_bars = min(500, len(df) - 3)
+    max_bars = min(max_base_bars, len(df) - 3)
 
     # Adaptive step: fine resolution for short bases, coarser for long ones
     def _step(b: int) -> int:

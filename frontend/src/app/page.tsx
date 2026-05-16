@@ -43,6 +43,7 @@ export default function Dashboard() {
   const [minPctChange, setMinPctChange] = useState(0);
   const [aboveEma21, setAboveEma21] = useState(false);
   const [aboveEma50, setAboveEma50] = useState(false);
+  const [maxBaseBars, setMaxBaseBars] = useState(500);
 
   const runScan = useCallback(async () => {
     setLoading(true);
@@ -58,6 +59,7 @@ export default function Dashboard() {
         min_pct_change: minPctChange,
         above_ema21: aboveEma21,
         above_ema50: aboveEma50,
+        max_base_bars: maxBaseBars,
       };
       const results = await api.scan(params);
       setSetups(results);
@@ -67,7 +69,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [universe, setupFilter, minRs, minScore, top, minAdr, minPctChange, aboveEma21, aboveEma50]);
+  }, [universe, setupFilter, minRs, minScore, top, minAdr, minPctChange, aboveEma21, aboveEma50, maxBaseBars]);
 
   const counts = {
     A: setups.filter((s) => s.grade === "A").length,
@@ -152,8 +154,22 @@ export default function Dashboard() {
               Price &gt; EMA(50)
             </label>
           </div>
-          <div className="flex items-center pt-4">
-            <button onClick={() => { setMinAdr(0); setMinPctChange(0); setAboveEma21(false); setAboveEma50(false); }}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Max Base Length <span className="text-gray-400">(TB only)</span>
+            </label>
+            <select value={maxBaseBars} onChange={(e) => setMaxBaseBars(Number(e.target.value))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value={60}>3 months (60 bars)</option>
+              <option value={130}>6 months (130 bars)</option>
+              <option value={260}>1 year (260 bars)</option>
+              <option value={500}>2 years (500 bars)</option>
+              <option value={750}>3 years (750 bars)</option>
+              <option value={1250}>5 years (1250 bars)</option>
+            </select>
+          </div>
+          <div className="flex items-end pb-1">
+            <button onClick={() => { setMinAdr(0); setMinPctChange(0); setAboveEma21(false); setAboveEma50(false); setMaxBaseBars(500); }}
               className="text-xs text-gray-400 hover:text-gray-600 underline">
               Reset advanced
             </button>

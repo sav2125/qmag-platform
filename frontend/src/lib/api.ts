@@ -33,6 +33,7 @@ export interface ScanParams {
   min_pct_change?: number;
   above_ema21?: boolean;
   above_ema50?: boolean;
+  max_base_bars?: number;
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -56,6 +57,7 @@ export const api = {
     if (p.min_pct_change != null && p.min_pct_change > 0) q.set("min_pct_change", String(p.min_pct_change));
     if (p.above_ema21) q.set("above_ema21", "true");
     if (p.above_ema50) q.set("above_ema50", "true");
+    if (p.max_base_bars != null) q.set("max_base_bars", String(p.max_base_bars));
     return req<Setup[]>(`/scan?${q}`);
   },
 
