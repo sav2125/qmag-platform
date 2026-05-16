@@ -4,7 +4,15 @@ import { useState, useCallback } from "react";
 import { api, type Setup, type ScanParams } from "@/lib/api";
 import { SetupTable } from "@/components/SetupTable";
 
-const UNIVERSES = ["sp500", "tech", "watchlist"];
+const UNIVERSES = [
+  { value: "sp500",      label: "S&P 500 (Large Cap)" },
+  { value: "nasdaq100",  label: "Nasdaq 100 (Growth)" },
+  { value: "midcap",     label: "Mid Cap Growth" },
+  { value: "smallcap",   label: "Small Cap Momentum" },
+  { value: "all",        label: "All US Equities" },
+  { value: "tech",       label: "Tech Leaders" },
+  { value: "watchlist",  label: "My Watchlist" },
+];
 const SETUPS = [
   { value: "", label: "All Setups" },
   { value: "ep", label: "EP — Episodic Pivot" },
@@ -76,7 +84,7 @@ export default function Dashboard() {
             <label className="block text-xs font-medium text-gray-500 mb-1">Universe</label>
             <select value={universe} onChange={(e) => setUniverse(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
-              {UNIVERSES.map((u) => <option key={u}>{u}</option>)}
+              {UNIVERSES.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
             </select>
           </div>
           <div>

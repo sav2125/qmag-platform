@@ -118,14 +118,67 @@ SP500_SAMPLE = [
     "NEE", "DUK", "SO", "D", "EXC", "AEP", "SRE", "XEL", "WEC", "ES",
 ]
 
+# Nasdaq 100 — growth & tech leaders (QQQ components)
+NASDAQ100 = [
+    "AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "AVGO", "COST", "NFLX",
+    "TMUS", "AMD", "QCOM", "INTU", "AMAT", "ISRG", "TXN", "BKNG", "MRVL", "CMCSA",
+    "REGN", "ADI", "PANW", "VRTX", "KLAC", "LRCX", "MU", "SNPS", "CDNS", "CRWD",
+    "CEG", "MELI", "FTNT", "MDLZ", "KDP", "CSX", "CTAS", "PCAR", "ORLY", "ROP",
+    "ADSK", "MNST", "NXPI", "PAYX", "FAST", "ROST", "DXCM", "IDXX", "EXC", "CTSH",
+    "BIIB", "ILMN", "MRNA", "ODFL", "VRSK", "GEHC", "GILD", "FANG", "ANSS", "TTWO",
+    "ZS", "TEAM", "DDOG", "NET", "WDAY", "ABNB", "DASH", "TTD", "LULU", "EBAY",
+    "DLTR", "FISV", "MCHP", "MAR", "NTAP", "ALGN", "POOL", "ENPH", "OKTA", "SGEN",
+    "ON", "GEHC", "GFS", "ARM", "SMCI", "PLTR", "APP", "HOOD", "COIN", "RBLX",
+    "DUOL", "SIRI", "WBD", "NWSA", "FOXA", "DKNG", "PINS", "SNAP", "LYFT", "UBER",
+]
+
+# Mid Cap Growth — S&P 400 + high-momentum mid caps ($2B–$20B market cap)
+MIDCAP_GROWTH = [
+    "AXON", "TOST", "CELH", "DUOL", "GTLB", "RDDT", "HIMS", "CAVA", "BROS", "DOCS",
+    "SOFI", "UPST", "SEZL", "CRDO", "VRT", "STRL", "POWL", "KTOS", "RKLB", "SPT",
+    "TENB", "OSCR", "IRTC", "ACMR", "AEIS", "ACLS", "AEHR", "JOBY", "ASTS", "NNE",
+    "DAVE", "MSTR", "IONQ", "QBTS", "RGTI", "RXRX", "VERA", "LMND", "NVTS", "LUNR",
+    "TMDX", "ARQT", "NBIS", "PSFE", "WLDN", "YMM", "NRDS", "AI", "SOUN", "BBAI",
+    "OPEN", "RKT", "UWMC", "VIAV", "PRCT", "PTON", "BIRD", "XPEV", "NIO", "LI",
+    "RIVN", "LCID", "NKLA", "BLNK", "CHPT", "EVGO", "LAZR", "LIDR", "OUST", "VLDR",
+    "STEM", "SPWR", "FSLR", "RUN", "NOVA", "SEDG", "ARRY", "BE", "PLUG", "BLDP",
+    "MTTR", "RDFN", "OPENDOOR", "UWMC", "GHLD", "PFSI", "IMO", "MQ", "AFRM", "SQ",
+    "PYPL", "AFRM", "BILL", "FOUR", "STEP", "RELY", "RPAY", "PAYO", "FLYW", "GPN",
+]
+
+# Small Cap Momentum — liquid small caps with momentum potential (<$2B market cap)
+SMALLCAP_MOMENTUM = [
+    "MARA", "RIOT", "CLSK", "IREN", "BITF", "HUT", "CIFR", "MIGI", "BTBT", "WULF",
+    "ACHR", "JOBY", "EVTL", "LILM", "ARCHER", "AAON", "ABCB", "ABMD", "ACAD", "ACBI",
+    "ALKT", "ALRM", "ALTR", "AMPH", "AMSF", "AMWD", "ANGI", "AOUT", "APAM", "APLE",
+    "APPF", "APPS", "ARES", "ARHS", "ASTH", "ATRC", "ATVI", "AVAV", "AVNT", "AZEK",
+    "BANF", "BFAM", "BLBD", "BMBL", "BOOT", "BRBR", "BRKL", "BURL", "CALM", "CALX",
+    "CASH", "CDAY", "CENTA", "CERT", "CEVA", "CHCO", "CHRD", "CLFD", "CLNE", "CLPS",
+    "CNMD", "CNXC", "COHU", "COLL", "COMP", "COUR", "CPRX", "CRUS", "CSGS", "CTKB",
+    "CVCO", "CVLT", "CWST", "DCOM", "DFIN", "DGII", "DIOD", "DJCO", "DNLI", "DORM",
+    "DV", "DVAX", "DWAC", "EFC", "EGRX", "EHAB", "ELAN", "ELHC", "ELME", "ELVN",
+    "EPAC", "EPAM", "EPRT", "ERAS", "ERIE", "ESE", "ESNT", "EVBG", "EVEX", "EXLS",
+]
+
+# All US Equities — combined universe for broadest scan
+ALL_US = list(dict.fromkeys(SP500_SAMPLE + NASDAQ100 + MIDCAP_GROWTH + SMALLCAP_MOMENTUM))
+
 
 def get_universe_symbols(name: str) -> list[str]:
     if name == "sp500":
         return SP500_SAMPLE
+    if name == "nasdaq100":
+        return NASDAQ100
+    if name == "midcap":
+        return MIDCAP_GROWTH
+    if name == "smallcap":
+        return SMALLCAP_MOMENTUM
+    if name == "all":
+        return ALL_US
     if name == "tech":
-        return [s for s in SP500_SAMPLE if s in {
+        return [s for s in NASDAQ100 if s in {
             "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AVGO", "ADBE", "CRM", "QCOM", "TXN",
-            "INTC", "AMD", "AMAT", "LRCX", "NOW", "PANW", "SNPS", "KLAC", "MRVL", "FTNT",
-            "ORCL", "IBM", "CSCO", "MU", "INTU", "ON", "DELL", "HPQ", "WDC", "STX",
+            "AMD", "AMAT", "LRCX", "PANW", "SNPS", "KLAC", "MRVL", "FTNT", "CRWD", "DDOG",
+            "ZS", "NET", "TEAM", "WDAY", "ON", "MU", "CDNS", "INTU", "PLTR", "APP",
         }]
     return SP500_SAMPLE
