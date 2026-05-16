@@ -148,7 +148,10 @@ def detect_ep(df: pd.DataFrame) -> Setup | None:
 # ── Tight Base Breakout ────────────────────────────────────────────────────────
 
 def detect_tb(df: pd.DataFrame) -> Setup | None:
-    """Flat base ≤8% range, resistance tested ≥2×, volume breakout."""
+    """Flat base ≤8% range, resistance tested ≥2×, volume breakout.
+    Supports short bases (10 bars) through multi-year bases (500 bars).
+    Longer bases get a confidence bonus — they tend to be more explosive.
+    """
     if len(df) < 30:
         return None
 
@@ -158,7 +161,21 @@ def detect_tb(df: pd.DataFrame) -> Setup | None:
     volume = df["volume"]
     vol_ma = volume.rolling(50).mean()
 
-    for base_bars in range(15, min(61, len(df) - 3), 5):
+    max_bars = min(500, len(df) - 3)
+
+    # Adaptive step: fine resolution for short bases, coarser for long ones
+    def _step(b: int) -> int:
+        if b < 60:
+            return 5
+        if b < 150:
+            return 10
+        return 20
+
+    best_setup: Setup | None = None
+    best_conf: float = 0.0
+
+    base_bars = 15
+    while base_bars <= max_bars:
         ce = len(df) - 2
         cs = ce - base_bars
         if cs < 0:
@@ -168,23 +185,31 @@ def detect_tb(df: pd.DataFrame) -> Setup | None:
         seg_low = float(low.iloc[cs: ce + 1].min())
         seg_mean = float(close.iloc[cs: ce + 1].mean())
         if seg_mean == 0:
+            base_bars += _step(base_bars)
             continue
 
         range_pct = (seg_high - seg_low) / seg_mean
-        if range_pct > 0.08:
+
+        # Slightly wider tolerance for very long bases (>1 year)
+        max_range = 0.10 if base_bars > 250 else 0.08
+        if range_pct > max_range:
+            base_bars += _step(base_bars)
             continue
 
         touches = int((high.iloc[cs: ce + 1] >= seg_high * 0.985).sum())
         if touches < 2:
+            base_bars += _step(base_bars)
             continue
 
         curr_close = float(close.iloc[-1])
         if curr_close <= seg_high:
+            base_bars += _step(base_bars)
             continue
 
         vm = vol_ma.iloc[-1]
         vr = float(volume.iloc[-1] / vm) if not pd.isna(vm) and vm > 0 else 1.0
         if vr < 1.2:
+            base_bars += _step(base_bars)
             continue
 
         target2 = seg_high + (seg_high - seg_low) * 2
@@ -192,23 +217,32 @@ def detect_tb(df: pd.DataFrame) -> Setup | None:
         entry = curr_close
         stop = seg_low * 0.99
 
-        tight = max(0.0, 1.0 - range_pct / 0.08)
+        tight = max(0.0, 1.0 - range_pct / max_range)
         touch_s = min(1.0, (touches - 2) / 4.0)
         vol_s = min(1.0, (vr - 1.2) / 2.0)
-        conf = min(0.88, 0.45 + 0.25 * tight + 0.15 * touch_s + 0.15 * vol_s)
+        # Longer bases get up to +0.08 confidence bonus (Qullamaggie: longer = more explosive)
+        duration_bonus = min(0.08, (base_bars - 15) / 500 * 0.08)
+        conf = min(0.92, 0.45 + 0.25 * tight + 0.15 * touch_s + 0.15 * vol_s + duration_bonus)
 
-        return Setup(
-            symbol="", setup_type="TB", state="breakout",
-            entry=round(entry, 2), stop=round(stop, 2),
-            t1=round(t1, 2), t2=round(target2, 2), rr=_rr(entry, stop, target2),
-            confidence=round(conf, 2), rs_score=0, rs_label="",
-            price=round(curr_close, 2),
-            pct_change=round((curr_close / float(close.iloc[-2]) - 1) * 100, 2) if len(df) > 1 else 0,
-            notes=f"{base_bars}d base · {round(range_pct*100,1)}% tight · {round(vr,1)}x vol",
-            meta={"base_bars": base_bars, "range_pct": round(range_pct * 100, 2),
-                  "vol_ratio": round(vr, 2), "touches": touches},
-        )
-    return None
+        if conf > best_conf:
+            best_conf = conf
+            weeks = round(base_bars / 5)
+            duration_label = f"{weeks}w" if base_bars < 250 else f"~{round(base_bars/252,1)}yr"
+            best_setup = Setup(
+                symbol="", setup_type="TB", state="breakout",
+                entry=round(entry, 2), stop=round(stop, 2),
+                t1=round(t1, 2), t2=round(target2, 2), rr=_rr(entry, stop, target2),
+                confidence=round(conf, 2), rs_score=0, rs_label="",
+                price=round(curr_close, 2),
+                pct_change=round((curr_close / float(close.iloc[-2]) - 1) * 100, 2) if len(df) > 1 else 0,
+                notes=f"{duration_label} base · {round(range_pct*100,1)}% tight · {round(vr,1)}x vol",
+                meta={"base_bars": base_bars, "range_pct": round(range_pct * 100, 2),
+                      "vol_ratio": round(vr, 2), "touches": touches},
+            )
+
+        base_bars += _step(base_bars)
+
+    return best_setup
 
 
 # ── Pocket Pivot ──────────────────────────────────────────────────────────────

@@ -74,7 +74,7 @@ def _fetch_yfinance(symbol: str, start: str, end: str) -> pd.DataFrame | None:
         return None
 
 
-def fetch_ohlcv(symbol: str, period_days: int = 365) -> pd.DataFrame | None:
+def fetch_ohlcv(symbol: str, period_days: int = 730) -> pd.DataFrame | None:
     """Fetch OHLCV for symbol; returns None on failure."""
     key = f"{symbol}:{period_days}"
     now = datetime.utcnow()
