@@ -1,6 +1,7 @@
 """OHLCV data fetcher.
 
-Primary (cloud): Tiingo API — set TIINGO_API_KEY env var.
+Primary (cloud): Alpaca Markets API — set ALPACA_API_KEY + ALPACA_API_SECRET env vars.
+  Free paper trading account at alpaca.markets — no credit card, 200 req/min.
 Fallback (local): yfinance — works on localhost, blocked by Yahoo on cloud IPs.
 """
 from __future__ import annotations
@@ -17,42 +18,40 @@ logger = logging.getLogger(__name__)
 _cache: dict[str, tuple[datetime, pd.DataFrame]] = {}
 CACHE_TTL_HOURS = 4
 
-TIINGO_BASE = "https://api.tiingo.com/tiingo/daily"
+ALPACA_DATA_URL = "https://data.alpaca.markets/v2/stocks/{symbol}/bars"
 
 
-def _fetch_tiingo(symbol: str, start: str, end: str, api_key: str) -> pd.DataFrame | None:
-    """Fetch OHLCV from Tiingo."""
-    url = f"{TIINGO_BASE}/{symbol}/prices"
-    headers = {"Content-Type": "application/json"}
+def _fetch_alpaca(symbol: str, start: str, end: str, api_key: str, api_secret: str) -> pd.DataFrame | None:
+    """Fetch adjusted OHLCV from Alpaca Markets (free paper account)."""
+    url = ALPACA_DATA_URL.format(symbol=symbol)
+    headers = {
+        "APCA-API-KEY-ID": api_key,
+        "APCA-API-SECRET-KEY": api_secret,
+    }
+    params = {
+        "timeframe": "1Day",
+        "start": start,
+        "end": end,
+        "adjustment": "all",   # split + dividend adjusted
+        "feed": "iex",         # free feed; use "sip" if you have a paid data plan
+        "limit": 10000,
+    }
     try:
-        r = httpx.get(
-            url,
-            params={"startDate": start, "endDate": end, "token": api_key},
-            headers=headers,
-            timeout=15,
-        )
+        r = httpx.get(url, headers=headers, params=params, timeout=15)
         r.raise_for_status()
-        rows = r.json()
-        if not rows:
+        bars = r.json().get("bars") or []
+        if not bars:
             return None
-        df = pd.DataFrame(rows)
-        # Parse dates — Tiingo returns tz-aware ISO strings
-        dates = pd.to_datetime(df["date"])
-        if dates.dt.tz is not None:
-            dates = dates.dt.tz_convert(None)
-        df["date"] = dates.dt.normalize()
+        df = pd.DataFrame(bars)
+        df["t"] = pd.to_datetime(df["t"]).dt.tz_convert(None).dt.normalize()
+        df = df.rename(columns={"t": "date", "o": "open", "h": "high",
+                                 "l": "low", "c": "close", "v": "volume"})
         df = df.set_index("date").sort_index()
         df = df[~df.index.duplicated(keep="last")]
-        # Drop raw (unadjusted) OHLCV before renaming adjusted columns
-        df = df.drop(columns=["open", "high", "low", "close", "volume"], errors="ignore")
-        df = df.rename(columns={
-            "adjOpen": "open", "adjHigh": "high",
-            "adjLow": "low", "adjClose": "close", "adjVolume": "volume",
-        })
         df = df[["open", "high", "low", "close", "volume"]].dropna()
         return df
     except Exception as e:
-        logger.warning("Tiingo fetch(%s): %s", symbol, e)
+        logger.warning("Alpaca fetch(%s): %s", symbol, e)
         return None
 
 
@@ -86,8 +85,9 @@ def fetch_ohlcv(symbol: str, period_days: int = 730) -> pd.DataFrame | None:
     end = now.strftime("%Y-%m-%d")
     start = (now - timedelta(days=period_days)).strftime("%Y-%m-%d")
 
-    api_key = os.getenv("TIINGO_API_KEY", "")
-    df = _fetch_tiingo(symbol, start, end, api_key) if api_key else _fetch_yfinance(symbol, start, end)
+    api_key = os.getenv("ALPACA_API_KEY", "")
+    api_secret = os.getenv("ALPACA_API_SECRET", "")
+    df = _fetch_alpaca(symbol, start, end, api_key, api_secret) if api_key else _fetch_yfinance(symbol, start, end)
 
     if df is None or len(df) < 20:
         return None

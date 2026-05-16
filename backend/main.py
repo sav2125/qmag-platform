@@ -102,34 +102,37 @@ def health():
 def debug_fetch(symbol: str = "NVDA"):
     """Test the active data fetcher and surface any errors."""
     import traceback
-    from scanner.fetcher import _fetch_tiingo, _fetch_yfinance
+    from scanner.fetcher import _fetch_alpaca, _fetch_yfinance
     from datetime import datetime, timedelta
 
-    api_key = os.getenv("TIINGO_API_KEY", "")
+    api_key = os.getenv("ALPACA_API_KEY", "")
+    api_secret = os.getenv("ALPACA_API_SECRET", "")
     end = datetime.utcnow().strftime("%Y-%m-%d")
     start = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%d")
 
     try:
         if api_key:
-            df = _fetch_tiingo(symbol, start, end, api_key)
-            source = "tiingo"
+            df = _fetch_alpaca(symbol, start, end, api_key, api_secret)
+            source = "alpaca"
         else:
             df = _fetch_yfinance(symbol, start, end)
             source = "yfinance"
 
         if df is None or df.empty:
-            return {"error": "empty dataframe", "symbol": symbol, "source": source, "api_key_set": bool(api_key)}
+            return {"error": "empty dataframe", "symbol": symbol, "source": source,
+                    "alpaca_key_set": bool(api_key), "alpaca_secret_set": bool(api_secret)}
 
         return {
             "symbol": symbol,
             "source": source,
-            "api_key_set": bool(api_key),
+            "alpaca_key_set": bool(api_key),
             "rows": len(df),
             "last_close": float(df["close"].iloc[-1]),
             "last_date": str(df.index[-1].date()),
         }
     except Exception as e:
-        return {"error": str(e), "traceback": traceback.format_exc(), "api_key_set": bool(api_key)}
+        return {"error": str(e), "traceback": traceback.format_exc(),
+                "alpaca_key_set": bool(api_key), "alpaca_secret_set": bool(api_secret)}
 
 
 @app.get("/scan", response_model=list[ScanResult])
