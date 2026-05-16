@@ -100,32 +100,36 @@ def health():
 
 @app.get("/debug/fetch")
 def debug_fetch(symbol: str = "NVDA"):
-    """Test yfinance data fetch directly and surface the real error."""
+    """Test the active data fetcher and surface any errors."""
     import traceback
+    from scanner.fetcher import _fetch_tiingo, _fetch_yfinance
     from datetime import datetime, timedelta
-    import yfinance as yf
+
+    api_key = os.getenv("TIINGO_API_KEY", "")
+    end = datetime.utcnow().strftime("%Y-%m-%d")
+    start = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%d")
 
     try:
-        end = datetime.utcnow()
-        start = end - timedelta(days=365)
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(
-            start=start.strftime("%Y-%m-%d"),
-            end=end.strftime("%Y-%m-%d"),
-        )
+        if api_key:
+            df = _fetch_tiingo(symbol, start, end, api_key)
+            source = "tiingo"
+        else:
+            df = _fetch_yfinance(symbol, start, end)
+            source = "yfinance"
+
         if df is None or df.empty:
-            return {"error": "empty dataframe", "symbol": symbol}
-        df.columns = [c.lower() for c in df.columns]
-        idx = df.index
+            return {"error": "empty dataframe", "symbol": symbol, "source": source, "api_key_set": bool(api_key)}
+
         return {
             "symbol": symbol,
+            "source": source,
+            "api_key_set": bool(api_key),
             "rows": len(df),
-            "columns": list(df.columns),
-            "index_tz": str(idx.dtype),
             "last_close": float(df["close"].iloc[-1]),
+            "last_date": str(df.index[-1].date()),
         }
     except Exception as e:
-        return {"error": str(e), "traceback": traceback.format_exc()}
+        return {"error": str(e), "traceback": traceback.format_exc(), "api_key_set": bool(api_key)}
 
 
 @app.get("/scan", response_model=list[ScanResult])
