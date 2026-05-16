@@ -134,15 +134,18 @@ def debug_fetch(symbol: str = "NVDA"):
 
 @app.get("/scan", response_model=list[ScanResult])
 def scan(
-    universe: str = Query("sp500", description="sp500 | tech | watchlist"),
+    universe: str = Query("sp500", description="sp500 | nasdaq100 | midcap | smallcap | all | tech | watchlist"),
     setup: str | None = Query(None, description="ep | tb | pp | pull"),
     min_rs: float = Query(50.0, ge=0, le=100),
     min_score: float = Query(0.0, ge=0, le=100),
     top: int = Query(20, ge=1, le=100),
+    min_adr: float = Query(0.0, ge=0, le=20, description="Min Average Daily Range %"),
+    min_pct_change: float = Query(0.0, ge=0, le=50, description="Min daily % change"),
+    above_ema21: bool = Query(False, description="Require price above EMA21"),
+    above_ema50: bool = Query(False, description="Require price above EMA50"),
 ):
     from scanner.engine import scan as run_scan
 
-    effective_universe = universe
     symbols_override = None
     if universe == "watchlist":
         syms = _load_watchlist()
@@ -152,19 +155,21 @@ def scan(
 
     try:
         if symbols_override:
-            from scanner.fetcher import get_universe_symbols
-            from scanner.engine import _process_symbol, DETECTORS
+            from scanner.engine import _process_symbol
             from scanner.fetcher import fetch_ohlcv
-            import pandas as pd
-            from scanner.rs_rank import rs_score, rs_label
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
             spy_df = fetch_ohlcv("SPY")
             spy_close = spy_df["close"] if spy_df is not None else None
             results = []
             with ThreadPoolExecutor(max_workers=10) as ex:
-                futs = {ex.submit(_process_symbol, s, setup, spy_close, min_rs, 1.0, 0): s
-                        for s in symbols_override}
+                futs = {
+                    ex.submit(
+                        _process_symbol, s, setup, spy_close, min_rs, 1.0, 0,
+                        min_adr, min_pct_change, above_ema21, above_ema50,
+                    ): s
+                    for s in symbols_override
+                }
                 for fut in as_completed(futs):
                     hit = fut.result()
                     if hit and hit.confidence * 100 >= min_score:
@@ -178,6 +183,10 @@ def scan(
                 min_rs=min_rs,
                 min_score=min_score,
                 top_n=top,
+                min_adr=min_adr,
+                min_pct_change=min_pct_change,
+                require_above_ema21=above_ema21,
+                require_above_ema50=above_ema50,
             )
     except Exception as e:
         logger.exception("Scan error")

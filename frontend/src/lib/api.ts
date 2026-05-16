@@ -29,6 +29,10 @@ export interface ScanParams {
   min_rs?: number;
   min_score?: number;
   top?: number;
+  min_adr?: number;
+  min_pct_change?: number;
+  above_ema21?: boolean;
+  above_ema50?: boolean;
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -48,6 +52,10 @@ export const api = {
     if (p.min_rs != null) q.set("min_rs", String(p.min_rs));
     if (p.min_score != null) q.set("min_score", String(p.min_score));
     if (p.top != null) q.set("top", String(p.top));
+    if (p.min_adr != null && p.min_adr > 0) q.set("min_adr", String(p.min_adr));
+    if (p.min_pct_change != null && p.min_pct_change > 0) q.set("min_pct_change", String(p.min_pct_change));
+    if (p.above_ema21) q.set("above_ema21", "true");
+    if (p.above_ema50) q.set("above_ema50", "true");
     return req<Setup[]>(`/scan?${q}`);
   },
 

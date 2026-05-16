@@ -17,6 +17,19 @@ DETECTORS = [detect_ep, detect_tb, detect_pp, detect_pull]
 SETUP_PRIORITY = {"EP": 0, "TB": 1, "PP": 2, "PULL": 3, "FLAG": 4}
 
 
+def _adr(df: pd.DataFrame, lookback: int = 20) -> float:
+    """Average Daily Range % — measures how much the stock moves each day."""
+    tail = df.tail(lookback)
+    ranges = (tail["high"] - tail["low"]) / tail["low"] * 100
+    return float(ranges.mean())
+
+
+def _above_ema(df: pd.DataFrame, period: int) -> bool:
+    """True if latest close is above the EMA of given period."""
+    ema = df["close"].ewm(span=period, adjust=False).mean()
+    return float(df["close"].iloc[-1]) > float(ema.iloc[-1])
+
+
 def _process_symbol(
     symbol: str,
     setup_filter: str | None,
@@ -24,6 +37,10 @@ def _process_symbol(
     min_rs: float,
     min_price: float,
     min_vol: float,
+    min_adr: float,
+    min_pct_change: float,
+    require_above_ema21: bool,
+    require_above_ema50: bool,
 ) -> Setup | None:
     df = fetch_ohlcv(symbol)
     if df is None or len(df) < 60:
@@ -36,6 +53,23 @@ def _process_symbol(
     avg_vol = float(df["volume"].tail(50).mean())
     if avg_vol < min_vol:
         return None
+
+    # ADR filter — minimum daily range % (liquidity / tradability proxy)
+    if min_adr > 0 and _adr(df) < min_adr:
+        return None
+
+    # EMA trend filters
+    if require_above_ema21 and not _above_ema(df, 21):
+        return None
+    if require_above_ema50 and not _above_ema(df, 50):
+        return None
+
+    # Daily % change filter
+    if min_pct_change > 0:
+        prev_close = float(df["close"].iloc[-2]) if len(df) >= 2 else price
+        pct_chg = (price - prev_close) / prev_close * 100 if prev_close > 0 else 0
+        if pct_chg < min_pct_change:
+            return None
 
     # RS filter
     rs = rs_score(df["close"], spy_close)
@@ -50,7 +84,6 @@ def _process_symbol(
     best: Setup | None = None
     for detect in DETECTORS:
         if setup_filter:
-            # Map filter to detector
             sf = setup_filter.upper()
             type_map = {"EP": detect_ep, "TB": detect_tb, "PP": detect_pp, "PULL": detect_pull}
             if detect != type_map.get(sf):
@@ -90,6 +123,10 @@ def scan(
     top_n: int = 20,
     min_price: float = 5.0,
     min_vol: float = 200_000,
+    min_adr: float = 0.0,
+    min_pct_change: float = 0.0,
+    require_above_ema21: bool = False,
+    require_above_ema50: bool = False,
 ) -> list[Setup]:
     symbols = get_universe_symbols(universe)
 
@@ -98,11 +135,15 @@ def scan(
     spy_close = spy_df["close"] if spy_df is not None else None
 
     results: list[Setup] = []
-    max_workers = 12
 
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+    with ThreadPoolExecutor(max_workers=12) as ex:
         futures = {
-            ex.submit(_process_symbol, sym, setup_filter, spy_close, min_rs, min_price, min_vol): sym
+            ex.submit(
+                _process_symbol, sym, setup_filter, spy_close,
+                min_rs, min_price, min_vol,
+                min_adr, min_pct_change,
+                require_above_ema21, require_above_ema50,
+            ): sym
             for sym in symbols
         }
         for fut in as_completed(futures):

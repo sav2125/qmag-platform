@@ -39,6 +39,10 @@ export default function Dashboard() {
   const [minRs, setMinRs] = useState(50);
   const [minScore, setMinScore] = useState(0);
   const [top, setTop] = useState(20);
+  const [minAdr, setMinAdr] = useState(0);
+  const [minPctChange, setMinPctChange] = useState(0);
+  const [aboveEma21, setAboveEma21] = useState(false);
+  const [aboveEma50, setAboveEma50] = useState(false);
 
   const runScan = useCallback(async () => {
     setLoading(true);
@@ -50,6 +54,10 @@ export default function Dashboard() {
         min_rs: minRs,
         min_score: minScore,
         top,
+        min_adr: minAdr,
+        min_pct_change: minPctChange,
+        above_ema21: aboveEma21,
+        above_ema50: aboveEma50,
       };
       const results = await api.scan(params);
       setSetups(results);
@@ -59,7 +67,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [universe, setupFilter, minRs, minScore, top]);
+  }, [universe, setupFilter, minRs, minScore, top, minAdr, minPctChange, aboveEma21, aboveEma50]);
 
   const counts = {
     A: setups.filter((s) => s.grade === "A").length,
@@ -110,6 +118,44 @@ export default function Dashboard() {
             <button onClick={runScan} disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors">
               {loading ? "Scanning…" : "Run Scan"}
+            </button>
+          </div>
+        </div>
+
+        {/* Advanced filters */}
+        <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Min ADR% <span className="text-gray-400">(avg daily range)</span>
+            </label>
+            <input type="number" min={0} max={15} step={0.5} value={minAdr}
+              onChange={(e) => setMinAdr(Number(e.target.value))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Min Day Chg% <span className="text-gray-400">(EP trigger)</span>
+            </label>
+            <input type="number" min={0} max={30} step={0.5} value={minPctChange}
+              onChange={(e) => setMinPctChange(Number(e.target.value))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+          </div>
+          <div className="flex flex-col gap-2 justify-center pt-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={aboveEma21} onChange={(e) => setAboveEma21(e.target.checked)}
+                className="accent-indigo-600 w-4 h-4" />
+              Price &gt; EMA(21)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" checked={aboveEma50} onChange={(e) => setAboveEma50(e.target.checked)}
+                className="accent-indigo-600 w-4 h-4" />
+              Price &gt; EMA(50)
+            </label>
+          </div>
+          <div className="flex items-center pt-4">
+            <button onClick={() => { setMinAdr(0); setMinPctChange(0); setAboveEma21(false); setAboveEma50(false); }}
+              className="text-xs text-gray-400 hover:text-gray-600 underline">
+              Reset advanced
             </button>
           </div>
         </div>
