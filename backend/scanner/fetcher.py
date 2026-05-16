@@ -155,6 +155,7 @@ def fetch_ohlcv(symbol: str, period_days: int = 730) -> pd.DataFrame | None:
 
 
 def fetch_batch(symbols: list[str], period_days: int = 365) -> dict[str, pd.DataFrame]:
+    """Fetch OHLCV for a list of symbols, returning only successful results."""
     results: dict[str, pd.DataFrame] = {}
     for sym in symbols:
         df = fetch_ohlcv(sym, period_days)
@@ -162,6 +163,10 @@ def fetch_batch(symbols: list[str], period_days: int = 365) -> dict[str, pd.Data
             results[sym] = df
     return results
 
+
+# ---------------------------------------------------------------------------
+# Static universe lists
+# ---------------------------------------------------------------------------
 
 SP500_SAMPLE = [
     "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "BRK-B", "UNH", "LLY",
@@ -190,53 +195,299 @@ NASDAQ100 = [
     "DUOL", "SIRI", "WBD", "NWSA", "FOXA", "DKNG", "PINS", "SNAP", "LYFT", "UBER",
 ]
 
-# Mid Cap Growth — S&P 400 + high-momentum mid caps ($2B–$20B market cap)
+# S&P 400 Mid-Cap index constituents (~400 real tickers).
+# Source: S&P 400 MidCap index as of early 2025.
 MIDCAP_GROWTH = [
-    "AXON", "TOST", "CELH", "DUOL", "GTLB", "RDDT", "HIMS", "CAVA", "BROS", "DOCS",
-    "SOFI", "UPST", "SEZL", "CRDO", "VRT", "STRL", "POWL", "KTOS", "RKLB", "SPT",
-    "TENB", "OSCR", "IRTC", "ACMR", "AEIS", "ACLS", "AEHR", "JOBY", "ASTS", "NNE",
-    "DAVE", "MSTR", "IONQ", "QBTS", "RGTI", "RXRX", "VERA", "LMND", "NVTS", "LUNR",
-    "TMDX", "ARQT", "NBIS", "PSFE", "WLDN", "YMM", "NRDS", "AI", "SOUN", "BBAI",
-    "OPEN", "RKT", "UWMC", "VIAV", "PRCT", "PTON", "BIRD", "XPEV", "NIO", "LI",
-    "RIVN", "LCID", "NKLA", "BLNK", "CHPT", "EVGO", "LAZR", "LIDR", "OUST", "VLDR",
-    "STEM", "SPWR", "FSLR", "RUN", "NOVA", "SEDG", "ARRY", "BE", "PLUG", "BLDP",
-    "MTTR", "RDFN", "OPENDOOR", "UWMC", "GHLD", "PFSI", "IMO", "MQ", "AFRM", "SQ",
-    "PYPL", "AFRM", "BILL", "FOUR", "STEP", "RELY", "RPAY", "PAYO", "FLYW", "GPN",
+    # A
+    "AAON", "ABG", "ABM", "ACA", "ACHC", "ACM", "ADNT", "AEO", "AFG", "AGCO",
+    "AIN", "AIT", "AJG", "AKAM", "ALK", "ALLE", "ALV", "AMAT", "AME", "AMKR",
+    "AMN", "AMNB", "AMPH", "AMSF", "AMWD", "ANF", "AOUT", "APAM", "APLE", "APPF",
+    "ARCB", "ARW", "ASB", "ASGN", "ASH", "ASTH", "ATI", "ATKR", "ATMU", "ATRC",
+    "AVAV", "AVNT", "AXON", "AYI", "AZZ",
+    # B
+    "BALY", "BANF", "BCPC", "BCO", "BECN", "BFH", "BFAM", "BJ", "BLBD", "BMI",
+    "BOOT", "BOX", "BRBR", "BRKL", "BRP", "BUR", "BURL",
+    # C
+    "CABO", "CACI", "CALM", "CALX", "CARG", "CBT", "CDAY", "CDW", "CENT", "CENTA",
+    "CEVA", "CHCO", "CHDN", "CHE", "CHRD", "CIR", "CLD", "CLFD", "CLH", "CLNE",
+    "CNX", "CNXC", "COHU", "COLL", "COLM", "COMP", "COOP", "COPART", "COUR",
+    "CPRX", "CRUS", "CSGS", "CSWI", "CTLP", "CVCO", "CVLT", "CW", "CWT", "CWST",
+    # D
+    "DAN", "DCOM", "DDS", "DECK", "DFIN", "DGII", "DKS", "DIOD", "DORM",
+    "DV", "DVAX",
+    # E
+    "EAT", "EEFT", "EFC", "EGRX", "ELAN", "ELF", "ENVA", "EPAC", "EPRT",
+    "ERIE", "ESE", "ESNT", "ETSY", "EVBG", "EXLS", "EXPO",
+    # F
+    "FBIN", "FBP", "FCFS", "FCN", "FELE", "FFIN", "FIBK", "FIVE", "FIVN", "FLO",
+    "FLS", "FNB", "FORM", "FR", "FRPT", "FULT", "FUN",
+    # G
+    "GATX", "GKOS", "GLOB", "GMS", "GNTX", "GPOR", "GPI", "GRBK", "GTLS",
+    "GVA", "GXO",
+    # H
+    "HAE", "HAFC", "HALO", "HBI", "HCSG", "HGV", "HIW", "HLI", "HLNE", "HNI",
+    "HOG", "HOPE", "HPP", "HRI", "HRLY", "HURN",
+    # I
+    "IBP", "IBOC", "ICFI", "IIIN", "IMKTA", "INN", "INSW", "IOSP", "IPGP",
+    "ITGR", "ITT", "IVZ",
+    # J
+    "JACK", "JHG", "JJSF", "JOBY", "JOUT",
+    # K
+    "KBH", "KBR", "KELYA", "KFY", "KNX", "KRC", "KTB",
+    # L
+    "LAD", "LANC", "LBRT", "LCII", "LDOS", "LEA", "LGND", "LKFN", "LNC", "LNW",
+    "LOPE", "LPX", "LRN", "LSI", "LTC", "LUMN",
+    # M
+    "MATX", "MBC", "MDGL", "MDU", "MEDP", "MEI", "MKTX", "MLI", "MMSI", "MNKD",
+    "MOG", "MPWR", "MRC", "MSA", "MSCI", "MTH", "MTRN", "MTX", "MWA",
+    # N
+    "NATL", "NBHC", "NEOG", "NFBK", "NFLX", "NHI", "NNN", "NOVT", "NRC",
+    "NRDS", "NVT", "NXRT",
+    # O
+    "OFG", "OGS", "OMCL", "OMF", "OPK", "OPOF", "OSK", "OUST", "OWL",
+    # P
+    "PAG", "PBH", "PCRX", "PDCO", "PENN", "PFSI", "PJT", "PKE", "PLXS", "PNFP",
+    "PODD", "POWL", "PRCT", "PRIM", "PRK", "PSMT", "PSN", "PTGX",
+    # R
+    "RBCAA", "RCM", "RDNT", "REXR", "RGLD", "RMAX", "RMBS", "RNR", "ROIC",
+    "ROLL", "RPRX", "RRC", "RRGB", "RRX", "RUSHA",
+    # S
+    "SABR", "SAH", "SAIA", "SANM", "SASR", "SBH", "SBRA", "SCSC", "SEIC", "SEM",
+    "SFBS", "SFNC", "SHO", "SHOO", "SITE", "SLGN", "SLM", "SM", "SMBC",
+    "SMBK", "SMTC", "SNV", "SPSC", "SRC", "SRI", "SRPT", "SSB", "STAG", "STFC",
+    "STGW", "STRL", "SUM", "SUPN", "SWX",
+    # T
+    "TAST", "TBBK", "TDC", "TDOC", "TENB", "THC", "TNET", "TOWN", "TPH", "TPX",
+    "TRMK", "TRNO", "TRU", "TRUP", "TWI", "TXNM", "TYL",
+    # U
+    "UFPI", "UGI", "UMBF", "UNFI", "UNIT", "UPST", "USCF", "USPH",
+    # V
+    "VAXX", "VBTX", "VG", "VICR", "VLY", "VMI", "VRTS", "VVV",
+    # W
+    "WAFD", "WAFD", "WDFC", "WHD", "WINA", "WK", "WLDN", "WMS", "WOR", "WSC", "WSM",
+    "WTFC", "WTS",
+    # X / Y / Z
+    "XHR", "XPEL", "YETI", "ZWS",
 ]
 
-# Small Cap Momentum — liquid small caps with momentum potential (<$2B market cap)
+# Russell 2000 / small-cap names — liquid names with momentum potential.
+# ~250 real small-cap tickers drawn from Russell 2000 components and active traders.
 SMALLCAP_MOMENTUM = [
-    "MARA", "RIOT", "CLSK", "IREN", "BITF", "HUT", "CIFR", "MIGI", "BTBT", "WULF",
-    "ACHR", "JOBY", "EVTL", "LILM", "ARCHER", "AAON", "ABCB", "ABMD", "ACAD", "ACBI",
-    "ALKT", "ALRM", "ALTR", "AMPH", "AMSF", "AMWD", "ANGI", "AOUT", "APAM", "APLE",
-    "APPF", "APPS", "ARES", "ARHS", "ASTH", "ATRC", "ATVI", "AVAV", "AVNT", "AZEK",
-    "BANF", "BFAM", "BLBD", "BMBL", "BOOT", "BRBR", "BRKL", "BURL", "CALM", "CALX",
-    "CASH", "CDAY", "CENTA", "CERT", "CEVA", "CHCO", "CHRD", "CLFD", "CLNE", "CLPS",
-    "CNMD", "CNXC", "COHU", "COLL", "COMP", "COUR", "CPRX", "CRUS", "CSGS", "CTKB",
-    "CVCO", "CVLT", "CWST", "DCOM", "DFIN", "DGII", "DIOD", "DJCO", "DNLI", "DORM",
-    "DV", "DVAX", "DWAC", "EFC", "EGRX", "EHAB", "ELAN", "ELHC", "ELME", "ELVN",
-    "EPAC", "EPAM", "EPRT", "ERAS", "ERIE", "ESE", "ESNT", "EVBG", "EVEX", "EXLS",
+    # Crypto miners / blockchain
+    "MARA", "RIOT", "CLSK", "IREN", "BITF", "HUT", "CIFR", "WULF", "BTBT", "MIGI",
+    # eVTOL / air mobility
+    "ACHR", "JOBY", "LILM", "EVTL",
+    # Biotech / specialty pharma
+    "ACAD", "ACBI", "ACHC", "ACET", "ACLS", "AEHR", "AGIO", "AKBA", "ALKT",
+    "ALRM", "ALTO", "AMPH", "AMRN", "AMSF", "ANGI", "ANIP", "AQST", "ARDX",
+    "ARQT", "ARRY", "ASTH", "ATRC", "AVAV", "AVNT",
+    # Banks / financials
+    "BANF", "BFAM", "BRKL", "BSVN", "CBTX", "CHCO", "CIVB", "CLBK", "CNOB",
+    "DCOM", "EVBN", "FBIZ", "FFBC", "FISI", "FMAO", "FNLC", "FSBW", "FXNC",
+    "GBNK", "GNTY", "HAFC", "HBCP", "HFWA", "HOPE", "HTBK", "HVBC",
+    # Industrials / manufacturing
+    "AAON", "ABM", "ACMR", "AEIS", "AFG", "AIMC", "AMWD", "APAM", "ARCB",
+    "ARCH", "ASB", "ASGN", "BCO", "BLBD", "BMI", "BOOT", "BRBR",
+    # Technology / software
+    "ALTR", "APPF", "APPS", "CDAY", "CERT", "CEVA", "CLFD", "CNXC", "COHU",
+    "COLL", "COMP", "COUR", "CPRX", "CRUS", "CSGS", "CTLP", "CVLT",
+    # Consumer / retail
+    "AOUT", "BIRD", "BMBL", "BURL", "CALM", "CALX", "CASH", "CENTA", "CHRD",
+    "CLNE", "CLPS", "CNMD", "COLL", "COLM", "DORM", "DV", "DVAX",
+    # Energy / cleantech
+    "ARRY", "BE", "BLDP", "BLNK", "CHPT", "EVGO", "FSLR", "NOVA", "PLUG",
+    "RUN", "SEDG", "SPWR", "STEM",
+    # REITs / real estate
+    "APLE", "EPRT", "ESNT", "NXRT", "ROIC", "SBRA", "STAG", "XHR",
+    # Healthcare / medical devices
+    "ABMD", "ATRC", "ATVI", "AVAV", "AXNX", "BEAT", "BNGO", "DOCS",
+    "EGRX", "ELAN", "IRTC", "LMND", "MMSI", "NOVT", "OSCR", "PCRX",
+    "PODD", "PRCT", "TMDX",
+    # Misc small-caps with high momentum history
+    "AFRM", "AI", "ALKT", "ASTS", "BBAI", "BIRD", "BROS", "CAVA", "CELH",
+    "CRDO", "DAVE", "DOCS", "DUOL", "FOUR", "GTLB", "HIMS", "HOOD", "IONQ",
+    "KTOS", "LMND", "LUNR", "MARA", "MSTR", "NBIS", "NNE", "NVTS", "OPEN",
+    "OSCR", "PLTR", "POWL", "QBTS", "RDDT", "RGTI", "RKLB", "RXRX", "SEZL",
+    "SMCI", "SOFI", "SOUN", "SPWR", "STRL", "TENB", "TMDX", "TOST", "UPST",
+    "VERA", "VRT", "WLDN", "YMM",
+    # Additional Russell 2000 names
+    "ABCB", "AEIS", "ALRM", "AMPH", "AMSF", "AMWD", "AOUT", "APAM",
+    "BALY", "BCPC", "BFH", "BLBD", "BMBL", "BRBR", "BRKL",
+    "CABO", "CALM", "CALX", "CASH", "CDAY", "CENTA", "CERT", "CEVA",
+    "CHCO", "CLFD", "CLNE", "CNMD", "CNXC", "COHU", "COLL", "COMP",
+    "COUR", "CPRX", "CRUS", "CSGS", "CVCO", "CVLT", "CWST",
+    "DCOM", "DFIN", "DGII", "DIOD", "DJCO", "DNLI",
+    "EFC", "ELAN", "EPAC", "EPRT", "ESE", "ESNT",
+    "FBIN", "FBP", "FCFS", "FFIN", "FIBK", "FIVE", "FIVN", "FLO",
+    "GATX", "GKOS", "GLOB", "GNTX",
+    "HAE", "HAFC", "HALO", "HBI",
+    "IBP", "IBOC", "ICFI", "IIIN",
+    "JJSF", "JOUT",
+    "KBH", "KELYA", "KFY",
+    "LANC", "LBRT", "LGND", "LKFN",
+    "MATX", "MDU", "MEDP", "MEI", "MMSI",
+    "NBHC", "NEOG", "NHI",
+    "OFG", "OGS", "OMF",
+    "PNFP", "PODD", "PSMT",
+    "RBCAA", "RDNT", "RMBS",
+    "SABR", "SASR", "SBH", "SBRA", "SCSC", "SEIC", "SFBS",
+    "SLGN", "SLM", "SM", "SMBC", "SNBR", "SNV", "SPSC", "SSB",
+    "TBBK", "TDC", "TNET", "TOWN", "TRMK",
+    "UFPI", "UGI", "UMBF", "UNFI",
+    "VLY", "VMI",
+    "WAFD", "WHD", "WINA", "WK", "WOR", "WSC", "WTFC",
+    "XPEL", "YETI",
 ]
 
-# All US Equities — combined universe for broadest scan
-ALL_US = list(dict.fromkeys(SP500_SAMPLE + NASDAQ100 + MIDCAP_GROWTH + SMALLCAP_MOMENTUM))
 
+# ---------------------------------------------------------------------------
+# Derived sets used for universe filtering
+# ---------------------------------------------------------------------------
+
+# Large-cap universe: union of S&P 500 sample and Nasdaq 100.
+_KNOWN_LARGE: set[str] = set(SP500_SAMPLE + NASDAQ100)
+
+# Mid-cap universe: all symbols in the S&P 400 list.
+_KNOWN_MID: set[str] = set(MIDCAP_GROWTH)
+
+# Static fallback used when no Alpaca credentials are configured.
+# Deduplication preserves order via dict.fromkeys.
+_FALLBACK_ALL: list[str] = list(
+    dict.fromkeys(SP500_SAMPLE + NASDAQ100 + MIDCAP_GROWTH + SMALLCAP_MOMENTUM)
+)
+
+
+# ---------------------------------------------------------------------------
+# Live Alpaca universe fetcher
+# ---------------------------------------------------------------------------
+
+ALPACA_ASSETS_URL = "https://paper-api.alpaca.markets/v2/assets"
+
+# Exchanges considered "US equity" for our purposes.
+_US_EXCHANGES = {"NYSE", "NASDAQ", "AMEX", "ARCA", "BATS"}
+
+# Module-level cache for the live symbol list.
+# Structure: {"symbols": list[str], "ts": datetime | None}
+_universe_cache: dict = {"symbols": [], "ts": None}
+
+
+def _fetch_alpaca_universe(api_key: str, api_secret: str) -> list[str]:
+    """Fetch the full list of active, tradable US equity symbols from Alpaca.
+
+    Uses the shared _http_client for connection pooling.
+    Filters to:
+      - tradable == True
+      - exchange in _US_EXCHANGES
+      - symbol is purely alphabetic (no hyphens/digits) and 1–5 chars long
+
+    Returns a sorted list of symbol strings, or [] on any error.
+    """
+    try:
+        headers = {
+            "APCA-API-KEY-ID": api_key,
+            "APCA-API-SECRET-KEY": api_secret,
+        }
+        params = {
+            "status": "active",
+            "asset_class": "us_equity",
+        }
+        r = _http_client.get(ALPACA_ASSETS_URL, headers=headers, params=params)
+        r.raise_for_status()
+        assets = r.json()
+
+        symbols = [
+            a["symbol"]
+            for a in assets
+            if a.get("tradable") is True
+            and a.get("exchange") in _US_EXCHANGES
+            and a.get("symbol", "").isalpha()
+            and 1 <= len(a.get("symbol", "")) <= 5
+        ]
+        return sorted(set(symbols))
+
+    except Exception as exc:
+        logger.warning("_fetch_alpaca_universe failed: %s", exc)
+        return []
+
+
+def get_all_us_symbols() -> list[str]:
+    """Return a broad list of tradable US equity symbols.
+
+    Caches the result for 24 hours to avoid hammering the Alpaca assets
+    endpoint on every scan.  Falls back to the static _FALLBACK_ALL list
+    when no API credentials are configured or the fetch fails.
+    """
+    global _universe_cache  # noqa: PLW0603 — intentional module-level state
+
+    now = datetime.utcnow()
+    cached_ts = _universe_cache["ts"]
+    if cached_ts is not None and (now - cached_ts) < timedelta(hours=24):
+        return _universe_cache["symbols"]
+
+    api_key = os.getenv("ALPACA_API_KEY", "")
+    api_secret = os.getenv("ALPACA_API_SECRET", "")
+
+    if api_key and api_secret:
+        symbols = _fetch_alpaca_universe(api_key, api_secret)
+    else:
+        symbols = []
+
+    if not symbols:
+        # Either no key set or the fetch failed — use our curated static list.
+        logger.info("get_all_us_symbols: using static fallback (%d symbols)", len(_FALLBACK_ALL))
+        symbols = _FALLBACK_ALL
+
+    _universe_cache["symbols"] = symbols
+    _universe_cache["ts"] = now
+    return symbols
+
+
+# ---------------------------------------------------------------------------
+# Public universe selector
+# ---------------------------------------------------------------------------
 
 def get_universe_symbols(name: str) -> list[str]:
+    """Return a list of symbols for the named universe.
+
+    Supported names:
+      "sp500"     — ~100-stock S&P 500 sample
+      "nasdaq100" — QQQ / Nasdaq 100 components
+      "midcap"    — S&P 400 mid-cap constituents (~400 symbols)
+      "smallcap"  — All live symbols excluding large- and mid-cap sets
+      "largecap"  — Union of SP500_SAMPLE and NASDAQ100
+      "all"       — Full live universe from Alpaca (or static fallback)
+      "tech"      — 30-stock tech subset of NASDAQ100
+      default     — SP500_SAMPLE
+    """
     if name == "sp500":
         return SP500_SAMPLE
+
     if name == "nasdaq100":
         return NASDAQ100
+
     if name == "midcap":
         return MIDCAP_GROWTH
+
     if name == "smallcap":
-        return SMALLCAP_MOMENTUM
+        # Pull the broadest available universe and strip out large/mid caps
+        # so we get genuine small-cap names only.
+        all_syms = get_all_us_symbols()
+        return [s for s in all_syms if s not in _KNOWN_LARGE and s not in _KNOWN_MID]
+
+    if name == "largecap":
+        return list(_KNOWN_LARGE)
+
     if name == "all":
-        return ALL_US
+        return get_all_us_symbols()
+
     if name == "tech":
-        return [s for s in NASDAQ100 if s in {
+        # 30-stock tech subset drawn from NASDAQ100 constituents.
+        _TECH_SET = {
             "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AVGO", "ADBE", "CRM", "QCOM", "TXN",
             "AMD", "AMAT", "LRCX", "PANW", "SNPS", "KLAC", "MRVL", "FTNT", "CRWD", "DDOG",
             "ZS", "NET", "TEAM", "WDAY", "ON", "MU", "CDNS", "INTU", "PLTR", "APP",
-        }]
+        }
+        return [s for s in NASDAQ100 if s in _TECH_SET]
+
+    # Default fallback
     return SP500_SAMPLE

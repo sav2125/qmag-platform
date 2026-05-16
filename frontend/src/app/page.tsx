@@ -5,12 +5,13 @@ import { api, type Setup, type ScanParams } from "@/lib/api";
 import { SetupTable } from "@/components/SetupTable";
 
 const UNIVERSES = [
-  { value: "sp500",      label: "S&P 500 (Large Cap)" },
-  { value: "nasdaq100",  label: "Nasdaq 100 (Growth)" },
-  { value: "midcap",     label: "Mid Cap Growth" },
-  { value: "smallcap",   label: "Small Cap Momentum" },
-  { value: "all",        label: "All US Equities" },
-  { value: "tech",       label: "Tech Leaders" },
+  { value: "all",        label: "All US Equities (~7 000 stocks)" },
+  { value: "largecap",   label: "Large Cap (S&P 500 + Nasdaq 100)" },
+  { value: "midcap",     label: "Mid Cap (S&P 400 — 369 stocks)" },
+  { value: "smallcap",   label: "Small Cap (Russell 2000 derived)" },
+  { value: "nasdaq100",  label: "Nasdaq 100" },
+  { value: "sp500",      label: "S&P 500 sample (100 stocks)" },
+  { value: "tech",       label: "Tech Leaders (30 stocks)" },
   { value: "watchlist",  label: "My Watchlist" },
 ];
 const SETUPS = [
