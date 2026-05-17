@@ -459,15 +459,63 @@ function AnalyzeInner() {
                 </p>
               </div>
 
-              {/* P Score overextension penalty (if any) */}
-              {(data.prob_penalty ?? 0) > 0 && (
-                <div className="mt-2 border-t border-gray-100 pt-2 text-[10px] text-orange-600 space-y-0.5">
-                  <div className="font-semibold">⚠ P Score overextension penalty: −{data.prob_penalty.toFixed(1)} pts</div>
-                  {(data.prob_penalty_notes ?? []).map((n, i) => (
-                    <div key={i} className="text-orange-500">{n}</div>
-                  ))}
-                </div>
-              )}
+              {/* P Score breakdown — per-signal contribution bars */}
+              {(data.prob_components ?? []).length > 0 && (() => {
+                const comps = data.prob_components;
+                const maxContrib = Math.max(...comps.map((c) => c.contribution), 0.01);
+                return (
+                  <div className="border-t border-gray-100 pt-2.5 space-y-1.5 mt-1">
+                    <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                      P Score breakdown
+                    </div>
+                    {comps.map((c) => {
+                      const pct  = Math.min(100, (c.contribution / maxContrib) * 100);
+                      const bull = c.direction === "bullish";
+                      const fill = bull ? "bg-teal-400" : "bg-red-300";
+                      // Compact source label
+                      const shortSrc = c.source === "ADNet" ? "A/D" : c.source === "EMA" ? "EMA" : c.source;
+                      return (
+                        <div key={c.source} className="flex items-center gap-2 group relative cursor-help">
+                          {/* Direction arrow + name */}
+                          <div className="w-14 text-[10px] text-gray-500 shrink-0 flex items-center gap-0.5">
+                            <span className={bull ? "text-teal-500" : "text-red-400"}>
+                              {bull ? "▲" : "▼"}
+                            </span>
+                            <span>{shortSrc}</span>
+                          </div>
+                          {/* Bar */}
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${fill}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          {/* Contribution number */}
+                          <div className="w-10 text-right text-[10px] font-mono text-gray-500 shrink-0">
+                            {c.contribution.toFixed(2)}
+                          </div>
+                          {/* Hover tooltip — full breakdown */}
+                          <span className="pointer-events-none absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-gray-900 text-white text-[10px] p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-mono">
+                            {c.source} ({c.direction})<br />
+                            str={c.strength.toFixed(2)} × w={c.weight} × acc={c.accuracy} × ×{c.regime_mult}<br />
+                            = {c.contribution.toFixed(3)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {/* Agreement + regime meta */}
+                    <div className="flex gap-3 pt-1 text-[9px] text-gray-400">
+                      <span>Agreement: <span className="font-semibold text-gray-500">{((data.prob_agreement ?? 0) * 100).toFixed(0)}%</span></span>
+                      <span>Regime: <span className="font-semibold text-gray-500 capitalize">{data.prob_regime ?? "—"}</span></span>
+                      {(data.prob_penalty ?? 0) > 0 && (
+                        <span className="text-orange-500">Penalty: −{data.prob_penalty.toFixed(1)}pts</span>
+                      )}
+                    </div>
+                    {(data.prob_penalty_notes ?? []).length > 0 && (
+                      <div className="text-[9px] text-orange-500 space-y-0.5">
+                        {data.prob_penalty_notes.map((n, i) => <div key={i}>⚠ {n}</div>)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </Card>
 
             {/* Direction + key technicals */}

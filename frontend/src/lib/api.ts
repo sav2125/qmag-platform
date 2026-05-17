@@ -104,6 +104,16 @@ export const api = {
 
 // ── Analyze types ─────────────────────────────────────────────────────────────
 
+export interface ProbComponent {
+  source:       string;    // "RSI" | "MACD" | "EMA" | "Stage" | "ICS" | "ADNet" | "EP" | "TB" | ...
+  direction:    "bullish" | "bearish";
+  strength:     number;    // 0.0–1.0
+  weight:       number;    // base weight from config
+  accuracy:     number;    // backtested accuracy factor
+  regime_mult:  number;    // regime multiplier applied
+  contribution: number;    // strength × weight × accuracy × regime_mult
+}
+
 export interface ChecklistItem {
   label:  string;
   status: "pass" | "warn" | "fail" | "neutral";
@@ -200,7 +210,7 @@ export interface SymbolAnalysis {
   prob_regime:        string;   // "trend" | "range" | "transition"
   prob_penalty:       number;   // overextension penalty applied
   prob_penalty_notes: string[];
-  prob_components:    Record<string, { direction: string; strength: number; contribution: number }>;
+  prob_components:    ProbComponent[];
 
   rsi:            number;
   adx:            number;
