@@ -85,4 +85,91 @@ export const api = {
 
   testEmail: () =>
     req<{ sent: boolean; to: string }>("/notify/test", { method: "POST" }),
+
+  analyze: (symbol: string) =>
+    req<SymbolAnalysis>(`/analyze/${encodeURIComponent(symbol.toUpperCase())}`),
 };
+
+// ── Analyze types ─────────────────────────────────────────────────────────────
+
+export interface ChecklistItem {
+  label:  string;
+  status: "pass" | "warn" | "fail" | "neutral";
+  detail: string;
+}
+
+export interface Warning {
+  name:     string;
+  severity: "info" | "warning" | "critical";
+  detail:   string;
+}
+
+export interface ActiveSetup {
+  setup_type:      string;
+  state:           string;
+  entry:           number;
+  stop:            number;
+  t1:              number;
+  t2:              number;
+  rr:              number;
+  risk_pct:        number;
+  confidence:      number;
+  composite_score: number;
+  grade:           string;
+  notes:           string;
+}
+
+export interface MAStack {
+  stack:               string;
+  detail:              string;
+  price_vs_ema21_pct:  number;
+  price_vs_ema50_pct:  number;
+  ema21_rising:        boolean;
+  ema50_rising:        boolean;
+  ema21:               number;
+  ema50:               number;
+  sma150:              number | null;
+}
+
+export interface ScoreBreakdown {
+  pattern: { pts: number; max: number; label: string };
+  rs:      { pts: number; max: number; label: string };
+  stage:   { pts: number; max: number; label: string };
+  ad:      { pts: number; max: number; label: string };
+  total:   number;
+}
+
+export interface SymbolAnalysis {
+  symbol:         string;
+  price:          number;
+  pct_change:     number;
+  rvol:           number;
+  vol_ratio_50d:  number;
+
+  composite_score:  number;
+  grade:            string;
+  direction:        "long" | "neutral" | "avoid";
+  rs_score:         number;
+  rs_label:         string;
+  weinstein_stage:  number;
+
+  rsi:            number;
+  adx:            number;
+  macd_histogram: number;
+  macd_direction: "bullish" | "bearish";
+  macd_expanding: boolean;
+
+  ma_stack: MAStack;
+
+  ad_net:    number;
+  isc_score: number;
+
+  overextension_penalty: number;
+
+  best_setup:    ActiveSetup | null;
+  active_setups: ActiveSetup[];
+
+  checklist:       ChecklistItem[];
+  warnings:        Warning[];
+  score_breakdown: ScoreBreakdown;
+}

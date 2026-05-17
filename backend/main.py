@@ -108,6 +108,29 @@ def health():
     return {"status": "ok", "date": date.today().isoformat()}
 
 
+@app.get("/analyze/{symbol}")
+def analyze(symbol: str):
+    """Full single-symbol analysis: all 6 setups, RSI/MACD/ADX, MA stack,
+    Weinstein stage, A/D Net, ICS, RVOL, checklist, warnings, score breakdown."""
+    from scanner.analyzer import analyze_symbol
+    from scanner.fetcher import fetch_ohlcv
+
+    sym = symbol.upper().strip()
+    spy_df    = fetch_ohlcv("SPY")
+    spy_close = spy_df["close"] if spy_df is not None else None
+
+    try:
+        result = analyze_symbol(sym, spy_close=spy_close)
+    except Exception as e:
+        logger.exception("Analyze error for %s", sym)
+        raise HTTPException(500, str(e))
+
+    if result is None:
+        raise HTTPException(404, f"No data found for {sym}. Check the ticker and try again.")
+
+    return result
+
+
 @app.get("/debug/fetch")
 def debug_fetch(symbol: str = "NVDA"):
     """Test the active data fetcher and surface any errors."""

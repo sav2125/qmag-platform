@@ -47,6 +47,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% ·
 - **All US universe:** Alpaca `/v2/assets` endpoint, cached 24 hours; falls back to 1,000+ curated static list
 
 ### Frontend
+- **Analyze page** — Deep-dive for any individual stock: all 6 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 9-item signal checklist, early warnings, and score breakdown
 - **Dashboard** — Scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
 - **Setup pages** — Deep-dive educational pages for EP, TB, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page
@@ -249,6 +250,7 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 |--------|------|-------------|
 | `GET` | `/health` | Health check + current date |
 | `GET` | `/scan` | Run scanner, returns setup list |
+| `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 6 setups, RSI/MACD/ADX, checklist, warnings, score breakdown |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
 | `GET` | `/watchlist` | Get saved watchlist symbols |
 | `POST` | `/watchlist` | Add symbol to watchlist |
@@ -301,6 +303,7 @@ qmag-platform/
         │   │   ├── pp/page.tsx   Pocket Pivot deep dive
         │   │   ├── pull/page.tsx EMA Pullback deep dive
         │   │   └── fbd/page.tsx  Failed Breakdown deep dive
+        │   ├── analyze/          Single-stock deep-dive page
         │   ├── scoring/          Scoring algorithm deep-dive (all formulas + rationale)
         │   ├── watchlist/        Watchlist manager UI
         │   └── settings/         Email test + manual digest trigger
