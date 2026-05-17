@@ -1,4 +1,4 @@
-"""Qullamaggie pattern detectors: EP, Pocket Pivot, Tight Base, EMA Pullback."""
+"""Qullamaggie pattern detectors: EP, Pocket Pivot, Tight Base, EMA Pullback, Failed Breakdown."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,24 +11,40 @@ import pandas as pd
 @dataclass
 class Setup:
     symbol: str
-    setup_type: str          # "EP" | "TB" | "PP" | "PULL" | "FLAG"
+    setup_type: str          # "EP" | "TB" | "PP" | "PULL" | "FBD"
     state: str               # "base" | "breakout" | "active"
     entry: float
     stop: float
     t1: float
     t2: float
     rr: float
-    confidence: float        # 0-1
+    confidence: float        # 0-1, raw pattern confidence
     rs_score: float          # 0-100 vs SPY
     rs_label: str
     price: float
     pct_change: float        # session %
     notes: str = ""
     meta: dict[str, Any] = field(default_factory=dict)
+    weinstein_stage: int = 0   # 1-4; 0 = insufficient data
+    ad_net: int = 0            # O'Neill A/D net over last 25 bars (+ = accumulation)
+
+    @property
+    def quality_score(self) -> float:
+        """Quality-adjusted score: penalises wide stops, rewards good R:R.
+
+        stop_factor: 15% stop → 0.0, 0% stop → 1.0 (clamped 0.40–1.00)
+        rr_factor:   2.0 R:R → 1.0x, 4.0 R:R → 1.2x, 1.0 R:R → 0.5x
+        """
+        if self.entry <= 0:
+            return self.confidence
+        stop_pct = abs(self.entry - self.stop) / self.entry
+        stop_factor = max(0.40, min(1.00, 1.0 - stop_pct / 0.15))
+        rr_factor = max(0.50, min(1.20, self.rr / 2.0))
+        return min(1.0, self.confidence * stop_factor * rr_factor)
 
     @property
     def grade(self) -> str:
-        score = self.confidence * 100
+        score = self.quality_score * 100
         if score >= 75:
             return "A"
         if score >= 60:
@@ -394,3 +410,194 @@ def _compute_rsi(close: pd.Series, period: int = 14) -> pd.Series:
     loss = (-delta.clip(upper=0)).rolling(period).mean()
     rs = gain / loss.replace(0, float("nan"))
     return 100 - 100 / (1 + rs)
+
+
+# ── Weinstein stage ───────────────────────────────────────────────────────────
+
+def weinstein_stage(df: pd.DataFrame) -> int:
+    """Classify Weinstein 4-stage cycle using the 150-bar (30-week) SMA.
+
+    Stage 1 — Basing:    flat MA, price below or at MA
+    Stage 2 — Advancing: rising MA, price above MA  ← only stage Qullamaggie trades
+    Stage 3 — Topping:   flat/rolling MA, price above but MA losing momentum
+    Stage 4 — Declining: falling MA, price below MA
+
+    Returns 0 when there is insufficient history.
+    """
+    if len(df) < 160:
+        return 0
+    close = df["close"]
+    ma150 = close.rolling(150).mean()
+    curr_ma = float(ma150.iloc[-1])
+    prev_ma = float(ma150.iloc[-11])  # 10-bar slope proxy
+    if pd.isna(curr_ma) or pd.isna(prev_ma) or prev_ma == 0:
+        return 0
+    slope_pct = (curr_ma - prev_ma) / prev_ma * 100
+    above_ma = float(close.iloc[-1]) > curr_ma
+
+    if slope_pct > 0.3 and above_ma:
+        return 2
+    if slope_pct < -0.3 and not above_ma:
+        return 4
+    if above_ma:
+        return 3
+    return 1
+
+
+# ── O'Neill accumulation/distribution day count ───────────────────────────────
+
+def ad_days(df: pd.DataFrame, lookback: int = 25) -> int:
+    """Count O'Neill-style institutional accumulation vs distribution days.
+
+    Accumulation day: close up ≥0.2% vs prior, volume > prior bar,
+                      close in upper 50% of the day's range.
+    Distribution day: close down ≥0.2% vs prior, volume > prior bar.
+    Returns net (acc - dist); positive = institutions buying.
+    """
+    if len(df) < lookback + 2:
+        return 0
+    tail = df.iloc[-(lookback + 1):]
+    acc = dist = 0
+    for i in range(1, len(tail)):
+        c  = float(tail["close"].iloc[i])
+        pc = float(tail["close"].iloc[i - 1])
+        v  = float(tail["volume"].iloc[i])
+        pv = float(tail["volume"].iloc[i - 1])
+        h  = float(tail["high"].iloc[i])
+        l  = float(tail["low"].iloc[i])
+        if pc <= 0 or pv <= 0:
+            continue
+        chg = (c - pc) / pc
+        bar_range = h - l
+        close_pos = (c - l) / bar_range if bar_range > 0 else 0.5
+        if chg >= 0.002 and v > pv and close_pos >= 0.5:
+            acc += 1
+        elif chg <= -0.002 and v > pv:
+            dist += 1
+    return acc - dist
+
+
+# ── Overextension penalty ─────────────────────────────────────────────────────
+
+def overextension_penalty(df: pd.DataFrame) -> float:
+    """Return a confidence penalty (0–0.20) for overextended price action.
+
+    Conditions:
+    - RSI > 80: +0.5 pts per RSI point above 80 (scaled to 0-1 by /100)
+    - Price > 8% above EMA21: +0.5 pts per 1% above 8% extension (scaled)
+    """
+    close = df["close"]
+    rsi_series = _compute_rsi(close, 14)
+    ema21 = close.ewm(span=21, adjust=False).mean()
+    rsi_val = float(rsi_series.iloc[-1]) if not pd.isna(rsi_series.iloc[-1]) else 55.0
+    curr = float(close.iloc[-1])
+    e21 = float(ema21.iloc[-1])
+
+    penalty = 0.0
+    if rsi_val > 80:
+        penalty += (rsi_val - 80) * 0.005
+    if e21 > 0:
+        ext = (curr - e21) / e21
+        if ext > 0.08:
+            penalty += min(0.10, (ext - 0.08) * 0.5)
+    return round(min(0.20, penalty), 3)
+
+
+# ── Failed Breakdown (Bear Trap) ──────────────────────────────────────────────
+
+def detect_fbd(df: pd.DataFrame) -> Setup | None:
+    """Failed Breakdown — price breaks below support then snaps back above.
+
+    Classic Qullamaggie/O'Neil bear-trap setup: shorts pile in on the break,
+    stock recovers violently as they cover. Entry is on the recovery.
+
+    Detection rules:
+    - Support = lowest close in the 20–40 bar window ending 5 bars ago
+    - Breakdown: any bar in the last 3–15 bars closed below support by 0.4–6%
+    - Recovery: at least one subsequent bar (within 3 bars of breakdown) closes back above support
+    - Current close must still be above support
+    """
+    if len(df) < 55:
+        return None
+
+    close  = df["close"]
+    high   = df["high"]
+    low    = df["low"]
+    volume = df["volume"]
+    last   = len(df) - 1
+
+    # Support level: stable floor computed from bars 16–40 bars ago
+    # (must sit entirely before the breakdown-scan window so it isn't corrupted
+    #  by the breakdown candle itself)
+    support_series = close.iloc[last - 40: last - 14]
+    if len(support_series) < 5:
+        return None
+    support = float(support_series.min())
+
+    avg_vol = _avg_vol(volume, last, 50)
+
+    # Scan for the breakdown candle
+    for bd_idx in range(last - 15, last - 2):
+        if bd_idx < 5:
+            continue
+        bd_close = float(close.iloc[bd_idx])
+        if support <= 0:
+            continue
+        breakdown_pct = (support - bd_close) / support
+
+        if not (0.004 <= breakdown_pct <= 0.06):
+            continue
+
+        # Recovery: closes back above support within 3 bars
+        recovered = False
+        recovery_idx = -1
+        for ri in range(bd_idx + 1, min(bd_idx + 4, last + 1)):
+            if float(close.iloc[ri]) > support:
+                recovered = True
+                recovery_idx = ri
+                break
+
+        if not recovered:
+            continue
+
+        curr_close = float(close.iloc[last])
+        if curr_close <= support:
+            continue  # Gave back the recovery
+
+        bd_vol = float(volume.iloc[bd_idx])
+        vol_ratio = bd_vol / avg_vol if avg_vol > 0 and not np.isnan(avg_vol) else 1.0
+
+        conf = 0.60
+        if breakdown_pct > 0.01:
+            conf += 0.06   # Deeper shakeout → more trapped shorts
+        if (recovery_idx - bd_idx) == 1:
+            conf += 0.06   # Immediate snap-back = very strong rejection
+        if vol_ratio > 1.5:
+            conf += 0.05   # High-volume breakdown = max trapped
+
+        entry = curr_close
+        stop  = float(low.iloc[bd_idx]) * 0.99  # Just below the breakdown wick
+
+        seg_highs = high.iloc[max(0, last - 40): last]
+        prior_highs = seg_highs[seg_highs > entry * 1.01]
+        t2 = float(prior_highs.iloc[-1]) if not prior_highs.empty else entry * 1.12
+        t1 = entry + (t2 - entry) * 0.5
+
+        bars_since = last - bd_idx
+        return Setup(
+            symbol="", setup_type="FBD", state="active",
+            entry=round(entry, 2), stop=round(stop, 2),
+            t1=round(t1, 2), t2=round(t2, 2), rr=_rr(entry, stop, t2),
+            confidence=round(min(0.82, conf), 2), rs_score=0, rs_label="",
+            price=round(curr_close, 2),
+            pct_change=round((curr_close / float(close.iloc[-2]) - 1) * 100, 2) if len(df) > 1 else 0,
+            notes=f"Bear trap -{round(breakdown_pct*100,1)}% · recovered {bars_since}d ago",
+            meta={
+                "breakdown_pct": round(breakdown_pct * 100, 2),
+                "bars_since": bars_since,
+                "bd_vol_ratio": round(vol_ratio, 2),
+                "support": round(support, 2),
+            },
+        )
+
+    return None

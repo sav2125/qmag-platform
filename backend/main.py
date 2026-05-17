@@ -55,6 +55,8 @@ class ScanResult(BaseModel):
     pct_change: float
     notes: str
     meta: dict
+    weinstein_stage: int = 0   # 1-4; 0 = insufficient data
+    ad_net: int = 0            # O'Neill A/D net days (+ = accumulation)
 
 
 class WatchlistItem(BaseModel):
@@ -88,6 +90,8 @@ def _setup_to_dict(s) -> dict:
         "rs_score": s.rs_score, "rs_label": s.rs_label,
         "price": s.price, "pct_change": s.pct_change,
         "notes": s.notes, "meta": s.meta,
+        "weinstein_stage": s.weinstein_stage,
+        "ad_net": s.ad_net,
     }
 
 
@@ -138,7 +142,7 @@ def debug_fetch(symbol: str = "NVDA"):
 @app.get("/scan", response_model=list[ScanResult])
 def scan(
     universe: str = Query("sp500", description="sp500 | nasdaq100 | midcap | smallcap | all | tech | watchlist"),
-    setup: str | None = Query(None, description="ep | tb | pp | pull"),
+    setup: str | None = Query(None, description="ep | tb | pp | pull | fbd"),
     min_rs: float = Query(50.0, ge=0, le=100),
     min_score: float = Query(0.0, ge=0, le=100),
     top: int = Query(20, ge=1, le=100),

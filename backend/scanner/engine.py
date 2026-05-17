@@ -1,4 +1,4 @@
-"""Main scanning engine: runs all four Qullamaggie setups on a universe."""
+"""Main scanning engine: runs all Qullamaggie setups on a universe."""
 from __future__ import annotations
 
 import logging
@@ -7,14 +7,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
 from .fetcher import fetch_ohlcv, fetch_batch, get_universe_symbols
-from .patterns import Setup, detect_ep, detect_pp, detect_tb, detect_pull
+from .patterns import (
+    Setup, detect_ep, detect_pp, detect_tb, detect_pull, detect_fbd,
+    weinstein_stage, ad_days, overextension_penalty,
+)
 from .rs_rank import rs_score, rs_label, rank_universe
 
 logger = logging.getLogger(__name__)
 
-DETECTORS = [detect_ep, detect_tb, detect_pp, detect_pull]
+DETECTORS = [detect_ep, detect_tb, detect_pp, detect_pull, detect_fbd]
 
-SETUP_PRIORITY = {"EP": 0, "TB": 1, "PP": 2, "PULL": 3, "FLAG": 4}
+SETUP_PRIORITY = {"EP": 0, "TB": 1, "PP": 2, "PULL": 3, "FBD": 3, "FLAG": 4}
 
 
 def _adr(df: pd.DataFrame, lookback: int = 20) -> float:
@@ -88,7 +91,10 @@ def _process_symbol(
     for detect in DETECTORS:
         if setup_filter:
             sf = setup_filter.upper()
-            type_map = {"EP": detect_ep, "TB": detect_tb, "PP": detect_pp, "PULL": detect_pull}
+            type_map = {
+                "EP": detect_ep, "TB": detect_tb,
+                "PP": detect_pp, "PULL": detect_pull, "FBD": detect_fbd,
+            }
             if detect != type_map.get(sf):
                 continue
 
@@ -114,6 +120,15 @@ def _process_symbol(
     best.symbol = symbol
     best.rs_score = round(raw_rs, 1)
     best.rs_label = rs_label(raw_rs)
+
+    # ── Enrichment: stage, A/D days, overextension penalty ───────────────────
+    best.weinstein_stage = weinstein_stage(df)
+    best.ad_net = ad_days(df)
+
+    penalty = overextension_penalty(df)
+    if penalty > 0:
+        best.confidence = round(max(0.30, best.confidence - penalty), 2)
+        best.meta["overextension_penalty"] = penalty
 
     return best
 
@@ -159,6 +174,6 @@ def scan(
             except Exception as e:
                 logger.debug("scan error %s: %s", futures[fut], e)
 
-    # Sort: A-grade first, then by confidence × rs_score
-    results.sort(key=lambda s: (-ord(s.grade[0]), -(s.confidence * s.rs_score)))
+    # Sort: A-grade first, then by quality_score × rs_score
+    results.sort(key=lambda s: (-ord(s.grade[0]), -(s.quality_score * s.rs_score)))
     return results[:top_n]

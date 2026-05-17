@@ -6,7 +6,7 @@ const BASE =
 
 export interface Setup {
   symbol: string;
-  setup_type: "EP" | "TB" | "PP" | "PULL" | "FLAG";
+  setup_type: "EP" | "TB" | "PP" | "PULL" | "FBD";
   state: string;
   entry: number;
   stop: number;
@@ -21,6 +21,8 @@ export interface Setup {
   pct_change: number;
   notes: string;
   meta: Record<string, unknown>;
+  weinstein_stage: number;   // 1-4; 0 = insufficient data
+  ad_net: number;            // O'Neill A/D net days (+ = accumulation)
 }
 
 export interface ScanParams {

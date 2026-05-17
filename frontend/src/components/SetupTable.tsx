@@ -1,7 +1,7 @@
 "use client";
 
 import type { Setup } from "@/lib/api";
-import { SetupBadge, GradeBadge, RRBadge } from "./SetupBadge";
+import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge } from "./SetupBadge";
 
 interface Props {
   setups: Setup[];
@@ -121,6 +121,22 @@ export function SetupTable({ setups, loading }: Props) {
             <th className="text-right py-3 px-3">R:R</th>
             <th className="text-right py-3 px-3">RS</th>
             <th className="text-center py-3 px-3">Grd</th>
+            <th className="text-center py-3 px-3">
+              <span className="group relative cursor-help">
+                Stg
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-52 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
+                  Weinstein Stage (30-week MA). S2 = advancing — the only stage to trade.
+                </span>
+              </span>
+            </th>
+            <th className="text-center py-3 px-3">
+              <span className="group relative cursor-help">
+                A/D
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
+                  O&apos;Neill A/D day net (last 25 bars). Positive = institutions accumulating. Negative = distributing.
+                </span>
+              </span>
+            </th>
             <th className="text-left py-3 px-3">Notes</th>
           </tr>
         </thead>
@@ -201,9 +217,24 @@ export function SetupTable({ setups, loading }: Props) {
                   <GradeBadge grade={s.grade} />
                 </td>
 
+                {/* Weinstein Stage */}
+                <td className="py-3 px-3 text-center">
+                  <StageBadge stage={s.weinstein_stage} />
+                </td>
+
+                {/* A/D net days */}
+                <td className="py-3 px-3 text-center">
+                  <ADNetBadge net={s.ad_net} />
+                </td>
+
                 {/* Notes — full text, wraps */}
                 <td className="py-3 px-3 text-gray-500 text-xs max-w-[220px] leading-relaxed">
                   {s.notes}
+                  {(s.meta?.overextension_penalty as number) > 0 && (
+                    <span className="block text-orange-500 mt-0.5">
+                      ⚠ Overextended (−{Math.round((s.meta.overextension_penalty as number) * 100)}pts)
+                    </span>
+                  )}
                 </td>
               </tr>
             );

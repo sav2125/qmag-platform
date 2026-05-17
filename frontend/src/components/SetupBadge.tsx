@@ -3,6 +3,7 @@ const COLORS: Record<string, string> = {
   TB:   "bg-green-600 text-white",
   PP:   "bg-cyan-600 text-white",
   PULL: "bg-amber-500 text-white",
+  FBD:  "bg-rose-600 text-white",
   FLAG: "bg-blue-600 text-white",
 };
 
@@ -22,4 +23,36 @@ export function GradeBadge({ grade }: { grade: string }) {
 export function RRBadge({ rr }: { rr: number }) {
   const c = rr >= 2 ? "text-green-600 font-bold" : rr >= 1.5 ? "text-amber-600 font-semibold" : "text-gray-400";
   return <span className={c}>{rr.toFixed(1)}x</span>;
+}
+
+const STAGE_CONFIG: Record<number, { label: string; color: string; tip: string }> = {
+  1: { label: "S1", color: "bg-gray-100 text-gray-500 border border-gray-200", tip: "Stage 1 — Basing. Stock is flat/below its 30-week MA. Not yet actionable." },
+  2: { label: "S2", color: "bg-green-100 text-green-700 border border-green-300", tip: "Stage 2 — Advancing. Rising 30-week MA, price above it. The only stage Qullamaggie trades." },
+  3: { label: "S3", color: "bg-amber-100 text-amber-700 border border-amber-300", tip: "Stage 3 — Topping. MA rolling over. Avoid new longs." },
+  4: { label: "S4", color: "bg-red-100 text-red-600 border border-red-200", tip: "Stage 4 — Declining. Price below falling MA. Short only." },
+};
+
+export function StageBadge({ stage }: { stage: number }) {
+  if (!stage) return <span className="text-gray-300 text-xs">—</span>;
+  const cfg = STAGE_CONFIG[stage] ?? { label: `S${stage}`, color: "bg-gray-100 text-gray-500", tip: "" };
+  return (
+    <span className={`group relative inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold cursor-help ${cfg.color}`}>
+      {cfg.label}
+      {cfg.tip && (
+        <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
+          {cfg.tip}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function ADNetBadge({ net }: { net: number }) {
+  if (net === 0) return <span className="text-gray-400 text-xs font-mono">0</span>;
+  const positive = net > 0;
+  return (
+    <span className={`text-xs font-mono font-semibold ${positive ? "text-green-600" : "text-red-500"}`}>
+      {positive ? "+" : ""}{net}
+    </span>
+  );
 }
