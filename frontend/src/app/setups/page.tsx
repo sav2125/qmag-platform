@@ -81,6 +81,26 @@ const SETUPS = [
     risk: "Stop below the EMA50 or the recent swing low",
     target: "Prior highs or measured move; typically 2–3× risk in strong trends",
   },
+  {
+    slug: "fbd",
+    name: "Failed Breakdown",
+    short: "FBD",
+    color: "bg-rose-100 border-rose-400 text-rose-800",
+    badge: "bg-rose-600",
+    icon: "🪤",
+    tagline: "The bear trap that becomes a rocket launch",
+    description:
+      "A Failed Breakdown triggers when a stock breaks below established support — flushing out weak longs and luring in short sellers — then reverses sharply back above support within 1–3 bars. Trapped shorts covering add enormous fuel to the upside.",
+    criteria: [
+      "Clear support level tested ≥2× in the prior 1–2 months",
+      "Stock closes below support by 0.4–6% (the shakeout)",
+      "Snaps back above support within 1–3 bars (the trap springs)",
+      "Current price still above support (recovery holding)",
+      "High breakdown volume preferred (more trapped shorts = more fuel)",
+    ],
+    risk: "Stop below the low of the breakdown bar",
+    target: "Prior resistance / swing highs; 2–4× risk possible on a violent short squeeze",
+  },
 ];
 
 export default function SetupsPage() {
@@ -113,7 +133,85 @@ export default function SetupsPage() {
         ))}
       </div>
 
-      <div className="mt-12 bg-indigo-950 text-white rounded-xl p-8">
+      {/* Scanner signal guide */}
+      <div className="mt-10 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-800 mb-1">Reading the Scanner Signals</h2>
+        <p className="text-sm text-gray-500 mb-5">
+          Every result in the scanner includes these enrichment signals. Here&apos;s what they mean.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="bg-green-100 text-green-700 border border-green-300 text-xs font-bold px-1.5 py-0.5 rounded">S2</span>
+                <span className="font-semibold text-gray-800">Weinstein Stage</span>
+              </div>
+              <p className="text-gray-600">
+                Classifies each stock into one of four stages using the 30-week (150-bar) moving average.
+                <strong> Only trade Stage 2</strong> (rising MA, price above it).
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-1 text-xs">
+                {[
+                  { label: "S1 Basing", color: "bg-gray-100 text-gray-500", desc: "Flat MA — wait" },
+                  { label: "S2 Advancing", color: "bg-green-100 text-green-700", desc: "Rising MA — trade" },
+                  { label: "S3 Topping", color: "bg-amber-100 text-amber-700", desc: "MA rolling over — avoid" },
+                  { label: "S4 Declining", color: "bg-red-100 text-red-600", desc: "Falling MA — short only" },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-center gap-1.5">
+                    <span className={`${s.color} border px-1 rounded font-bold`}>{s.label.split(" ")[0]}</span>
+                    <span className="text-gray-500">{s.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-green-600 font-mono font-bold text-xs">+5</span>
+                <span className="font-semibold text-gray-800">A/D Net (Accumulation/Distribution)</span>
+              </div>
+              <p className="text-gray-600">
+                O&apos;Neill-style institutional footprint over the last 25 bars. Positive = institutions are accumulating.
+                Negative = they&apos;re distributing.
+              </p>
+              <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+                <p><span className="text-green-600 font-mono font-semibold">Acc day:</span> up ≥0.2%, volume &gt; prior bar, close in upper 50% of range</p>
+                <p><span className="text-red-500 font-mono font-semibold">Dist day:</span> down ≥0.2%, volume &gt; prior bar</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-orange-500 text-xs font-semibold">⚠ Overextended</span>
+                <span className="font-semibold text-gray-800">Overextension Penalty</span>
+              </div>
+              <p className="text-gray-600">
+                When RSI &gt; 80 or price is &gt;8% above EMA21, a penalty is applied to the confidence
+                score. The notes column shows the penalty amount. Avoid chasing extended setups.
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="bg-green-100 text-green-700 font-bold text-xs px-1.5 py-0.5 rounded">A</span>
+                <span className="font-semibold text-gray-800">Quality Score &amp; Grade</span>
+              </div>
+              <p className="text-gray-600">
+                Grade is based on a quality-adjusted score, not just raw confidence. It penalises wide
+                stops and rewards good R:R ratios — so tight setups rank higher than sloppy ones with
+                the same pattern score.
+              </p>
+              <div className="mt-2 text-xs text-gray-500 font-mono">
+                quality = confidence × stop_factor × rr_factor
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 bg-indigo-950 text-white rounded-xl p-8">
         <h2 className="text-xl font-bold mb-4">The Qullamaggie Philosophy</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <div>
@@ -133,8 +231,8 @@ export default function SetupsPage() {
           <div>
             <div className="font-semibold text-indigo-300 mb-2">Size Up on Conviction</div>
             <p className="text-indigo-100">
-              Grade A setups (high confidence + high RS) get larger position sizes. Grade C
-              setups get smaller. Match size to setup quality.
+              Grade A setups (high confidence + high RS + Stage 2) get larger position sizes. Grade C
+              setups get smaller. Match size to setup quality — the scanner does the ranking for you.
             </p>
           </div>
         </div>
