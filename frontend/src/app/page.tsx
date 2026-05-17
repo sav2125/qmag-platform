@@ -40,7 +40,8 @@ export default function Dashboard() {
   const [universe, setUniverse] = useState("sp500");
   const [setupFilter, setSetupFilter] = useState("");
   const [minRs, setMinRs] = useState(50);
-  const [minScore, setMinScore] = useState(0);
+  const [minScore, setMinScore] = useState(0);   // composite_score threshold (0–100)
+  const [gradeFilter, setGradeFilter] = useState<"" | "A" | "AB">(""); // post-scan client filter
   const [top, setTop] = useState(20);
   const [minAdr, setMinAdr] = useState(0);
   const [minPctChange, setMinPctChange] = useState(0);
@@ -74,6 +75,11 @@ export default function Dashboard() {
     }
   }, [universe, setupFilter, minRs, minScore, top, minAdr, minPctChange, aboveEma21, aboveEma50, maxBaseBars]);
 
+  // Client-side grade filter applied after scan results arrive
+  const visibleSetups = gradeFilter === "A"  ? setups.filter((s) => s.grade === "A")
+                      : gradeFilter === "AB" ? setups.filter((s) => s.grade === "A" || s.grade === "B")
+                      : setups;
+
   const counts = {
     A: setups.filter((s) => s.grade === "A").length,
     B: setups.filter((s) => s.grade === "B").length,
@@ -92,7 +98,7 @@ export default function Dashboard() {
 
       {/* Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Universe</label>
             <select value={universe} onChange={(e) => setUniverse(e.target.value)}
@@ -112,6 +118,24 @@ export default function Dashboard() {
             <input type="range" min={0} max={90} step={5} value={minRs}
               onChange={(e) => setMinRs(Number(e.target.value))}
               className="w-full accent-indigo-600 mt-1" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Min Score ({minScore})
+              <span className="ml-1 text-gray-400 font-normal">(0–100)</span>
+            </label>
+            <input type="range" min={0} max={90} step={5} value={minScore}
+              onChange={(e) => setMinScore(Number(e.target.value))}
+              className="w-full accent-indigo-600 mt-1" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Grade Filter</label>
+            <select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value as "" | "A" | "AB")}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="">All Grades</option>
+              <option value="AB">A + B only</option>
+              <option value="A">A only (best)</option>
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Top N</label>
@@ -207,13 +231,15 @@ export default function Dashboard() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-800">
-            {scanned ? `${setups.length} Setup${setups.length !== 1 ? "s" : ""}` : "Results"}
+            {scanned
+              ? `${visibleSetups.length} Setup${visibleSetups.length !== 1 ? "s" : ""}${gradeFilter ? ` (${gradeFilter === "A" ? "Grade A" : "Grade A+B"})` : ""}`
+              : "Results"}
           </h2>
           {!scanned && (
             <span className="text-sm text-gray-400">Configure filters above and press Run Scan</span>
           )}
         </div>
-        <SetupTable setups={setups} loading={loading} />
+        <SetupTable setups={visibleSetups} loading={loading} />
       </div>
 
       {/* Legend */}

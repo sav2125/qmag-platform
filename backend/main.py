@@ -55,8 +55,9 @@ class ScanResult(BaseModel):
     pct_change: float
     notes: str
     meta: dict
-    weinstein_stage: int = 0   # 1-4; 0 = insufficient data
-    ad_net: int = 0            # O'Neill A/D net days (+ = accumulation)
+    weinstein_stage: int = 0      # 1-4; 0 = insufficient data
+    ad_net: int = 0               # O'Neill A/D net days (+ = accumulation)
+    composite_score: float = 0.0  # Unified 0-100: pattern quality + RS + stage + A/D
 
 
 class WatchlistItem(BaseModel):
@@ -92,6 +93,7 @@ def _setup_to_dict(s) -> dict:
         "notes": s.notes, "meta": s.meta,
         "weinstein_stage": s.weinstein_stage,
         "ad_net": s.ad_net,
+        "composite_score": s.composite_score,
     }
 
 
@@ -180,9 +182,9 @@ def scan(
                 }
                 for fut in as_completed(futs):
                     hit = fut.result()
-                    if hit and hit.confidence * 100 >= min_score:
+                    if hit and hit.composite_score >= min_score:
                         results.append(hit)
-            results.sort(key=lambda s: (-ord(s.grade[0]), -(s.confidence * s.rs_score)))
+            results.sort(key=lambda s: -s.composite_score)
             results = results[:top]
         else:
             results = run_scan(

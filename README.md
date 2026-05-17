@@ -169,15 +169,27 @@ When RSI > 80 or price is >8% above EMA21, a penalty is applied to the confidenc
 
 ### Quality Score and Grade
 
-Grade is based on a quality-adjusted score rather than raw pattern confidence:
+Grade is based on a unified composite score that incorporates all signals — not just raw pattern confidence:
 
 ```
-stop_factor  = clip(1 - stop_pct / 0.15, 0.40, 1.00)   # penalises wide stops
-rr_factor    = clip(rr / 2.0, 0.50, 1.20)               # rewards good R:R
-quality      = confidence x stop_factor x rr_factor      # capped at 1.0
+# Step 1 — quality score (pattern confidence adjusted for stop width and R:R)
+stop_factor   = clip(1 - stop_pct / 0.15, 0.40, 1.00)
+rr_factor     = clip(rr / 2.0, 0.50, 1.20)
+quality_score = confidence x stop_factor x rr_factor      # capped at 1.0
 
-A: quality >= 75    B: quality >= 60    C: quality >= 45    D: < 45
+# Step 2 — composite score (0-100)
+base     = quality_score x 60    # pattern quality: up to 60 pts
+rs_pts   = rs_score x 0.25       # relative strength: up to 25 pts
+stg_pts  = {S2:10, S1:4, S3:2, S4:0, unknown:5}
+ad_pts   = clamp(ad_net x 0.5, -5, +5)
+
+composite = base + rs_pts + stg_pts + ad_pts
+
+# Step 3 — grade thresholds (calibrated to real pattern confidence ranges)
+A: composite >= 72    B: >= 58    C: >= 44    D: < 44
 ```
+
+This means a great pattern with weak RS or Stage 1/3 **cannot** grade A — which is intentional. Qullamaggie only trades Stage 2 leaders.
 
 ---
 

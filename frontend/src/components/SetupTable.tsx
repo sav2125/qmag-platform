@@ -212,9 +212,12 @@ export function SetupTable({ setups, loading }: Props) {
                   {s.rs_score.toFixed(0)}
                 </td>
 
-                {/* Grade */}
+                {/* Grade + composite score */}
                 <td className="py-3 px-3 text-center">
                   <GradeBadge grade={s.grade} />
+                  <span className="block text-[10px] text-gray-400 font-mono mt-0.5">
+                    {s.composite_score?.toFixed(0) ?? "—"}
+                  </span>
                 </td>
 
                 {/* Weinstein Stage */}

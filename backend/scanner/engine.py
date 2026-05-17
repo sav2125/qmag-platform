@@ -169,11 +169,11 @@ def scan(
         for fut in as_completed(futures):
             try:
                 hit = fut.result()
-                if hit and hit.confidence * 100 >= min_score:
+                if hit and hit.composite_score >= min_score:
                     results.append(hit)
             except Exception as e:
                 logger.debug("scan error %s: %s", futures[fut], e)
 
-    # Sort: A-grade first, then by quality_score × rs_score
-    results.sort(key=lambda s: (-ord(s.grade[0]), -(s.quality_score * s.rs_score)))
+    # Sort by composite_score descending (already incorporates grade, RS, stage, A/D)
+    results.sort(key=lambda s: -s.composite_score)
     return results[:top_n]

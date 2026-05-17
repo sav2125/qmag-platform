@@ -30,10 +30,10 @@ class Setup:
 
     @property
     def quality_score(self) -> float:
-        """Quality-adjusted score: penalises wide stops, rewards good R:R.
+        """Pattern quality adjusted for stop width and R:R ratio (0–1).
 
-        stop_factor: 15% stop → 0.0, 0% stop → 1.0 (clamped 0.40–1.00)
-        rr_factor:   2.0 R:R → 1.0x, 4.0 R:R → 1.2x, 1.0 R:R → 0.5x
+        stop_factor: 15% stop → 0.40x, tight stop → 1.00x
+        rr_factor:   1.0 R:R → 0.50x, 2.0 R:R → 1.00x, 4.0 R:R → 1.20x
         """
         if self.entry <= 0:
             return self.confidence
@@ -43,13 +43,40 @@ class Setup:
         return min(1.0, self.confidence * stop_factor * rr_factor)
 
     @property
+    def composite_score(self) -> float:
+        """Unified 0–100 score combining pattern quality, RS, Weinstein stage, and A/D net.
+
+        Weights (max contribution):
+          Pattern quality (confidence × stop × R:R)  → 60 pts
+          Relative Strength vs SPY                   → 25 pts
+          Weinstein stage (30-week MA)               → 10 pts   S2=10, S1=4, unknown=5, S3=2, S4=0
+          O'Neill A/D net (last 25 bars)             →  5 pts   clamped ±5
+
+        This means a great pattern with weak RS or wrong stage cannot grade A —
+        which is correct: Qullamaggie only trades Stage 2 leaders.
+        """
+        base     = self.quality_score * 60
+        rs_pts   = self.rs_score * 0.25
+        stg_pts  = {2: 10.0, 1: 4.0, 3: 2.0, 4: 0.0}.get(self.weinstein_stage, 5.0)
+        ad_pts   = max(-5.0, min(5.0, self.ad_net * 0.5))
+        return round(min(100.0, max(0.0, base + rs_pts + stg_pts + ad_pts)), 1)
+
+    @property
     def grade(self) -> str:
-        score = self.quality_score * 100
-        if score >= 75:
+        """Grade based on composite_score (pattern + RS + stage + A/D).
+
+        Thresholds are calibrated against real pattern confidence ranges (0.55–0.92):
+          A ≥ 72  — strong pattern + good RS + Stage 2 (full size)
+          B ≥ 58  — solid setup, one weak dimension (half-to-full size)
+          C ≥ 44  — marginal setup, trade small or watch only
+          D < 44  — avoid
+        """
+        s = self.composite_score
+        if s >= 72:
             return "A"
-        if score >= 60:
+        if s >= 58:
             return "B"
-        if score >= 45:
+        if s >= 44:
             return "C"
         return "D"
 

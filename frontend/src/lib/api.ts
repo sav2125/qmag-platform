@@ -21,8 +21,9 @@ export interface Setup {
   pct_change: number;
   notes: string;
   meta: Record<string, unknown>;
-  weinstein_stage: number;   // 1-4; 0 = insufficient data
-  ad_net: number;            // O'Neill A/D net days (+ = accumulation)
+  weinstein_stage: number;    // 1-4; 0 = insufficient data
+  ad_net: number;             // O'Neill A/D net days (+ = accumulation)
+  composite_score: number;    // Unified 0-100: pattern quality + RS + stage + A/D
 }
 
 export interface ScanParams {
