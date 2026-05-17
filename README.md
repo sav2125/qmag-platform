@@ -18,7 +18,7 @@ A full-stack trading scanner that identifies Kristjan Qullamaggie's trading setu
 | **FBD** | Failed Breakdown | Price breaks below support 0.4–6%, snaps back above within 1–3 bars; trapped shorts fuel the reversal |
 | **WYS** | Wyckoff Spring | Shakeout ≤3% below a tight accumulation range (15% range, 40 bars), snap-back within 3 bars; highest-conviction bear trap |
 
-Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% · Weinstein Stage · A/D Net**
+Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Q Grade + Q Score · P Grade + P Score · Risk% · Weinstein Stage · A/D Net · Weekly direction**
 
 ---
 
@@ -175,9 +175,18 @@ When RSI > 80 or price is >8% above EMA21, a penalty is applied to the confidenc
 - EMA21 extension penalty: up to 10 pts when price > 8% above EMA21
 - Maximum total penalty: 20 pts. Shown as "Overextended (-Xpts)" in the notes column.
 
-### Quality Score and Grade
+### Dual Scoring: Q Score + P Score
 
-Grade is based on a unified composite score that incorporates all signals — not just raw pattern confidence. Full algorithm reasoning is on the **[/scoring page](https://qmag-platform-1.onrender.com/scoring)** of the live site.
+Every scan result and analysis carries **two independent scores**, each producing its own letter grade:
+
+| Score | Formula | Grade thresholds | What it measures |
+|-------|---------|-----------------|-----------------|
+| **Q Score** | `quality×60 + RS×25 + stage×10 + A/D×5` | A≥72 / B≥58 / C≥44 / D<44 | Qullamaggie's explicit methodology: tight stop, RS leader, Stage 2, accumulation |
+| **P Score** | `Σ (strength × weight × accuracy × regime_mult)` | A≥75 / B≥60 / C≥45 / D<45 | Probability-weighted signal voting across 7 independent signals |
+
+Full algorithm reasoning (formulas, weights, thresholds, rationale) on the **[/scoring page](https://qmag-platform-1.onrender.com/scoring)** of the live site.
+
+#### Q Score — Qullamaggie Formula
 
 ```
 # Step 1 — quality score (adjusts confidence for stop width and R:R)
@@ -185,23 +194,34 @@ stop_factor   = clip(1 - stop_pct / 0.15, 0.40, 1.00)   # wide stop → lower sc
 rr_factor     = clip(rr / 2.0, 0.50, 1.20)               # poor R:R → lower; great R:R → +20% bonus
 quality_score = min(1.0, confidence x stop_factor x rr_factor)
 
-# Step 2 — composite score (0-100)
+# Step 2 — Q Score (0-100)
 base     = quality_score x 60    # pattern quality:  0-60 pts  (60% weight)
 rs_pts   = rs_score x 0.25       # relative strength: 0-25 pts  (25% weight)
 stg_pts  = {S2:10, S1:4, S3:2, S4:0, unknown:5}   # Weinstein: 0-10 pts (10% weight)
 ad_pts   = clamp(ad_net x 0.5, -5, +5)             # O'Neill A/D: ±5 pts  (5% weight)
 
-composite = base + rs_pts + stg_pts + ad_pts
+q_score  = base + rs_pts + stg_pts + ad_pts
 
-# Step 3 — grade thresholds (calibrated to real detector confidence ranges)
-A: composite >= 72    B: >= 58    C: >= 44    D: < 44
+# Step 3 — Q grade thresholds (calibrated to real detector confidence ranges)
+A: q_score >= 72    B: >= 58    C: >= 44    D: < 44
 ```
 
-**Why these weights?** Pattern quality is the primary signal (60%). RS is the most important market-context filter Qullamaggie uses (25%). Stage 2 is a required condition, not optional (10%). A/D is a tiebreaker only (5%).
+#### P Score — Probability Scorer
 
-**Why these grade thresholds?** Originally A≥80, B≥65, C≥50 — but detector confidence outputs realistically range 0.60–0.90, not 0.90–1.00. A textbook-perfect EP with RS 90 + Stage 2 + accumulation scored 74.9 — which should be an A. Thresholds were recalibrated accordingly.
+Ported from the `technical-analysis` reference repo. Each signal contributes: `strength × weight × accuracy × regime_multiplier`. Regime is inferred from Weinstein stage (S2=trend, S4=range, else transition). Agreement bonus of ×1.2 applied when ≥70% of signals agree.
 
-A great pattern with weak RS or non-Stage-2 **cannot** grade A — intentional. Qullamaggie only trades Stage 2 leaders with strong RS.
+```
+Signals: RSI (w=1.0, acc=62%), MACD (w=1.0, acc=65%), EMA stack (w=1.5, acc=70%),
+         Stage (w=2.5, acc=72%), ICS (w=1.2, acc=68%), A/D Net (w=1.0, acc=65%),
+         Setup pattern (EP: w=3.0 acc=72% / TB: 2.5/70% / WYS: 3.0/75% / ...)
+
+P grade: A≥75 / B≥60 / C≥45 / D<45
+```
+
+**When both agree (QA + PA):** Maximum conviction — size up.
+**When they diverge:** Investigate why before trading — check the Analyzer page signal breakdown.
+
+A great pattern with weak RS or non-Stage-2 **cannot** Q-grade A — intentional. Qullamaggie only trades Stage 2 leaders with strong RS.
 
 ---
 

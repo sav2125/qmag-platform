@@ -47,6 +47,10 @@ def setup_to_dict(s: Any) -> dict[str, Any]:
 
     This is the single source of truth for Setup serialisation — used by
     both the FastAPI /scan endpoint and the snapshot writer.
+
+    Field naming:
+      q_score / q_grade  — Qullamaggie composite score (existing formula)
+      prob_score / prob_grade — Probability scorer (tech-analysis port)
     """
     return {
         "symbol":          s.symbol,
@@ -58,7 +62,12 @@ def setup_to_dict(s: Any) -> dict[str, Any]:
         "t2":              s.t2,
         "rr":              s.rr,
         "confidence":      s.confidence,
-        "grade":           s.grade,
+        # Q Score (Qullamaggie formula: quality×60 + RS×25 + stage×10 + A/D×5)
+        "q_score":         s.composite_score,
+        "grade":           s.grade,           # Q grade (A≥72 / B≥58 / C≥44 / D<44)
+        # P Score (probability-weighted signal voting)
+        "prob_score":      getattr(s, "prob_score", 0.0),
+        "prob_grade":      getattr(s, "prob_grade", "D"),
         "rs_score":        s.rs_score,
         "rs_label":        s.rs_label,
         "price":           s.price,
@@ -67,7 +76,6 @@ def setup_to_dict(s: Any) -> dict[str, Any]:
         "meta":            s.meta,
         "weinstein_stage": s.weinstein_stage,
         "ad_net":          s.ad_net,
-        "composite_score": s.composite_score,
         "rvol":            s.rvol,
         "isc_score":       s.isc_score,
         "weekly_dir":      getattr(s, "weekly_dir", "neutral"),
@@ -129,7 +137,7 @@ def apply_filters(
     if min_rs > 0:
         out = [r for r in out if r.get("rs_score", 0) >= min_rs]
     if min_score > 0:
-        out = [r for r in out if r.get("composite_score", 0) >= min_score]
+        out = [r for r in out if r.get("q_score", r.get("composite_score", 0)) >= min_score]
     # Already sorted by composite_score desc when saved; preserve that order.
     return out[:top_n]
 

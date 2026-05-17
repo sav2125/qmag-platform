@@ -45,7 +45,7 @@ export default function Dashboard() {
   const [universe, setUniverse] = useState("sp500");
   const [setupFilter, setSetupFilter] = useState("");
   const [minRs, setMinRs] = useState(50);
-  const [minScore, setMinScore] = useState(0);   // composite_score threshold (0–100)
+  const [minScore, setMinScore] = useState(0);   // Q Score threshold (0–100)
   const [gradeFilter, setGradeFilter] = useState<"" | "A" | "AB">(""); // post-scan client filter
   const [top, setTop] = useState(20);
   const [minAdr, setMinAdr] = useState(0);

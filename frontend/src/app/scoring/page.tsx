@@ -44,9 +44,17 @@ function Warn({ children }: { children: React.ReactNode }) {
 
 const TOC = [
   { id: "overview",     label: "Overview" },
-  { id: "quality",      label: "Step 1 — Quality Score" },
-  { id: "composite",    label: "Step 2 — Composite Score" },
-  { id: "grade",        label: "Step 3 — Grade" },
+  // Q Score
+  { id: "qscore",       label: "Q Score — Qullamaggie Formula" },
+  { id: "quality",      label: "  Step 1 — Quality Score" },
+  { id: "composite",    label: "  Step 2 — Composite Score" },
+  { id: "grade",        label: "  Step 3 — Grade Thresholds" },
+  // P Score
+  { id: "pscore",       label: "P Score — Probability Scorer" },
+  { id: "pscore-signals",  label: "  P Signals & Weights" },
+  { id: "pscore-regime",   label: "  Regime Multipliers" },
+  { id: "pscore-grades",   label: "  P Grade Thresholds" },
+  // Individual signals
   { id: "weinstein",    label: "Signal: Weinstein Stage" },
   { id: "adnet",        label: "Signal: A/D Net" },
   { id: "overext",      label: "Signal: Overextension Penalty" },
@@ -89,24 +97,58 @@ export default function ScoringPage() {
       {/* Overview */}
       <Section id="overview" title="🗺️ Overview">
         <p>
-          Every scan result receives a <strong>composite score (0–100)</strong> that feeds a letter grade
-          (A/B/C/D). The goal is to rank setups so the genuinely best opportunities — tight pattern,
-          strong RS, institutional buying, right market stage — float to the top, while weak or
-          over-extended setups are penalised before you even look at them.
+          Every scan result carries <strong>two independent scores</strong>, each producing its own letter grade:
         </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <div className="font-bold text-indigo-800 mb-1">Q Score — Qullamaggie Formula</div>
+            <div className="text-xs text-indigo-700 space-y-1">
+              <p>A fixed 4-component formula based on Kristjan Qullamaggie&apos;s methodology:</p>
+              <code className="block font-mono bg-indigo-100 px-2 py-1 rounded text-[11px]">
+                quality×60 + RS×25 + stage×10 + A/D×5
+              </code>
+              <p>Grade: <strong>A≥72 / B≥58 / C≥44 / D&lt;44</strong></p>
+            </div>
+          </div>
+          <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+            <div className="font-bold text-teal-800 mb-1">P Score — Probability Scorer</div>
+            <div className="text-xs text-teal-700 space-y-1">
+              <p>A signal-voting model ported from the <em>technical-analysis</em> reference repo:</p>
+              <code className="block font-mono bg-teal-100 px-2 py-1 rounded text-[11px]">
+                Σ (strength × weight × accuracy × regime_mult)
+              </code>
+              <p>Grade: <strong>A≥75 / B≥60 / C≥45 / D&lt;45</strong></p>
+            </div>
+          </div>
+        </div>
+        <Note>
+          <strong>Why two scores?</strong> The Q Score is anchored to Qullamaggie&apos;s explicit methodology —
+          simple, interpretable, formula-driven. The P Score independently measures signal alignment across
+          multiple indicators with backtested accuracy factors and regime-aware weighting. When both agree
+          (e.g. QA + PA), conviction is highest. When they disagree, investigate why before trading.
+        </Note>
+      </Section>
+
+      {/* Q Score — header section */}
+      <Section id="qscore" title="📐 Q Score — Qullamaggie Formula">
         <p>
-          Scoring happens in three steps:
+          The Q Score is a <strong>fixed, transparent formula</strong> directly derived from Kristjan Qullamaggie&apos;s
+          publicly described methodology. It bundles pattern quality, relative strength, Weinstein stage,
+          and institutional footprint into a single 0–100 number. The goal: rank setups so the genuinely
+          best opportunities — tight pattern, RS leader, Stage 2, institutional accumulation — float to
+          the top.
         </p>
+        <p>Scoring happens in three steps:</p>
         <ol className="list-decimal list-inside space-y-1 pl-2">
           <li><strong>Quality score</strong> — adjusts raw pattern confidence for stop width and R:R</li>
-          <li><strong>Composite score</strong> — adds RS, Weinstein stage, and A/D net to the quality score</li>
-          <li><strong>Grade</strong> — maps composite score to A/B/C/D via calibrated thresholds</li>
+          <li><strong>Q Score (composite)</strong> — adds RS, Weinstein stage, and A/D net on top</li>
+          <li><strong>Q Grade</strong> — maps Q Score to A/B/C/D via calibrated thresholds</li>
         </ol>
         <Note>
           <strong>Why one unified score?</strong> Early versions showed RS, stage, and A/D as display-only
           columns. They looked nice but didn&apos;t affect ranking. A strong RS 90 stock with a mediocre pattern
-          ranked the same as a weak RS 30 stock with the same pattern. The composite score fixes this: all
-          signals directly affect grade, so an A grade truly means &quot;best across every dimension.&quot;
+          ranked the same as a weak RS 30 stock with the same pattern. The Q Score fixes this: all signals
+          directly affect the grade, so an A grade truly means &quot;best across every dimension.&quot;
         </Note>
       </Section>
 
@@ -286,6 +328,182 @@ D  →  composite  < 44   (avoid — multiple signals poor)`}
           </table>
         </div>
       </Section>
+
+      {/* ── P SCORE ──────────────────────────────────────────────────────────── */}
+
+      <Section id="pscore" title="🎲 P Score — Probability Scorer">
+        <p>
+          The P Score is a <strong>probability-weighted signal voting model</strong> ported from the{" "}
+          <em>technical-analysis</em> reference repo. Rather than a fixed formula, it aggregates multiple
+          independent signals — each weighted by its domain importance and its historical accuracy — into a
+          single 0–100 confidence score. It answers: <em>what fraction of the evidence supports this trade,
+          and how reliable is that evidence?</em>
+        </p>
+
+        <CodeBlock>{`# Core contribution formula for each signal:
+contribution = strength × eff_weight × accuracy
+
+#   strength    — signal output, 0.0–1.0
+#                 (e.g. RSI strength = (RSI-50)/50 when bullish)
+#   eff_weight  = base_weight × regime_multiplier
+#                 (regime adjusts how much each signal type matters)
+#   accuracy    = backtested win-rate for this signal class
+
+# Raw score = dominant_side_total / dominant_max
+# Composite = min(100, raw_score × 100 × agreement_bonus)
+# Then apply overextension penalty (same RSI/EMA21 rules as Q Score)`}
+        </CodeBlock>
+
+        <Note>
+          <strong>P Score vs Q Score:</strong> The Q Score is a fixed formula — it always gives the same
+          weights. The P Score adapts: in a trending regime, trend signals are worth more; in a ranging
+          regime, mean-reversion signals get a boost. An agreement bonus rewards when ≥70% of signals agree,
+          reflecting the principle that conviction grows when independent indicators converge.
+        </Note>
+      </Section>
+
+      <Section id="pscore-signals" title="P Score: Signals, Weights & Accuracy">
+        <p>
+          Every setup result uses these 12 signals. Each contributes to the P Score proportionally
+          to its effective weight and its historical accuracy factor:
+        </p>
+
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Signal</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Class</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Base weight</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Accuracy</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Strength source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["EP (Episodic Pivot)", "Trend", "3.0", "72%", "Confidence from detector"],
+                ["WYS (Wyckoff Spring)", "Trend", "3.0", "75%", "Confidence from detector"],
+                ["TB (Tight Base)", "Trend", "2.5", "70%", "Confidence from detector"],
+                ["Weinstein Stage", "Trend", "2.5", "72%", "1.0=S2, 0.5=S1, 0.0=S4"],
+                ["EMA Stack", "Trend", "1.5", "70%", "full_bull=0.9, partial_bull=0.6"],
+                ["ICS", "Trend", "1.2", "68%", "ICS score / 100"],
+                ["FBD (Failed Breakdown)", "Trend", "2.0", "68%", "Confidence from detector"],
+                ["PP (Pocket Pivot)", "Trend", "2.0", "65%", "Confidence from detector"],
+                ["MACD", "Trend", "1.0", "65%", "Bullish/bearish histogram sign"],
+                ["A/D Net", "Trend", "1.0", "65%", "Clipped ad_net / 10"],
+                ["PULL (EMA Pullback)", "Trend", "1.5", "63%", "Confidence from detector"],
+                ["RSI", "Mean Rev.", "1.0", "62%", "Distance from 50 ÷ 50"],
+              ].map(([s, cls, w, acc, src]) => (
+                <tr key={s} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{s}</td>
+                  <td className="py-2 px-3 border border-gray-200">
+                    <span className={cls === "Trend" ? "text-green-700" : "text-amber-600"}>{cls}</span>
+                  </td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center">{w}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-indigo-700">{acc}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{src}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="font-semibold text-gray-800 mt-4">Agreement bonus</h3>
+        <CodeBlock>{`# If ≥70% of active signals agree on direction:
+agreement_bonus = 1.20  # +20% to final score
+
+# Rationale: independent indicators rarely converge by chance.
+# When 7 out of 9 signals all say "bullish", the conviction
+# is qualitatively stronger than 5 out of 9.`}
+        </CodeBlock>
+      </Section>
+
+      <Section id="pscore-regime" title="P Score: Regime Multipliers">
+        <p>
+          The market regime modifies how much weight each signal class receives. A trending regime
+          rewards trend-following signals; a ranging regime rewards mean-reversion signals.
+          Regime is inferred from the Weinstein stage: Stage 2 = trend, Stage 4 = range, else transition.
+        </p>
+
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Regime</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Detected when</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Trend signal mult.</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Mean-rev. mult.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Trend",      "Weinstein Stage 2",           "1.15×", "0.70×"],
+                ["Transition", "Stage 1 or 3 (default)",      "0.95×", "0.85×"],
+                ["Range",      "Weinstein Stage 4",           "0.75×", "1.15×"],
+              ].map(([r, w, t, m]) => (
+                <tr key={r} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{r}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600">{w}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-green-700">{t}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-amber-600">{m}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <Note>
+          <strong>Why RSI is mean-reversion?</strong> RSI above 70 is conventionally overbought —
+          it signals the stock has moved far from equilibrium and a pullback is statistically likely.
+          That&apos;s the opposite of a trend-following signal. In a trending regime, the RSI component gets
+          downweighted (0.70×) so it doesn&apos;t penalise a stock just because it has momentum.
+        </Note>
+      </Section>
+
+      <Section id="pscore-grades" title="P Score: Grade Thresholds">
+        <CodeBlock>{`# P Grade thresholds (different from Q Grade — higher bar for A)
+A  →  prob_score ≥ 75   (strong signal alignment — high probability setup)
+B  →  prob_score ≥ 60   (good alignment — most signals agree)
+C  →  prob_score ≥ 45   (partial alignment — some signals conflict)
+D  →  prob_score  < 45  (weak alignment — signals disagreeing or absent)`}
+        </CodeBlock>
+
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Condition</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Interpretation</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Trade implication</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["QA + PA", "Both formulas agree: elite setup", "Maximum conviction — size up"],
+                ["QA + PB", "Q says elite, P says good", "Strong setup — normal size"],
+                ["QB + PA", "P more confident than Q formula", "Worth investigating — check chart"],
+                ["QA + PD", "Signals diverging sharply", "Pattern strong but signals mixed — wait or reduce size"],
+                ["QD + PD", "Both poor", "Skip — no edge"],
+              ].map(([c, i, t]) => (
+                <tr key={c} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-mono font-semibold text-indigo-700">{c}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-700">{i}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600">{t}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <Warn>
+          <strong>P Grade is not a replacement for Q Grade</strong> — it&apos;s a second opinion.
+          The P Score uses backtested accuracy estimates (not live-calibrated against your broker fills).
+          Treat it as a signal-alignment gauge: when it agrees with Q, trade normally. When it disagrees,
+          reduce size and investigate the conflicting signals on the Analyzer page.
+        </Warn>
+      </Section>
+
+      {/* ── END P SCORE ───────────────────────────────────────────────────────── */}
 
       {/* Weinstein Stage */}
       <Section id="weinstein" title="Signal: Weinstein Stage">
@@ -829,23 +1047,23 @@ T2     = range_high + (range_high - range_floor)  # measured move`}
           Qullamaggie would never take that trade, and the scanner shouldn&apos;t give it Grade A either.
         </p>
 
-        <h3 className="font-semibold text-gray-800 mt-4">Comparison with technical-analysis repo</h3>
+        <h3 className="font-semibold text-gray-800 mt-4">Comparison with the technical-analysis reference repo</h3>
         <p>
-          The <em>technical-analysis</em> repo uses an Institutional Composite Score (ICS) combining OBV,
-          CMF, Chaikin A/D, and MFI. Our A/D Net is simpler but directly aligned with how O&apos;Neil and
-          Qullamaggie think about institutional footprint. The reference repo also uses backtested
-          accuracy factors — a future improvement would be to run our detectors against historical data
-          and weight confidence by actual win rates per setup type.
+          The <em>technical-analysis</em> reference repo uses a config-driven probability scorer with
+          backtested accuracy factors, regime multipliers, and signal-class categorisation. We have
+          ported this architecture as the <strong>P Score</strong>, using our six setup types as primary
+          signals and recalibrating the accuracy factors against publicly available win-rate estimates.
+          The ICS (OBV + CMF + A/D line + MFI) was also ported as a standalone display signal.
         </p>
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
           <p className="text-xs text-gray-500 uppercase font-semibold tracking-wide mb-2">Future improvements under consideration</p>
           <ul className="list-disc list-inside pl-2 space-y-1 text-gray-600 text-sm">
-            <li>Backtested accuracy factor per setup type (EP historically wins more than PP)</li>
-            <li>Multi-timeframe confirmation (weekly chart in Stage 2 + daily setup)</li>
-            <li>Volume profile score — breakout on above-average volume should score higher</li>
-            <li>Sector RS — stock outperforming both SPY and its sector ETF gets a bonus</li>
-            <li>Wyckoff spring / accumulation phase detection from the reference repo</li>
+            <li>Live-calibrate accuracy factors from your own trade journal (P Score becomes personalised)</li>
+            <li>Multi-timeframe P Score — run the same signal voting on weekly bars and blend results</li>
+            <li>Volume profile score — breakout on above-average volume gets a precision boost</li>
+            <li>Sector RS — stock outperforming both SPY and its sector ETF earns a multiplier</li>
+            <li>Wyckoff accumulation phase detection (full cycle: PS→SC→AR→ST→LPS→SOS→BU)</li>
           </ul>
         </div>
       </Section>

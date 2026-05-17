@@ -16,9 +16,37 @@ export function SetupBadge({ type }: { type: string }) {
   );
 }
 
+// Q Grade — Qullamaggie formula (A≥72 / B≥58 / C≥44 / D<44)
 export function GradeBadge({ grade }: { grade: string }) {
   const c = { A: "text-green-600", B: "text-blue-600", C: "text-amber-600", D: "text-gray-400" }[grade] ?? "text-gray-400";
   return <span className={`font-bold text-sm ${c}`}>{grade}</span>;
+}
+
+// P Grade — probability scorer (A≥75 / B≥60 / C≥45 / D<45)
+// Uses a teal/cyan palette to visually distinguish it from the Q Grade.
+export function ProbGradeBadge({ grade, score }: { grade: string; score?: number }) {
+  const cfg: Record<string, { text: string; bg: string; border: string }> = {
+    A: { text: "text-teal-700",  bg: "bg-teal-50",  border: "border-teal-300"  },
+    B: { text: "text-cyan-700",  bg: "bg-cyan-50",  border: "border-cyan-300"  },
+    C: { text: "text-sky-700",   bg: "bg-sky-50",   border: "border-sky-200"   },
+    D: { text: "text-gray-400",  bg: "bg-gray-50",  border: "border-gray-200"  },
+  };
+  const c = cfg[grade] ?? cfg.D;
+  return (
+    <span
+      className={`group relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold cursor-help ${c.text} ${c.bg} ${c.border}`}
+      title={`P Score: probability-weighted signal voting (A≥75 / B≥60 / C≥45 / D<45)`}
+    >
+      P{grade}
+      {score !== undefined && <span className="font-mono font-normal opacity-70">{score.toFixed(0)}</span>}
+      <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-64 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal">
+        <strong>P Score</strong> — probability-weighted signal voting (0–100).<br />
+        Signals: RSI, MACD, EMA stack, Weinstein stage, ICS, A/D Net, setup pattern.<br />
+        Each contributes: <code className="font-mono bg-gray-700 px-0.5 rounded">strength × weight × accuracy × regime_mult</code>.<br />
+        Grade: A≥75 / B≥60 / C≥45 / D&lt;45
+      </span>
+    </span>
+  );
 }
 
 export function RRBadge({ rr }: { rr: number }) {

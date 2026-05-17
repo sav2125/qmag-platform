@@ -29,7 +29,9 @@ class Setup:
     ad_net: int = 0            # O'Neill A/D net over last 25 bars (+ = accumulation)
     rvol: float = 1.0          # Relative Volume: today's vol / 20-day avg
     isc_score: float = 0.0     # Institutional Composite Score: OBV+CMF+A/D line+MFI → 0-100
-    weekly_dir: str = "neutral" # Weekly TF direction: "bullish" | "neutral" | "bearish"
+    weekly_dir: str = "neutral"  # Weekly TF direction: "bullish" | "neutral" | "bearish"
+    prob_score: float = 0.0      # P Score: probability-weighted signal voting (0–100)
+    prob_grade: str = "D"        # P Score grade: A≥75 / B≥60 / C≥45 / D<45
 
     @property
     def quality_score(self) -> float:

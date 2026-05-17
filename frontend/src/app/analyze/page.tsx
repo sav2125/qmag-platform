@@ -3,7 +3,7 @@
 import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, type SymbolAnalysis, type ActiveSetup, type ChecklistItem, type Warning, type TimeframeSignal } from "@/lib/api";
-import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
+import { SetupBadge, GradeBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
 
 // ── Small reusable UI pieces ──────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ function SetupCard({ s, highlight = false }: { s: ActiveSetup; highlight?: boole
         </div>
         <div className="flex items-center gap-2">
           <GradeBadge grade={s.grade} />
-          <span className="text-[10px] text-gray-400 font-mono">{s.composite_score.toFixed(0)}</span>
+          <span className="text-[10px] text-gray-400 font-mono">Q{s.q_score.toFixed(0)}</span>
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 text-xs">
@@ -368,32 +368,61 @@ function AnalyzeInner() {
               </div>
             </Card>
 
-            {/* Grade + Composite Score card */}
+            {/* Q Score + P Score card */}
             <Card className="md:col-span-1">
-              {/* Top row: Grade, composite total, RS, Stage */}
-              <div className="flex flex-wrap gap-3 items-center mb-3">
-                <div className="text-center">
-                  <div className="text-4xl font-bold"><GradeBadge grade={data.grade} /></div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">Grade</div>
+
+              {/* ── Dual score header ── */}
+              <div className="flex gap-4 mb-3">
+
+                {/* Q Score — Qullamaggie formula */}
+                <div className="flex-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2.5 text-center">
+                  <div className="text-[9px] font-semibold text-indigo-400 uppercase tracking-wide mb-0.5">Q Score</div>
+                  <div className="flex items-baseline justify-center gap-1.5">
+                    <span className="text-2xl font-bold font-mono text-indigo-700">{data.q_score.toFixed(0)}</span>
+                    <span className="text-xs text-indigo-400">/100</span>
+                  </div>
+                  <div className="mt-1">
+                    <GradeBadge grade={data.grade} />
+                    <div className="text-[9px] text-indigo-400 mt-0.5">Qullamaggie grade</div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold font-mono text-indigo-600">{data.composite_score.toFixed(0)}</div>
-                  <div className="text-[10px] text-gray-400">Composite / 100</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-mono font-semibold text-gray-700">{data.rs_score.toFixed(0)}</div>
-                  <div className="text-[10px] text-gray-400">{data.rs_label}</div>
-                </div>
-                <div>
-                  <StageBadge stage={data.weinstein_stage} />
-                  <div className="text-[10px] text-gray-400 mt-0.5">{stageLabel[data.weinstein_stage] ?? "Unknown"}</div>
+
+                {/* P Score — probability-weighted signal voting */}
+                <div className="flex-1 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2.5 text-center">
+                  <div className="text-[9px] font-semibold text-teal-500 uppercase tracking-wide mb-0.5">P Score</div>
+                  <div className="flex items-baseline justify-center gap-1.5">
+                    <span className="text-2xl font-bold font-mono text-teal-700">{(data.prob_score ?? 0).toFixed(0)}</span>
+                    <span className="text-xs text-teal-400">/100</span>
+                  </div>
+                  <div className="mt-1">
+                    <ProbGradeBadge grade={data.prob_grade ?? "D"} />
+                    <div className="text-[9px] text-teal-400 mt-0.5">Signal voting grade</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Mini score breakdown — shows exactly where the number comes from */}
+              {/* RS + Stage context pills */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="text-center bg-gray-50 rounded px-3 py-1.5 flex-1">
+                  <div className="text-sm font-mono font-semibold text-gray-700">{data.rs_score.toFixed(0)}</div>
+                  <div className="text-[10px] text-gray-400">{data.rs_label}</div>
+                </div>
+                <div className="text-center bg-gray-50 rounded px-3 py-1.5 flex-1">
+                  <StageBadge stage={data.weinstein_stage} />
+                  <div className="text-[10px] text-gray-400 mt-0.5">{stageLabel[data.weinstein_stage] ?? "Unknown"}</div>
+                </div>
+                {data.prob_regime && (
+                  <div className="text-center bg-gray-50 rounded px-3 py-1.5 flex-1">
+                    <div className="text-[10px] font-semibold text-gray-600 capitalize">{data.prob_regime}</div>
+                    <div className="text-[9px] text-gray-400">regime</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Q Score breakdown — mini bars */}
               <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
                 <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  Score breakdown
+                  Q Score breakdown
                 </div>
                 {(["pattern", "rs", "stage", "ad"] as const).map((k) => {
                   const c = data.score_breakdown[k];
@@ -414,22 +443,31 @@ function AnalyzeInner() {
                       <div className={`text-[10px] font-mono w-10 text-right shrink-0 ${neg ? "text-red-500" : "text-gray-600"}`}>
                         {neg ? "" : "+"}{c.pts.toFixed(0)}/{c.max}
                       </div>
-                      {/* Tooltip showing full label on hover */}
                       <span className="pointer-events-none absolute left-0 bottom-full mb-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-[10px] p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
                         {c.label}
                       </span>
                     </div>
                   );
                 })}
-                {/* Pattern quality footnote */}
                 <p className="text-[9px] text-gray-400 pt-0.5 leading-relaxed">
                   Pattern quality:{" "}
                   <span className="font-mono font-semibold text-gray-500">
                     {(data.score_breakdown.pattern.pts / 60 * 100).toFixed(0)}%
                   </span>
-                  {" "}= confidence × stop tightness × R:R
+                  {" "}= confidence × stop tightness × R:R ·{" "}
+                  <a href="/scoring" className="text-indigo-400 hover:underline">Scoring docs →</a>
                 </p>
               </div>
+
+              {/* P Score overextension penalty (if any) */}
+              {(data.prob_penalty ?? 0) > 0 && (
+                <div className="mt-2 border-t border-gray-100 pt-2 text-[10px] text-orange-600 space-y-0.5">
+                  <div className="font-semibold">⚠ P Score overextension penalty: −{data.prob_penalty.toFixed(1)} pts</div>
+                  {(data.prob_penalty_notes ?? []).map((n, i) => (
+                    <div key={i} className="text-orange-500">{n}</div>
+                  ))}
+                </div>
+              )}
             </Card>
 
             {/* Direction + key technicals */}
@@ -568,7 +606,7 @@ function AnalyzeInner() {
             ) : (
               <div className="space-y-3">
                 {data.active_setups
-                  .sort((a, b) => b.composite_score - a.composite_score)
+                  .sort((a, b) => b.q_score - a.q_score)
                   .map((s, i) => (
                     <SetupCard key={s.setup_type} s={s} highlight={i === 0 && data.active_setups.length > 1} />
                   ))}

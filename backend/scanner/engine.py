@@ -13,6 +13,7 @@ from .patterns import (
     relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
 from .analyzer import _resample_weekly, _tf_signals
+from .prob_scorer import compute_prob_score
 from .rs_rank import rs_score, rs_label, rank_universe
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,21 @@ logger = logging.getLogger(__name__)
 DETECTORS = [detect_ep, detect_tb, detect_wys, detect_pp, detect_pull, detect_fbd]
 
 SETUP_PRIORITY = {"EP": 0, "TB": 1, "WYS": 2, "PP": 3, "PULL": 3, "FBD": 4, "FLAG": 5}
+
+
+def _ma_stack_label(df: pd.DataFrame) -> str:
+    """Return a compact MA stack label for use by prob_scorer."""
+    close = df["close"]
+    price = float(close.iloc[-1])
+    ema21 = float(close.ewm(span=21, adjust=False).mean().iloc[-1])
+    ema50 = float(close.ewm(span=50, adjust=False).mean().iloc[-1])
+    above21 = price > ema21
+    above50 = price > ema50
+    rising21 = ema21 > float(close.ewm(span=21, adjust=False).mean().iloc[-6]) if len(close) >= 6 else True
+    if above21 and above50 and rising21:   return "full_bull"
+    if above21 and rising21:               return "partial_bull"
+    if not above21 and not above50:        return "bear"
+    return "mixed"
 
 
 def _adr(df: pd.DataFrame, lookback: int = 20) -> float:
@@ -135,11 +151,27 @@ def _process_symbol(
 
     # Weekly timeframe direction — free resampling of existing daily bars, no extra API call
     try:
-        df_weekly      = _resample_weekly(df)
-        wk             = _tf_signals(df_weekly, "Weekly")
+        df_weekly       = _resample_weekly(df)
+        wk              = _tf_signals(df_weekly, "Weekly")
         best.weekly_dir = wk.get("direction", "neutral")
     except Exception:
         best.weekly_dir = "neutral"
+
+    # P Score — probability-weighted signal voting (ported from sav2125/technical-analysis)
+    try:
+        ps = compute_prob_score(
+            df=df,
+            stage=best.weinstein_stage,
+            isc=best.isc_score,
+            ad_net=best.ad_net,
+            ma_stack=_ma_stack_label(df),
+            active_setups=[best],
+        )
+        best.prob_score = ps["prob_score"]
+        best.prob_grade = ps["prob_grade"]
+    except Exception:
+        best.prob_score = 0.0
+        best.prob_grade = "D"
 
     # Overextension penalty: docks confidence when RSI > 80 or price far above EMA21
     penalty = overextension_penalty(df)

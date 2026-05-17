@@ -23,7 +23,9 @@ export interface Setup {
   meta: Record<string, unknown>;
   weinstein_stage: number;    // 1-4; 0 = insufficient data
   ad_net: number;             // O'Neill A/D net days (+ = accumulation)
-  composite_score: number;    // Unified 0-100: pattern quality + RS + stage + A/D
+  q_score: number;            // Q Score (Qullamaggie): quality×60 + RS×25 + stage×10 + A/D×5
+  prob_score: number;         // P Score (probability-weighted signal voting, 0–100)
+  prob_grade: string;         // P grade: A≥75 / B≥60 / C≥45 / D<45
   rvol: number;               // Relative Volume: today / 20-day avg
   isc_score: number;          // Institutional Composite Score: OBV+CMF+A/D+MFI → 0-100
   weekly_dir: "bullish" | "neutral" | "bearish"; // Weekly TF direction (free resample)
@@ -115,18 +117,18 @@ export interface Warning {
 }
 
 export interface ActiveSetup {
-  setup_type:      string;
-  state:           string;
-  entry:           number;
-  stop:            number;
-  t1:              number;
-  t2:              number;
-  rr:              number;
-  risk_pct:        number;
-  confidence:      number;
-  composite_score: number;
-  grade:           string;
-  notes:           string;
+  setup_type:  string;
+  state:       string;
+  entry:       number;
+  stop:        number;
+  t1:          number;
+  t2:          number;
+  rr:          number;
+  risk_pct:    number;
+  confidence:  number;
+  q_score:     number;   // Q Score (Qullamaggie formula)
+  grade:       string;   // Q grade (A≥72 / B≥58 / C≥44 / D<44)
+  notes:       string;
 }
 
 export interface MAStack {
@@ -182,12 +184,23 @@ export interface SymbolAnalysis {
   rvol:           number;
   vol_ratio_50d:  number;
 
-  composite_score:  number;
-  grade:            string;
-  direction:        "long" | "neutral" | "avoid";
-  rs_score:         number;
-  rs_label:         string;
-  weinstein_stage:  number;
+  // Q Score — Qullamaggie composite (quality×60 + RS×25 + stage×10 + A/D×5)
+  q_score:     number;
+  grade:        string;   // Q grade: A≥72 / B≥58 / C≥44 / D<44
+  direction:    "long" | "neutral" | "avoid";
+  rs_score:     number;
+  rs_label:     string;
+  weinstein_stage: number;
+
+  // P Score — probability-weighted signal voting
+  prob_score:         number;   // 0–100
+  prob_grade:         string;   // A≥75 / B≥60 / C≥45 / D<45
+  prob_direction:     string;   // "long" | "short" | "neutral"
+  prob_agreement:     number;   // fraction of signals agreeing (0–1)
+  prob_regime:        string;   // "trend" | "range" | "transition"
+  prob_penalty:       number;   // overextension penalty applied
+  prob_penalty_notes: string[];
+  prob_components:    Record<string, { direction: string; strength: number; contribution: number }>;
 
   rsi:            number;
   adx:            number;
@@ -205,8 +218,8 @@ export interface SymbolAnalysis {
   best_setup:    ActiveSetup | null;
   active_setups: ActiveSetup[];
 
-  checklist:          ChecklistItem[];
-  warnings:           Warning[];
-  score_breakdown:    ScoreBreakdown;
+  checklist:           ChecklistItem[];
+  warnings:            Warning[];
+  score_breakdown:     ScoreBreakdown;
   timeframe_alignment: MTFAlignment;
 }

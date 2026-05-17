@@ -26,6 +26,7 @@ from .patterns import (
     relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
 from .rs_rank import rs_score, rs_label
+from .prob_scorer import compute_prob_score
 
 logger = logging.getLogger(__name__)
 
@@ -485,6 +486,21 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         pat_pts    = 30.0
         pat_label  = "none"
 
+    # ── P Score — probability-weighted signal voting ──────────────────────────
+    try:
+        ps_result = compute_prob_score(
+            df=df,
+            stage=stage,
+            isc=isc,
+            ad_net=ad,
+            ma_stack=ma_info["stack"],
+            active_setups=active_setups,
+        )
+    except Exception:
+        ps_result = {"prob_score": 0.0, "prob_grade": "D", "prob_direction": "neutral",
+                     "prob_components": [], "prob_agreement": 0.0, "prob_regime": "transition",
+                     "prob_penalty": 0.0, "prob_penalty_notes": []}
+
     # ── Direction ─────────────────────────────────────────────────────────────
     if stage == 2 and ma_info["stack"] in ("full_bull", "partial_bull") and rsi_val >= 35:
         direction = "long"
@@ -524,7 +540,7 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
             "rr":              s.rr,
             "risk_pct":        round((s.entry - s.stop) / s.entry * 100, 1) if s.entry > 0 else 0,
             "confidence":      s.confidence,
-            "composite_score": s.composite_score,
+            "q_score":         s.composite_score,   # Q Score (Qullamaggie formula)
             "grade":           s.grade,
             "notes":           s.notes,
         }
@@ -536,8 +552,8 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "pct_change":    pct_change,
         "rvol":          rvol_val,
         "vol_ratio_50d": vol_ratio,
-        # Scoring
-        "composite_score": comp_score,
+        # Scoring — Q Score (Qullamaggie formula)
+        "q_score":         comp_score,
         "grade":           grade_val,
         "direction":       direction,
         "rs_score":        rs_raw_val,
@@ -565,4 +581,13 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "score_breakdown":    score_breakdown,
         # Multi-timeframe alignment
         "timeframe_alignment": mtf,
+        # P Score
+        "prob_score":         ps_result["prob_score"],
+        "prob_grade":         ps_result["prob_grade"],
+        "prob_direction":     ps_result["prob_direction"],
+        "prob_components":    ps_result["prob_components"],
+        "prob_agreement":     ps_result.get("prob_agreement", 0.0),
+        "prob_regime":        ps_result.get("prob_regime", "transition"),
+        "prob_penalty":       ps_result.get("prob_penalty", 0.0),
+        "prob_penalty_notes": ps_result.get("prob_penalty_notes", []),
     }
