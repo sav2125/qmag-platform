@@ -37,6 +37,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% ·
 - **Bull exhaustion warning** — RSI > 70 + volume fading + price > 3% above EMA21 → "Bull exhaustion" flag in Notes column
 - **RVOL** — Relative Volume: today's volume vs 20-day avg; shown under Price column (violet when ≥2×)
 - **ICS** — Institutional Composite Score (OBV + CMF + A/D line + MFI → 0–100); shown under A/D column
+- **Weekly direction badge** — W ▲ / W — / W ▼ pill under the Grade; weekly bars resampled from the existing daily fetch (no extra API calls), using SMA30 = exact Weinstein 30-week MA
 - **Quality score** — Grade uses `confidence x stop_factor x rr_factor`; tight stops + good R:R rank higher than sloppy setups
 - **State legend** — Hover tooltips on every badge; footer legend below the table
 

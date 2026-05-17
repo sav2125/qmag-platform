@@ -29,6 +29,7 @@ class Setup:
     ad_net: int = 0            # O'Neill A/D net over last 25 bars (+ = accumulation)
     rvol: float = 1.0          # Relative Volume: today's vol / 20-day avg
     isc_score: float = 0.0     # Institutional Composite Score: OBV+CMF+A/D line+MFI → 0-100
+    weekly_dir: str = "neutral" # Weekly TF direction: "bullish" | "neutral" | "bearish"
 
     @property
     def quality_score(self) -> float:

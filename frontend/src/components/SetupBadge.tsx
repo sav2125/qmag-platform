@@ -78,6 +78,25 @@ export function ICSBadge({ score }: { score: number }) {
   );
 }
 
+// WeeklyDir — Weekly timeframe direction badge (resampled from daily bars)
+// Shown as a compact pill under the Grade in the scan table.
+export function WeeklyDirBadge({ dir }: { dir: "bullish" | "neutral" | "bearish" }) {
+  const cfg = {
+    bullish: { label: "W ▲", cls: "bg-green-100 text-green-700 border-green-300", tip: "Weekly timeframe is bullish (RSI>50, MACD+, above EMAs, SMA30 rising)" },
+    neutral: { label: "W —", cls: "bg-amber-50  text-amber-600 border-amber-300",  tip: "Weekly timeframe is neutral — mixed signals" },
+    bearish: { label: "W ▼", cls: "bg-red-50    text-red-600   border-red-200",    tip: "Weekly timeframe is bearish — consider staying out" },
+  }[dir] ?? { label: "W ?", cls: "bg-gray-100 text-gray-500 border-gray-200", tip: "" };
+
+  return (
+    <span className={`group relative inline-block text-[9px] font-bold px-1.5 py-0.5 rounded border cursor-help ${cfg.cls}`}>
+      {cfg.label}
+      <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal">
+        {cfg.tip}
+      </span>
+    </span>
+  );
+}
+
 // RVOL — Relative Volume (today vs 20-day avg)
 // Purple ≥2× (surge), normal otherwise
 export function RVOLLabel({ rvol }: { rvol: number }) {

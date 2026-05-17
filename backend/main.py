@@ -60,6 +60,7 @@ class ScanResult(BaseModel):
     composite_score: float = 0.0  # Unified 0-100: pattern quality + RS + stage + A/D
     rvol: float = 1.0             # Relative Volume: today / 20-day avg
     isc_score: float = 0.0        # Institutional Composite Score (OBV+CMF+A/D+MFI → 0-100)
+    weekly_dir: str = "neutral"   # Weekly TF direction: bullish | neutral | bearish
 
 
 class WatchlistItem(BaseModel):
@@ -98,6 +99,7 @@ def _setup_to_dict(s) -> dict:
         "composite_score": s.composite_score,
         "rvol": s.rvol,
         "isc_score": s.isc_score,
+        "weekly_dir": getattr(s, "weekly_dir", "neutral"),
     }
 
 

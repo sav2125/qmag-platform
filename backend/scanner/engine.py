@@ -12,6 +12,7 @@ from .patterns import (
     weinstein_stage, ad_days, overextension_penalty,
     relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
+from .analyzer import _resample_weekly, _tf_signals
 from .rs_rank import rs_score, rs_label, rank_universe
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,14 @@ def _process_symbol(
     best.ad_net          = ad_days(df)
     best.rvol            = relative_volume(df)
     best.isc_score       = institutional_composite_score(df)
+
+    # Weekly timeframe direction — free resampling of existing daily bars, no extra API call
+    try:
+        df_weekly      = _resample_weekly(df)
+        wk             = _tf_signals(df_weekly, "Weekly")
+        best.weekly_dir = wk.get("direction", "neutral")
+    except Exception:
+        best.weekly_dir = "neutral"
 
     # Overextension penalty: docks confidence when RSI > 80 or price far above EMA21
     penalty = overextension_penalty(df)

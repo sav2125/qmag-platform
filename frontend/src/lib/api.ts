@@ -26,6 +26,7 @@ export interface Setup {
   composite_score: number;    // Unified 0-100: pattern quality + RS + stage + A/D
   rvol: number;               // Relative Volume: today / 20-day avg
   isc_score: number;          // Institutional Composite Score: OBV+CMF+A/D+MFI → 0-100
+  weekly_dir: "bullish" | "neutral" | "bearish"; // Weekly TF direction (free resample)
 }
 
 export interface ScanParams {

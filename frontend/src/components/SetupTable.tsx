@@ -1,7 +1,7 @@
 "use client";
 
 import type { Setup } from "@/lib/api";
-import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "./SetupBadge";
+import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel, WeeklyDirBadge } from "./SetupBadge";
 
 interface Props {
   setups: Setup[];
@@ -120,7 +120,15 @@ export function SetupTable({ setups, loading }: Props) {
             <th className="text-right py-3 px-3 text-green-600">T2</th>
             <th className="text-right py-3 px-3">R:R</th>
             <th className="text-right py-3 px-3">RS</th>
-            <th className="text-center py-3 px-3">Grd</th>
+            <th className="text-center py-3 px-3">
+              <span className="group relative cursor-help">
+                Grd
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-60 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
+                  <strong>Grade</strong> A/B/C/D + composite score (0–100).<br />
+                  <strong>W ▲ / W — / W ▼</strong> — weekly timeframe direction (resampled from daily bars, SMA30 = Weinstein 30-week MA).
+                </span>
+              </span>
+            </th>
             <th className="text-center py-3 px-3">
               <span className="group relative cursor-help">
                 Stg
@@ -216,11 +224,14 @@ export function SetupTable({ setups, loading }: Props) {
                   {s.rs_score.toFixed(0)}
                 </td>
 
-                {/* Grade + composite score */}
+                {/* Grade + composite score + weekly direction */}
                 <td className="py-3 px-3 text-center">
                   <GradeBadge grade={s.grade} />
                   <span className="block text-[10px] text-gray-400 font-mono mt-0.5">
                     {s.composite_score?.toFixed(0) ?? "—"}
+                  </span>
+                  <span className="block mt-1">
+                    <WeeklyDirBadge dir={s.weekly_dir ?? "neutral"} />
                   </span>
                 </td>
 
