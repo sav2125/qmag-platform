@@ -33,6 +33,9 @@ const LEGEND = [
   { type: "WYS",  color: "bg-violet-700", desc: "Wyckoff Spring: shakeout below tight accumulation range, snap-back" },
 ];
 
+// Universes that support snapshots (exclude watchlist + all)
+const SNAPSHOT_UNIVERSES = new Set(["sp500", "nasdaq100", "largecap", "midcap", "smallcap", "tech"]);
+
 export default function Dashboard() {
   const [setups, setSetups] = useState<Setup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,6 +54,13 @@ export default function Dashboard() {
   const [aboveEma50, setAboveEma50] = useState(false);
   const [maxBaseBars, setMaxBaseBars] = useState(500);
 
+  // Snapshot state
+  const [useCached, setUseCached]     = useState(false);
+  const [refreshing, setRefreshing]   = useState(false);
+  const [snapshotMsg, setSnapshotMsg] = useState("");
+
+  const canSnapshot = SNAPSHOT_UNIVERSES.has(universe);
+
   const runScan = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -66,6 +76,7 @@ export default function Dashboard() {
         above_ema21: aboveEma21,
         above_ema50: aboveEma50,
         max_base_bars: maxBaseBars,
+        cached: useCached && canSnapshot,
       };
       const results = await api.scan(params);
       setSetups(results);
@@ -75,7 +86,21 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [universe, setupFilter, minRs, minScore, top, minAdr, minPctChange, aboveEma21, aboveEma50, maxBaseBars]);
+  }, [universe, setupFilter, minRs, minScore, top, minAdr, minPctChange, aboveEma21, aboveEma50, maxBaseBars, useCached, canSnapshot]);
+
+  const buildSnapshot = useCallback(async () => {
+    if (!canSnapshot) return;
+    setRefreshing(true);
+    setSnapshotMsg("");
+    try {
+      const res = await api.refreshSnapshot(universe);
+      setSnapshotMsg(`✅ Snapshot built — ${res.results} setups`);
+    } catch {
+      setSnapshotMsg("❌ Snapshot failed — check backend logs");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [universe, canSnapshot]);
 
   // Client-side grade filter applied after scan results arrive
   const visibleSetups = gradeFilter === "A"  ? setups.filter((s) => s.grade === "A")
@@ -145,6 +170,37 @@ export default function Dashboard() {
               onChange={(e) => setTop(Number(e.target.value))}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
           </div>
+          {/* Snapshot toggle + refresh */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-gray-500">Snapshot</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => canSnapshot && setUseCached((v) => !v)}
+                title={canSnapshot ? "Use today's pre-built snapshot (instant)" : "Not available for this universe"}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold border transition-colors ${
+                  !canSnapshot
+                    ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
+                    : useCached
+                    ? "bg-green-600 border-green-600 text-white"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-indigo-300"
+                }`}
+              >
+                {useCached ? "📸 Cached ✓" : "📸 Use Cache"}
+              </button>
+              <button
+                onClick={buildSnapshot}
+                disabled={!canSnapshot || refreshing}
+                title="Build / rebuild today's snapshot for this universe"
+                className="rounded-lg px-2 py-2 text-xs font-semibold border border-gray-200 bg-white text-gray-500 hover:border-indigo-300 disabled:opacity-40 transition-colors"
+              >
+                {refreshing ? "⏳" : "🔄"}
+              </button>
+            </div>
+            {snapshotMsg && (
+              <span className="text-[10px] text-gray-500 leading-tight">{snapshotMsg}</span>
+            )}
+          </div>
+
           <div className="flex items-end">
             <button onClick={runScan} disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors">
@@ -232,10 +288,15 @@ export default function Dashboard() {
       {/* Results table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-800">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
             {scanned
               ? `${visibleSetups.length} Setup${visibleSetups.length !== 1 ? "s" : ""}${gradeFilter ? ` (${gradeFilter === "A" ? "Grade A" : "Grade A+B"})` : ""}`
               : "Results"}
+            {scanned && useCached && canSnapshot && (
+              <span className="text-[10px] font-normal bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                📸 from snapshot
+              </span>
+            )}
           </h2>
           {!scanned && (
             <span className="text-sm text-gray-400">Configure filters above and press Run Scan</span>

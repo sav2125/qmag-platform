@@ -86,21 +86,7 @@ def _save_watchlist(symbols: list[str]) -> None:
     WATCHLIST_PATH.write_text(json.dumps(sorted(set(symbols))))
 
 
-def _setup_to_dict(s) -> dict:
-    return {
-        "symbol": s.symbol, "setup_type": s.setup_type, "state": s.state,
-        "entry": s.entry, "stop": s.stop, "t1": s.t1, "t2": s.t2,
-        "rr": s.rr, "confidence": s.confidence, "grade": s.grade,
-        "rs_score": s.rs_score, "rs_label": s.rs_label,
-        "price": s.price, "pct_change": s.pct_change,
-        "notes": s.notes, "meta": s.meta,
-        "weinstein_stage": s.weinstein_stage,
-        "ad_net": s.ad_net,
-        "composite_score": s.composite_score,
-        "rvol": s.rvol,
-        "isc_score": s.isc_score,
-        "weekly_dir": getattr(s, "weekly_dir", "neutral"),
-    }
+from scanner.snapshot import setup_to_dict as _setup_to_dict, save_snapshot, load_snapshot, apply_filters, has_snapshot
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -182,9 +168,23 @@ def scan(
     above_ema21: bool = Query(False, description="Require price above EMA21"),
     above_ema50: bool = Query(False, description="Require price above EMA50"),
     max_base_bars: int = Query(500, ge=10, le=1500, description="Max TB base length in bars (~5 bars/week)"),
+    cached: bool = Query(False, description="Serve from today's snapshot (instant). Falls back to live scan if no snapshot exists."),
 ):
     from scanner.engine import scan as run_scan
 
+    # ── Snapshot path ─────────────────────────────────────────────────────────
+    if cached and universe not in ("watchlist", "all"):
+        rows = load_snapshot(universe)
+        if rows is not None:
+            logger.info("Serving %s from snapshot (%d rows before filter)", universe, len(rows))
+            filtered = apply_filters(rows, setup_filter=setup, min_rs=min_rs, min_score=min_score, top_n=top)
+            # min_adr / above_ema filters require raw df — silently skipped for cached results
+            if (min_adr > 0 or min_pct_change > 0 or above_ema21 or above_ema50):
+                logger.info("cached=True: min_adr/pct_change/ema filters skipped (no raw df in snapshot)")
+            return [ScanResult(**r) for r in filtered]
+        logger.info("cached=True but no snapshot found for %s — falling back to live scan", universe)
+
+    # ── Live scan path ────────────────────────────────────────────────────────
     symbols_override = None
     if universe == "watchlist":
         syms = _load_watchlist()
@@ -233,6 +233,32 @@ def scan(
         raise HTTPException(500, str(e))
 
     return [ScanResult(**_setup_to_dict(r)) for r in results]
+
+
+class RefreshRequest(BaseModel):
+    universe: str = "sp500"
+
+
+@app.post("/scan/refresh")
+def scan_refresh(req: RefreshRequest):
+    """Force-rebuild today's snapshot for a given universe.
+
+    Runs the full live scan (min_rs=0, all setups, top_n=500) and saves
+    to disk. Subsequent GET /scan?cached=true calls will be instant.
+    Useful to call right after market close via cron or manual trigger.
+    """
+    from scanner.engine import scan as run_scan
+    universe = req.universe.lower().strip()
+    if universe in ("watchlist", "all"):
+        raise HTTPException(400, "Snapshots are not supported for 'watchlist' or 'all' universes.")
+    try:
+        results = run_scan(universe=universe, min_rs=0.0, top_n=500)
+        rows = [_setup_to_dict(r) for r in results]
+        p = save_snapshot(universe, rows)
+        return {"universe": universe, "results": len(rows), "path": str(p.name)}
+    except Exception as e:
+        logger.exception("Snapshot refresh error for %s", universe)
+        raise HTTPException(500, str(e))
 
 
 @app.get("/watchlist")

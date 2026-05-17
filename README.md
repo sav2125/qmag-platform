@@ -40,6 +40,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% ·
 - **Weekly direction badge** — W ▲ / W — / W ▼ pill under the Grade; weekly bars resampled from the existing daily fetch (no extra API calls), using SMA30 = exact Weinstein 30-week MA
 - **Quality score** — Grade uses `confidence x stop_factor x rr_factor`; tight stops + good R:R rank higher than sloppy setups
 - **State legend** — Hover tooltips on every badge; footer legend below the table
+- **Snapshot cache** — `GET /scan?cached=true` serves results from today's pre-built snapshot (instant). Snapshots are built by the daily digest (`--all-snapshots`) or manually via `POST /scan/refresh`. Old snapshots auto-cleaned after 7 days. Not available for `watchlist` or `all_us` universes
 
 ### Data
 - **Primary source:** [Alpaca Markets](https://alpaca.markets) free paper trading API — works on cloud hosts (200 req/min)
@@ -250,7 +251,8 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check + current date |
-| `GET` | `/scan` | Run scanner, returns setup list |
+| `GET` | `/scan` | Run scanner, returns setup list. Add `?cached=true` for instant snapshot-based results |
+| `POST` | `/scan/refresh` | Force-rebuild today's snapshot for a given universe (`{"universe": "sp500"}`) |
 | `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 6 setups, RSI/MACD/ADX, checklist, warnings, score breakdown, multi-timeframe alignment |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
 | `GET` | `/watchlist` | Get saved watchlist symbols |

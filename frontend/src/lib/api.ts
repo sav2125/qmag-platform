@@ -40,6 +40,7 @@ export interface ScanParams {
   above_ema21?: boolean;
   above_ema50?: boolean;
   max_base_bars?: number;
+  cached?: boolean;  // serve from today's snapshot (instant); ignored for watchlist/all
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -64,6 +65,7 @@ export const api = {
     if (p.above_ema21) q.set("above_ema21", "true");
     if (p.above_ema50) q.set("above_ema50", "true");
     if (p.max_base_bars != null) q.set("max_base_bars", String(p.max_base_bars));
+    if (p.cached) q.set("cached", "true");
     return req<Setup[]>(`/scan?${q}`);
   },
 
@@ -89,6 +91,13 @@ export const api = {
 
   analyze: (symbol: string) =>
     req<SymbolAnalysis>(`/analyze/${encodeURIComponent(symbol.toUpperCase())}`),
+
+  refreshSnapshot: (universe: string) =>
+    req<{ universe: string; results: number; path: string }>("/scan/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ universe }),
+    }),
 };
 
 // ── Analyze types ─────────────────────────────────────────────────────────────
