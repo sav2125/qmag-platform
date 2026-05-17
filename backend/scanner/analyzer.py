@@ -8,6 +8,8 @@ Produces every signal the qmag-platform knows about for one stock:
   - Signal checklist (9 items)
   - Early warnings (bull exhaustion, overextension, volume dry-up, momentum fading)
   - Score breakdown (what is helping/hurting composite)
+  - Multi-timeframe alignment (daily / weekly / monthly) — resampled from daily bars,
+    no extra API calls required
 """
 from __future__ import annotations
 
@@ -255,6 +257,132 @@ def _warnings(df: pd.DataFrame, exhaustion_str: str | None, penalty: float) -> l
     return w
 
 
+# ── Multi-timeframe resampling ────────────────────────────────────────────────
+
+def _resample_weekly(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLCV to weekly bars (week-end). No extra API call needed."""
+    return (
+        df.resample("W")
+        .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+        .dropna()
+    )
+
+
+def _resample_monthly(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLCV to monthly bars. No extra API call needed."""
+    try:
+        rule = "ME"  # pandas ≥ 2.2
+        return (
+            df.resample(rule)
+            .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+            .dropna()
+        )
+    except Exception:
+        rule = "M"
+        return (
+            df.resample(rule)
+            .agg({"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"})
+            .dropna()
+        )
+
+
+def _tf_signals(df: pd.DataFrame, label: str) -> dict:
+    """Compute key trend signals for a single timeframe.
+
+    Key MA conventions:
+      Daily   → SMA 150  (≈ 30-week proxy on daily bars)
+      Weekly  → SMA 30   (exact Weinstein 30-week MA)
+      Monthly → SMA 12   (12-month trend MA)
+    """
+    if len(df) < 14:
+        return {"label": label, "bars": len(df), "direction": "neutral", "insufficient": True}
+
+    close = df["close"]
+    curr  = float(close.iloc[-1])
+
+    # RSI
+    rsi_s   = _rsi(close, 14)
+    rsi_val = float(rsi_s.iloc[-1]) if not pd.isna(rsi_s.iloc[-1]) else 50.0
+
+    # MACD histogram
+    _, _, hist_s  = _macd(close)
+    macd_hist_val = float(hist_s.iloc[-1]) if not pd.isna(hist_s.iloc[-1]) else 0.0
+
+    # Short/long EMAs — span sizes scaled to timeframe bar density
+    fast_span, slow_span = (10, 21) if label != "Daily" else (21, 50)
+    ema_f = float(close.ewm(span=fast_span, adjust=False).mean().iloc[-1])
+    ema_s = float(close.ewm(span=slow_span, adjust=False).mean().iloc[-1])
+
+    # Key MA (stage proxy)
+    ma_periods = {"Daily": 150, "Weekly": 30, "Monthly": 12}
+    ma_p     = ma_periods.get(label, 30)
+    key_ma_val: float | None = None
+    stage    = 0
+    ma_label = f"SMA{ma_p}"
+
+    if len(close) >= ma_p:
+        key_ma_s  = close.rolling(ma_p).mean()
+        key_ma_val = float(key_ma_s.iloc[-1])
+        lookback  = min(5, len(key_ma_s) - 1)
+        prev_ma   = float(key_ma_s.iloc[-lookback - 1])
+        slope_pct = (key_ma_val - prev_ma) / prev_ma * 100 if prev_ma > 0 else 0.0
+        above     = curr > key_ma_val
+        if   slope_pct >  0.3 and above:  stage = 2
+        elif slope_pct < -0.3 and not above: stage = 4
+        elif above:                         stage = 3
+        else:                               stage = 1
+
+    # Bullish signal count (0–5): RSI > 50, MACD +, price > fast EMA, fast > slow EMA, Stage 2
+    bull_count = sum([
+        rsi_val > 50,
+        macd_hist_val > 0,
+        curr > ema_f,
+        ema_f > ema_s,
+        stage == 2,
+    ])
+    direction = "bullish" if bull_count >= 4 else "bearish" if bull_count <= 1 else "neutral"
+
+    return {
+        "label":            label,
+        "bars":             len(df),
+        "direction":        direction,
+        "stage":            stage,
+        "rsi":              round(rsi_val, 1),
+        "macd":             "bullish" if macd_hist_val > 0 else "bearish",
+        "ema_fast":         round(ema_f, 2),
+        "ema_slow":         round(ema_s, 2),
+        "price_vs_ema_pct": round((curr - ema_f) / ema_f * 100, 1) if ema_f > 0 else 0.0,
+        "key_ma":           round(key_ma_val, 2) if key_ma_val is not None else None,
+        "key_ma_label":     ma_label,
+    }
+
+
+def _mtf_alignment(daily: dict, weekly: dict, monthly: dict) -> dict:
+    """Summarise multi-timeframe alignment.
+
+    Score: +1 per bullish TF, -1 per bearish TF → range [-3, +3].
+    Full alignment (±3) = highest conviction.
+    """
+    dirs  = [d.get("direction", "neutral") for d in (daily, weekly, monthly)]
+    bull  = dirs.count("bullish")
+    bear  = dirs.count("bearish")
+
+    if   bull == 3: alignment, score, label = "full_bull",   3, "All 3 timeframes bullish — maximum conviction"
+    elif bull == 2: alignment, score, label = "mostly_bull", 2, "2 of 3 timeframes bullish — good alignment"
+    elif bear == 3: alignment, score, label = "full_bear",  -3, "All 3 timeframes bearish — avoid longs"
+    elif bear == 2: alignment, score, label = "mostly_bear",-2, "2 of 3 bearish — high risk for longs"
+    else:           alignment, score, label = "mixed",       0, "Mixed signals across timeframes — wait for clarity"
+
+    return {
+        "alignment": alignment,
+        "score":     score,
+        "label":     label,
+        "daily":     daily,
+        "weekly":    weekly,
+        "monthly":   monthly,
+    }
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str, Any] | None:
@@ -264,7 +392,7 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     direct JSON serialisation and rendering on the /analyze page.
     Returns None if data cannot be fetched or is too short.
     """
-    df = fetch_ohlcv(symbol, period_days=730)
+    df = fetch_ohlcv(symbol, period_days=730)   # ~2 years daily OHLCV
     if df is None or len(df) < 60:
         return None
 
@@ -365,6 +493,14 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     else:
         direction = "neutral"
 
+    # ── Multi-timeframe alignment ─────────────────────────────────────────────
+    df_weekly  = _resample_weekly(df)
+    df_monthly = _resample_monthly(df)
+    daily_tf   = _tf_signals(df,         "Daily")
+    weekly_tf  = _tf_signals(df_weekly,  "Weekly")
+    monthly_tf = _tf_signals(df_monthly, "Monthly")
+    mtf        = _mtf_alignment(daily_tf, weekly_tf, monthly_tf)
+
     # ── Score breakdown ───────────────────────────────────────────────────────
     stg_pts_val = {2: 10.0, 1: 4.0, 3: 2.0, 4: 0.0}.get(stage, 5.0)
     ad_pts_val  = round(max(-5.0, min(5.0, ad * 0.5)), 1)
@@ -424,7 +560,9 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "best_setup":    _sd(best) if best else None,
         "active_setups": [_sd(s) for s in active_setups],
         # Derived
-        "checklist":       checklist_items,
-        "warnings":        warning_items,
-        "score_breakdown": score_breakdown,
+        "checklist":          checklist_items,
+        "warnings":           warning_items,
+        "score_breakdown":    score_breakdown,
+        # Multi-timeframe alignment
+        "timeframe_alignment": mtf,
     }

@@ -139,6 +139,32 @@ export interface ScoreBreakdown {
   total:   number;
 }
 
+// ── Multi-timeframe types ──────────────────────────────────────────────────────
+
+export interface TimeframeSignal {
+  label:            "Daily" | "Weekly" | "Monthly";
+  bars:             number;
+  direction:        "bullish" | "neutral" | "bearish";
+  stage:            number;           // 0 = insufficient data
+  rsi:              number;
+  macd:             "bullish" | "bearish";
+  ema_fast:         number;
+  ema_slow:         number;
+  price_vs_ema_pct: number;
+  key_ma:           number | null;    // SMA150 / SMA30 / SMA12
+  key_ma_label:     string;           // "SMA150" | "SMA30" | "SMA12"
+  insufficient?:    true;
+}
+
+export interface MTFAlignment {
+  alignment: "full_bull" | "mostly_bull" | "mixed" | "mostly_bear" | "full_bear";
+  score:     number;    // -3 … +3
+  label:     string;
+  daily:     TimeframeSignal;
+  weekly:    TimeframeSignal;
+  monthly:   TimeframeSignal;
+}
+
 export interface SymbolAnalysis {
   symbol:         string;
   price:          number;
@@ -169,7 +195,8 @@ export interface SymbolAnalysis {
   best_setup:    ActiveSetup | null;
   active_setups: ActiveSetup[];
 
-  checklist:       ChecklistItem[];
-  warnings:        Warning[];
-  score_breakdown: ScoreBreakdown;
+  checklist:          ChecklistItem[];
+  warnings:           Warning[];
+  score_breakdown:    ScoreBreakdown;
+  timeframe_alignment: MTFAlignment;
 }

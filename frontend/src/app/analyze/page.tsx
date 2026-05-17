@@ -2,7 +2,7 @@
 
 import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { api, type SymbolAnalysis, type ActiveSetup, type ChecklistItem, type Warning } from "@/lib/api";
+import { api, type SymbolAnalysis, type ActiveSetup, type ChecklistItem, type Warning, type TimeframeSignal } from "@/lib/api";
 import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
 
 // ── Small reusable UI pieces ──────────────────────────────────────────────────
@@ -177,6 +177,78 @@ function RSIBar({ rsi }: { rsi: number }) {
       <span className={`text-sm font-mono font-semibold w-10 text-right ${rsi > 70 ? "text-red-600" : rsi >= 40 ? "text-green-600" : "text-blue-500"}`}>
         {rsi.toFixed(0)}
       </span>
+    </div>
+  );
+}
+
+// ── Timeframe card ────────────────────────────────────────────────────────────
+
+const TF_DIR_CFG = {
+  bullish: { dot: "bg-green-500",  label: "Bullish",  text: "text-green-700" },
+  neutral: { dot: "bg-amber-400",  label: "Neutral",  text: "text-amber-700" },
+  bearish: { dot: "bg-red-500",    label: "Bearish",  text: "text-red-600"   },
+};
+
+const STAGE_LBL: Record<number, string> = {
+  1: "S1 Basing", 2: "S2 Advancing", 3: "S3 Topping", 4: "S4 Declining",
+};
+
+function TFCard({ tf }: { tf: TimeframeSignal }) {
+  if (tf.insufficient) {
+    return (
+      <div className="flex-1 bg-gray-50 rounded-xl border border-gray-200 p-4 text-center text-xs text-gray-400">
+        <div className="font-semibold text-gray-500 mb-1">{tf.label}</div>
+        Not enough bars ({tf.bars})
+      </div>
+    );
+  }
+
+  const dir = TF_DIR_CFG[tf.direction] ?? TF_DIR_CFG.neutral;
+  const stageColor = { 2: "text-green-700 bg-green-50", 4: "text-red-700 bg-red-50", 1: "text-blue-700 bg-blue-50", 3: "text-amber-700 bg-amber-50" }[tf.stage] ?? "text-gray-600 bg-gray-50";
+
+  return (
+    <div className="flex-1 bg-gray-50 rounded-xl border border-gray-200 p-4 min-w-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">{tf.label}</span>
+        <span className="text-[10px] text-gray-400">{tf.bars} bars</span>
+      </div>
+
+      {/* Direction */}
+      <div className={`flex items-center gap-1.5 mb-3 ${dir.text}`}>
+        <span className={`inline-block w-2 h-2 rounded-full ${dir.dot}`} />
+        <span className="font-semibold text-sm">{dir.label}</span>
+      </div>
+
+      {/* Stage */}
+      <div className={`text-[10px] font-medium px-2 py-0.5 rounded inline-block mb-3 ${stageColor}`}>
+        {tf.stage ? STAGE_LBL[tf.stage] ?? `Stage ${tf.stage}` : "Stage unknown"}
+      </div>
+
+      {/* Indicators grid */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+        <div>
+          <span className="text-gray-400">RSI</span>
+          <span className={`ml-1.5 font-mono font-semibold ${tf.rsi > 70 ? "text-red-600" : tf.rsi >= 50 ? "text-green-600" : "text-gray-600"}`}>
+            {tf.rsi.toFixed(0)}
+          </span>
+        </div>
+        <div>
+          <span className="text-gray-400">MACD</span>
+          <span className={`ml-1.5 font-semibold ${tf.macd === "bullish" ? "text-green-600" : "text-red-500"}`}>
+            {tf.macd === "bullish" ? "▲" : "▼"}
+          </span>
+        </div>
+        <div className="col-span-2">
+          <span className="text-gray-400">{tf.key_ma_label}</span>
+          <span className="ml-1.5 font-mono">{tf.key_ma !== null ? `$${tf.key_ma.toFixed(2)}` : "—"}</span>
+          {tf.key_ma !== null && (
+            <span className={`ml-1 text-[10px] font-semibold ${tf.price_vs_ema_pct >= 0 ? "text-green-600" : "text-red-500"}`}>
+              ({tf.price_vs_ema_pct >= 0 ? "+" : ""}{tf.price_vs_ema_pct.toFixed(1)}% vs EMA)
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -410,7 +482,44 @@ function AnalyzeInner() {
             </Card>
           </div>
 
-          {/* ── Row 3: Active setups ── */}
+          {/* ── Row 3: Timeframe Alignment ── */}
+          <Card title="Timeframe Alignment">
+            {/* Overall label + score */}
+            {(() => {
+              const mtf = data.timeframe_alignment;
+              const alignCfg: Record<string, { bar: string; text: string; dot: string }> = {
+                full_bull:   { bar: "bg-green-100 border-green-300 text-green-800",   text: "text-green-700",  dot: "bg-green-500"  },
+                mostly_bull: { bar: "bg-emerald-50 border-emerald-300 text-emerald-800", text: "text-emerald-600", dot: "bg-emerald-400" },
+                mixed:       { bar: "bg-amber-50 border-amber-300 text-amber-800",    text: "text-amber-700",  dot: "bg-amber-400"  },
+                mostly_bear: { bar: "bg-orange-50 border-orange-300 text-orange-800", text: "text-orange-600", dot: "bg-orange-500"  },
+                full_bear:   { bar: "bg-red-50 border-red-300 text-red-800",          text: "text-red-600",    dot: "bg-red-500"    },
+              };
+              const cfg = alignCfg[mtf.alignment] ?? alignCfg.mixed;
+              const scoreEmoji = mtf.score >= 2 ? "🟢" : mtf.score <= -2 ? "🔴" : "🟡";
+
+              return (
+                <>
+                  <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium mb-4 ${cfg.bar}`}>
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${cfg.dot} shrink-0`} />
+                    <span>{scoreEmoji} {mtf.label}</span>
+                    <span className="ml-auto text-[11px] opacity-70 font-mono">score {mtf.score > 0 ? "+" : ""}{mtf.score} / 3</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <TFCard tf={mtf.daily} />
+                    <TFCard tf={mtf.weekly} />
+                    <TFCard tf={mtf.monthly} />
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+                    <strong>How:</strong> Daily uses EMA21/50 + SMA150. Weekly resamples daily bars → exact Weinstein 30-week SMA.
+                    Monthly resamples to monthly bars → 12-month SMA. Direction per TF: bullish = 4+/5 signals; bearish = 1−/5.
+                    No extra API calls — all derived from the same 2-year daily OHLCV fetch.
+                  </p>
+                </>
+              );
+            })()}
+          </Card>
+
+          {/* ── Row 4: Active setups ── */}
           <Card title={`Active Setups (${data.active_setups.length} firing)`}>
             {data.active_setups.length === 0 ? (
               <p className="text-sm text-gray-400">No setups currently detected for {data.symbol}. The stock may not meet any pattern criteria right now.</p>
@@ -430,7 +539,7 @@ function AnalyzeInner() {
             )}
           </Card>
 
-          {/* ── Row 4: Checklist + Warnings ── */}
+          {/* ── Row 5: Checklist + Warnings ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
             <Card title="Signal Checklist">
@@ -478,7 +587,7 @@ function AnalyzeInner() {
             </div>
           </div>
 
-          {/* ── Key stats row ── */}
+          {/* ── Row 6: Key stats ── */}
           <Card title="Key Metrics">
             <div className="flex flex-wrap gap-3">
               <StatPill label="RSI" value={data.rsi.toFixed(0)}
