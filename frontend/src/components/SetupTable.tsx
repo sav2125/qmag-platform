@@ -64,10 +64,14 @@ function ActionHint({ state, entry, price }: { state: string; entry: number; pri
   if (state === "active") {
     return <span className="text-blue-700 font-semibold text-xs">📌 Enter near mkt</span>;
   }
-  // base — show how far to entry
+  // base — price is at or above entry: treat as "at the trigger"
+  if (pctToEntry <= 0.5) {
+    return <span className="text-orange-600 font-semibold text-xs">⚡ At entry — watch vol</span>;
+  }
+  // base — show how far price still needs to travel to reach entry
   return (
     <span className="text-yellow-700 text-xs">
-      🔔 Alert {pctToEntry > 0 ? `+${pctToEntry.toFixed(1)}%` : `${pctToEntry.toFixed(1)}%`} away
+      🔔 Alert at ${entry.toFixed(2)} (+{pctToEntry.toFixed(1)}%)
     </span>
   );
 }
