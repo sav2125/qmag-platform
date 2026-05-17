@@ -51,6 +51,7 @@ const TOC = [
   { id: "adnet",        label: "Signal: A/D Net" },
   { id: "overext",      label: "Signal: Overextension Penalty" },
   { id: "rs",           label: "Signal: Relative Strength" },
+  { id: "adx",          label: "Signal: ADX (Trend Strength)" },
   { id: "rvol",         label: "Signal: Relative Volume" },
   { id: "ics",          label: "Signal: ICS (Institutional Composite)" },
   { id: "exhaustion",   label: "Signal: Bull Exhaustion Warning" },
@@ -525,6 +526,74 @@ rs_score = mapped 0–100 across the scanned universe`}
           least matching the market. For high-quality scans, raise it to 70–75 to see only clear leaders.
           Qullamaggie typically trades RS ≥ 70 stocks exclusively.
         </Note>
+      </Section>
+
+      {/* ADX */}
+      <Section id="adx" title="Signal: ADX — Average Directional Index">
+        <p>
+          ADX (J. Welles Wilder, 1978) measures <strong>trend strength</strong>, not direction.
+          A reading of 40 on a falling stock means the decline is <em>strong</em>.
+          It answers the question: <em>is this stock trending cleanly, or chopping around?</em>
+          Qullamaggie wants momentum stocks in powerful trends, not range-bound noise.
+        </p>
+
+        <CodeBlock>{`# Step 1 — True Range (captures gap-open volatility)
+tr   = max(high - low,  |high - prev_close|,  |low - prev_close|)
+
+# Step 2 — Directional Movement (+DM and -DM)
++DM  = max(high - prev_high, 0)  if  high - prev_high  >  prev_low - low  else 0
+-DM  = max(prev_low - low,  0)   if  prev_low - low    >  high - prev_high else 0
+
+# Step 3 — Wilder's EWM smoothing (period = 14)
+ATR14  = ewm(tr,   span=14)
++DI14  = 100 × ewm(+DM, span=14) / ATR14
+-DI14  = 100 × ewm(-DM, span=14) / ATR14
+
+# Step 4 — Directional Index → ADX (second smoothing pass)
+DX   = 100 × |+DI14 - -DI14| / (+DI14 + -DI14)
+ADX  = ewm(DX, span=14)       # range 0–100, direction-agnostic`}
+        </CodeBlock>
+
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">ADX value</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Checklist</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Interpretation</th>
+                <th className="text-left py-2 px-3 border border-gray-200">What it means for your trade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["≥ 30", "✅ Trending",   "Strong, established trend",  "Momentum stocks love this zone — breakouts extend, pullbacks are buyable"],
+                ["20–29", "⚠️ Developing", "Trend building, not mature", "Could be early in a move or consolidating — confirm with RS and stage"],
+                ["< 20",  "❌ Weak",       "Range-bound / choppy",        "Avoid new longs — setups fail more often without trend momentum"],
+              ].map(([v, c, i, m]) => (
+                <tr key={v} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-mono font-semibold">{v}</td>
+                  <td className="py-2 px-3 border border-gray-200">{c}</td>
+                  <td className="py-2 px-3 border border-gray-200">{i}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600">{m}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <Note>
+          <strong>ADX is checklist-only — it does not feed the composite score.</strong>{" "}
+          A strong EP setup can fire on a low-ADX day (the catalyst itself creates the momentum).
+          Adding ADX to the composite would unfairly penalise early breakouts before trend strength
+          has had time to register. Use it as confirmation: high ADX (30+) makes existing setups
+          more reliable, but a low ADX alone is not a reason to skip an otherwise excellent setup.
+        </Note>
+
+        <Warn>
+          <strong>ADX does not tell you the direction</strong> — only that a trend exists.
+          A stock with ADX = 60 and +DI below -DI is in a strong <em>downtrend</em>.
+          Always read ADX alongside the MA stack and Weinstein stage (Stage 2 = advancing, the only tradeable stage).
+        </Warn>
       </Section>
 
       {/* Relative Volume */}

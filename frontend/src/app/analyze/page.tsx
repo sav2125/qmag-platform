@@ -368,16 +368,17 @@ function AnalyzeInner() {
               </div>
             </Card>
 
-            {/* Grade + RS + Stage card */}
+            {/* Grade + Composite Score card */}
             <Card className="md:col-span-1">
-              <div className="flex flex-wrap gap-3 items-center">
+              {/* Top row: Grade, composite total, RS, Stage */}
+              <div className="flex flex-wrap gap-3 items-center mb-3">
                 <div className="text-center">
                   <div className="text-4xl font-bold"><GradeBadge grade={data.grade} /></div>
                   <div className="text-[10px] text-gray-400 mt-0.5">Grade</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold font-mono text-indigo-600">{data.composite_score.toFixed(0)}</div>
-                  <div className="text-[10px] text-gray-400">Score</div>
+                  <div className="text-[10px] text-gray-400">Composite / 100</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-mono font-semibold text-gray-700">{data.rs_score.toFixed(0)}</div>
@@ -387,6 +388,47 @@ function AnalyzeInner() {
                   <StageBadge stage={data.weinstein_stage} />
                   <div className="text-[10px] text-gray-400 mt-0.5">{stageLabel[data.weinstein_stage] ?? "Unknown"}</div>
                 </div>
+              </div>
+
+              {/* Mini score breakdown — shows exactly where the number comes from */}
+              <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
+                <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  Score breakdown
+                </div>
+                {(["pattern", "rs", "stage", "ad"] as const).map((k) => {
+                  const c = data.score_breakdown[k];
+                  const pct  = Math.max(0, Math.min(100, Math.abs(c.pts) / c.max * 100));
+                  const neg  = c.pts < 0;
+                  const fill = neg
+                    ? "bg-red-300"
+                    : pct >= 80 ? "bg-green-500"
+                    : pct >= 50 ? "bg-indigo-400"
+                    : "bg-gray-300";
+                  const shortLabel = { pattern: "Pattern", rs: "RS", stage: "Stage", ad: "A/D" }[k];
+                  return (
+                    <div key={k} className="flex items-center gap-2 group relative cursor-help">
+                      <div className="w-12 text-[10px] text-gray-500 shrink-0">{shortLabel}</div>
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${fill}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className={`text-[10px] font-mono w-10 text-right shrink-0 ${neg ? "text-red-500" : "text-gray-600"}`}>
+                        {neg ? "" : "+"}{c.pts.toFixed(0)}/{c.max}
+                      </div>
+                      {/* Tooltip showing full label on hover */}
+                      <span className="pointer-events-none absolute left-0 bottom-full mb-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-[10px] p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
+                        {c.label}
+                      </span>
+                    </div>
+                  );
+                })}
+                {/* Pattern quality footnote */}
+                <p className="text-[9px] text-gray-400 pt-0.5 leading-relaxed">
+                  Pattern quality:{" "}
+                  <span className="font-mono font-semibold text-gray-500">
+                    {(data.score_breakdown.pattern.pts / 60 * 100).toFixed(0)}%
+                  </span>
+                  {" "}= confidence × stop tightness × R:R
+                </p>
               </div>
             </Card>
 
