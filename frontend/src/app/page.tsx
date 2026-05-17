@@ -21,14 +21,16 @@ const SETUPS = [
   { value: "pp", label: "PP — Pocket Pivot" },
   { value: "pull", label: "PULL — EMA Pullback" },
   { value: "fbd", label: "FBD — Failed Breakdown" },
+  { value: "wys", label: "WYS — Wyckoff Spring" },
 ];
 
 const LEGEND = [
-  { type: "EP", color: "bg-purple-600", desc: "Catalyst surge ≥5% on ≥2× volume, tight base" },
-  { type: "TB", color: "bg-green-600", desc: "Flat base ≤8% range, resistance tested ≥2×" },
-  { type: "PP", color: "bg-cyan-600", desc: "Up-day volume > 10-day down-day high" },
-  { type: "PULL", color: "bg-amber-500", desc: "Pullback to rising EMA21 in uptrend" },
-  { type: "FBD", color: "bg-rose-600", desc: "Bear trap: breaks support then snaps back (shorts trapped)" },
+  { type: "EP",   color: "bg-purple-600", desc: "Catalyst surge ≥5% on ≥2× volume, tight base" },
+  { type: "TB",   color: "bg-green-600",  desc: "Flat base ≤8% range, resistance tested ≥2×" },
+  { type: "PP",   color: "bg-cyan-600",   desc: "Up-day volume > 10-day down-day high" },
+  { type: "PULL", color: "bg-amber-500",  desc: "Pullback to rising EMA21 in uptrend" },
+  { type: "FBD",  color: "bg-rose-600",   desc: "Bear trap: breaks support then snaps back (shorts trapped)" },
+  { type: "WYS",  color: "bg-violet-700", desc: "Wyckoff Spring: shakeout below tight accumulation range, snap-back" },
 ];
 
 export default function Dashboard() {

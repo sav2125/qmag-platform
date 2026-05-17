@@ -1,7 +1,7 @@
 "use client";
 
 import type { Setup } from "@/lib/api";
-import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge } from "./SetupBadge";
+import { SetupBadge, GradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "./SetupBadge";
 
 interface Props {
   setups: Setup[];
@@ -132,8 +132,9 @@ export function SetupTable({ setups, loading }: Props) {
             <th className="text-center py-3 px-3">
               <span className="group relative cursor-help">
                 A/D
-                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
-                  O&apos;Neill A/D day net (last 25 bars). Positive = institutions accumulating. Negative = distributing.
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-64 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
+                  <strong>A/D Net</strong> — O&apos;Neill accumulation/distribution day count (last 25 bars). Positive = institutions buying.<br />
+                  <strong>ICS</strong> — Institutional Composite Score (OBV + CMF + A/D line + MFI, 0–100). ≥75 = strong accumulation.
                 </span>
               </span>
             </th>
@@ -169,11 +170,14 @@ export function SetupTable({ setups, loading }: Props) {
                   <ActionHint state={s.state} entry={s.entry} price={s.price} />
                 </td>
 
-                {/* Price + daily change */}
+                {/* Price + daily change + RVOL */}
                 <td className="py-3 px-3 text-right font-mono text-gray-700">
                   ${s.price.toFixed(2)}
                   <span className={`block text-[11px] ${s.pct_change >= 0 ? "text-green-600" : "text-red-500"}`}>
                     {s.pct_change >= 0 ? "+" : ""}{s.pct_change.toFixed(1)}%
+                  </span>
+                  <span className="block mt-0.5">
+                    <RVOLLabel rvol={s.rvol ?? 1} />
                   </span>
                 </td>
 
@@ -225,9 +229,14 @@ export function SetupTable({ setups, loading }: Props) {
                   <StageBadge stage={s.weinstein_stage} />
                 </td>
 
-                {/* A/D net days */}
+                {/* A/D net days + ICS */}
                 <td className="py-3 px-3 text-center">
                   <ADNetBadge net={s.ad_net} />
+                  {s.isc_score != null && (
+                    <span className="block mt-0.5">
+                      <ICSBadge score={s.isc_score} />
+                    </span>
+                  )}
                 </td>
 
                 {/* Notes — full text, wraps */}

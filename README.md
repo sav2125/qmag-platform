@@ -16,6 +16,7 @@ A full-stack trading scanner that identifies Kristjan Qullamaggie's trading setu
 | **PP** | Pocket Pivot | Up-day volume exceeds the highest down-day volume in the prior 10 days, above 10-day MA, EMA21 > EMA50 |
 | **PULL** | EMA Pullback | Stage 2 uptrend (EMA21 > EMA50, rising), price touched EMA21 in last 1–5 bars, RSI 38–68 |
 | **FBD** | Failed Breakdown | Price breaks below support 0.4–6%, snaps back above within 1–3 bars; trapped shorts fuel the reversal |
+| **WYS** | Wyckoff Spring | Shakeout ≤3% below a tight accumulation range (15% range, 40 bars), snap-back within 3 bars; highest-conviction bear trap |
 
 Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% · Weinstein Stage · A/D Net**
 
@@ -25,7 +26,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% ·
 
 ### Scanner
 - **8 stock universes** — Full S&P 500 (503 stocks, live), Nasdaq 100, Large Cap (S&P 500 + Nasdaq), Mid Cap (S&P 400, 369 stocks), Small Cap (Alpaca universe minus large/mid), All US Equities (~7,000), Tech Leaders (30), My Watchlist
-- **5 setup types** — EP, TB, PP, PULL, and FBD (Failed Breakdown / bear trap)
+- **6 setup types** — EP, TB, PP, PULL, FBD (Failed Breakdown / bear trap), WYS (Wyckoff Spring)
 - **Advanced filters** — Min RS, Min ADR%, Min daily % change, Above EMA21/50, Max Base Length (TB only, up to 5 years), Top N results
 - **State classification** — Breakout (enter now), In Base (set alert), Active (enter near market)
 - **Action hints** — Context-aware "Enter now / Enter near mkt / Alert at $X.XX (+X%)" per state
@@ -33,6 +34,9 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% ·
 - **Weinstein Stage** — S1/S2/S3/S4 badge per result using the 30-week (150-bar) MA; only Stage 2 is tradeable
 - **A/D Net** — O'Neill accumulation/distribution day count over the last 25 bars; positive = institutional buying
 - **Overextension penalty** — RSI > 80 or price > 8% above EMA21 docks the confidence score; shown in notes column
+- **Bull exhaustion warning** — RSI > 70 + volume fading + price > 3% above EMA21 → "Bull exhaustion" flag in Notes column
+- **RVOL** — Relative Volume: today's volume vs 20-day avg; shown under Price column (violet when ≥2×)
+- **ICS** — Institutional Composite Score (OBV + CMF + A/D line + MFI → 0–100); shown under A/D column
 - **Quality score** — Grade uses `confidence x stop_factor x rr_factor`; tight stops + good R:R rank higher than sloppy setups
 - **State legend** — Hover tooltips on every badge; footer legend below the table
 
@@ -46,6 +50,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Grade · Risk% ·
 - **Dashboard** — Scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
 - **Setup pages** — Deep-dive educational pages for EP, TB, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page
+- **Scoring page** — Full algorithm reasoning: every formula, every weight, every threshold, and the WHY behind each design decision
 - **Watchlist** — Persistent per-symbol list scanned separately
 - **Email settings** — Test SMTP config and trigger manual digests from the UI
 - **Light mode forced** — Consistent UI regardless of OS dark mode preference
@@ -169,27 +174,31 @@ When RSI > 80 or price is >8% above EMA21, a penalty is applied to the confidenc
 
 ### Quality Score and Grade
 
-Grade is based on a unified composite score that incorporates all signals — not just raw pattern confidence:
+Grade is based on a unified composite score that incorporates all signals — not just raw pattern confidence. Full algorithm reasoning is on the **[/scoring page](https://qmag-platform-1.onrender.com/scoring)** of the live site.
 
 ```
-# Step 1 — quality score (pattern confidence adjusted for stop width and R:R)
-stop_factor   = clip(1 - stop_pct / 0.15, 0.40, 1.00)
-rr_factor     = clip(rr / 2.0, 0.50, 1.20)
-quality_score = confidence x stop_factor x rr_factor      # capped at 1.0
+# Step 1 — quality score (adjusts confidence for stop width and R:R)
+stop_factor   = clip(1 - stop_pct / 0.15, 0.40, 1.00)   # wide stop → lower score
+rr_factor     = clip(rr / 2.0, 0.50, 1.20)               # poor R:R → lower; great R:R → +20% bonus
+quality_score = min(1.0, confidence x stop_factor x rr_factor)
 
 # Step 2 — composite score (0-100)
-base     = quality_score x 60    # pattern quality: up to 60 pts
-rs_pts   = rs_score x 0.25       # relative strength: up to 25 pts
-stg_pts  = {S2:10, S1:4, S3:2, S4:0, unknown:5}
-ad_pts   = clamp(ad_net x 0.5, -5, +5)
+base     = quality_score x 60    # pattern quality:  0-60 pts  (60% weight)
+rs_pts   = rs_score x 0.25       # relative strength: 0-25 pts  (25% weight)
+stg_pts  = {S2:10, S1:4, S3:2, S4:0, unknown:5}   # Weinstein: 0-10 pts (10% weight)
+ad_pts   = clamp(ad_net x 0.5, -5, +5)             # O'Neill A/D: ±5 pts  (5% weight)
 
 composite = base + rs_pts + stg_pts + ad_pts
 
-# Step 3 — grade thresholds (calibrated to real pattern confidence ranges)
+# Step 3 — grade thresholds (calibrated to real detector confidence ranges)
 A: composite >= 72    B: >= 58    C: >= 44    D: < 44
 ```
 
-This means a great pattern with weak RS or Stage 1/3 **cannot** grade A — which is intentional. Qullamaggie only trades Stage 2 leaders.
+**Why these weights?** Pattern quality is the primary signal (60%). RS is the most important market-context filter Qullamaggie uses (25%). Stage 2 is a required condition, not optional (10%). A/D is a tiebreaker only (5%).
+
+**Why these grade thresholds?** Originally A≥80, B≥65, C≥50 — but detector confidence outputs realistically range 0.60–0.90, not 0.90–1.00. A textbook-perfect EP with RS 90 + Stage 2 + accumulation scored 74.9 — which should be an A. Thresholds were recalibrated accordingly.
+
+A great pattern with weak RS or non-Stage-2 **cannot** grade A — intentional. Qullamaggie only trades Stage 2 leaders with strong RS.
 
 ---
 
@@ -252,7 +261,7 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | `universe` | string | `sp500` | sp500, nasdaq100, largecap, midcap, smallcap, all, tech, watchlist |
-| `setup` | string | null | ep, tb, pp, pull, fbd |
+| `setup` | string | null | ep, tb, pp, pull, fbd, wys |
 | `min_rs` | float | 50 | Minimum RS score (0-100) |
 | `min_score` | float | 0 | Minimum confidence score (0-100) |
 | `top` | int | 20 | Max results returned (1-100) |
@@ -292,6 +301,7 @@ qmag-platform/
         │   │   ├── pp/page.tsx   Pocket Pivot deep dive
         │   │   ├── pull/page.tsx EMA Pullback deep dive
         │   │   └── fbd/page.tsx  Failed Breakdown deep dive
+        │   ├── scoring/          Scoring algorithm deep-dive (all formulas + rationale)
         │   ├── watchlist/        Watchlist manager UI
         │   └── settings/         Email test + manual digest trigger
         ├── components/

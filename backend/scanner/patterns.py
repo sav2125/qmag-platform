@@ -11,7 +11,7 @@ import pandas as pd
 @dataclass
 class Setup:
     symbol: str
-    setup_type: str          # "EP" | "TB" | "PP" | "PULL" | "FBD"
+    setup_type: str          # "EP" | "TB" | "PP" | "PULL" | "FBD" | "WYS"
     state: str               # "base" | "breakout" | "active"
     entry: float
     stop: float
@@ -27,6 +27,8 @@ class Setup:
     meta: dict[str, Any] = field(default_factory=dict)
     weinstein_stage: int = 0   # 1-4; 0 = insufficient data
     ad_net: int = 0            # O'Neill A/D net over last 25 bars (+ = accumulation)
+    rvol: float = 1.0          # Relative Volume: today's vol / 20-day avg
+    isc_score: float = 0.0     # Institutional Composite Score: OBV+CMF+A/D line+MFI → 0-100
 
     @property
     def quality_score(self) -> float:
@@ -591,6 +593,7 @@ def detect_fbd(df: pd.DataFrame) -> Setup | None:
         if curr_close <= support:
             continue  # Gave back the recovery
 
+
         bd_vol = float(volume.iloc[bd_idx])
         vol_ratio = bd_vol / avg_vol if avg_vol > 0 and not np.isnan(avg_vol) else 1.0
 
@@ -628,3 +631,231 @@ def detect_fbd(df: pd.DataFrame) -> Setup | None:
         )
 
     return None
+
+
+# ── Wyckoff Spring (WYS) ──────────────────────────────────────────────────────
+
+def detect_wys(df: pd.DataFrame) -> Setup | None:
+    """Wyckoff Spring — shakeout below a tight accumulation range, snap-back above.
+
+    Higher-conviction cousin of FBD: requires a confirmed prior trading range
+    (consolidation), not just any support level. Trapped sellers on the false
+    breakdown fuel the reversal.
+
+    Detection rules:
+    - Accumulation range: price/high/low stays within 15% over 40 bars ending ≥3 bars
+      before the spring candle (avoids contaminating support with the breakdown bar)
+    - Spring: 1 bar closes below range floor by ≤ 3% (tight shakeout = Wyckoff signature)
+    - Recovery: at least one bar within 3 bars of spring closes back above floor
+    - Current close still above floor (spring held — we haven't given it back)
+    """
+    if len(df) < 70:
+        return None
+
+    close  = df["close"]
+    high   = df["high"]
+    low    = df["low"]
+    volume = df["volume"]
+    last   = len(df) - 1
+
+    for spring_idx in range(last - 20, last - 1):
+        if spring_idx < 45:
+            continue
+
+        # Range computed from the 40 bars ending 3 bars before spring (clean window)
+        range_end   = spring_idx - 3
+        range_start = range_end - 40
+        if range_start < 0:
+            continue
+
+        range_high  = float(high.iloc[range_start:range_end].max())
+        range_floor = float(close.iloc[range_start:range_end].min())
+        range_mean  = float(close.iloc[range_start:range_end].mean())
+        if range_mean <= 0:
+            continue
+
+        range_pct = (range_high - range_floor) / range_mean
+        if range_pct > 0.15:          # Must be a genuinely tight range
+            continue
+
+        # Spring candle: closes below floor by ≤ 3%
+        spring_close = float(close.iloc[spring_idx])
+        if spring_close >= range_floor:
+            continue
+        penetration = (range_floor - spring_close) / range_floor
+        if not (0 < penetration <= 0.03):
+            continue
+
+        # Recovery within 3 bars
+        recovered    = False
+        recovery_idx = -1
+        for ri in range(spring_idx + 1, min(spring_idx + 4, last + 1)):
+            if float(close.iloc[ri]) > range_floor:
+                recovered    = True
+                recovery_idx = ri
+                break
+        if not recovered:
+            continue
+
+        # Current price still above floor
+        curr_close = float(close.iloc[last])
+        if curr_close <= range_floor:
+            continue
+
+        avg_vol = _avg_vol(volume, spring_idx, 50)
+        spring_vol_val = float(volume.iloc[spring_idx])
+        vol_ratio = spring_vol_val / avg_vol if avg_vol > 0 and not np.isnan(avg_vol) else 1.0
+
+        # Confidence
+        conf = 0.60
+        if penetration < 0.01:   conf += 0.10   # Ultra-shallow spring = textbook Wyckoff
+        elif penetration < 0.02: conf += 0.06
+        if (recovery_idx - spring_idx) == 1:
+            conf += 0.07   # Immediate snap-back = very strong rejection
+        if vol_ratio > 1.5:
+            conf += 0.05   # High vol on spring = sellers trapped
+        if range_pct < 0.08:
+            conf += 0.05   # Tighter range = stronger accumulation phase
+
+        bars_since  = last - spring_idx
+        spring_low  = float(low.iloc[spring_idx])
+        stop        = round(spring_low * 0.99, 2)
+        entry       = round(curr_close, 2)
+        t1          = round(range_high, 2)
+        t2          = round(range_high + (range_high - range_floor), 2)
+
+        return Setup(
+            symbol="", setup_type="WYS", state="active",
+            entry=entry, stop=stop,
+            t1=t1, t2=t2, rr=_rr(entry, stop, t2),
+            confidence=round(min(0.87, conf), 2), rs_score=0, rs_label="",
+            price=round(curr_close, 2),
+            pct_change=round((curr_close / float(close.iloc[-2]) - 1) * 100, 2) if len(df) > 1 else 0,
+            notes=(
+                f"Wyckoff Spring -{round(penetration*100,1)}% · "
+                f"{bars_since}d ago · {round(range_pct*100,1)}% range"
+            ),
+            meta={
+                "penetration_pct": round(penetration * 100, 2),
+                "bars_since": bars_since,
+                "range_pct": round(range_pct * 100, 2),
+                "spring_vol_ratio": round(vol_ratio, 2),
+                "range_support": round(range_floor, 2),
+            },
+        )
+
+    return None
+
+
+# ── Relative Volume ───────────────────────────────────────────────────────────
+
+def relative_volume(df: pd.DataFrame, period: int = 20) -> float:
+    """Today's volume as a multiple of the 20-day average.
+
+    Used as a quick liquidity / conviction signal across all setup types.
+    Returns 1.0 when insufficient data.
+    """
+    if len(df) < period + 2:
+        return 1.0
+    avg  = float(df["volume"].iloc[-(period + 1):-1].mean())
+    curr = float(df["volume"].iloc[-1])
+    return round(curr / avg, 2) if avg > 0 else 1.0
+
+
+# ── Institutional Composite Score (ICS) ──────────────────────────────────────
+
+def institutional_composite_score(df: pd.DataFrame, period: int = 20) -> float:
+    """ICS (0–100) — four volume-flow indicators combined into one institutional signal.
+
+    Adapted from O'Neil / Chaikin methodology used in technical-analysis repo.
+
+    Components (25 pts each):
+    - OBV trend   : On-Balance Volume rising over `period` bars → 25 pts
+    - CMF         : Chaikin Money Flow > 0; proportional 0–25 pts
+    - A/D line    : Chaikin A/D accumulation/distribution line rising → 25 pts
+    - MFI         : Money Flow Index > 50; proportional 0–25 pts above 50
+
+    Score of 75+ = institutions clearly accumulating.
+    Score of 25- = institutions clearly distributing.
+    """
+    if len(df) < period + 10:
+        return 50.0
+
+    close  = df["close"]
+    high   = df["high"]
+    low    = df["low"]
+    volume = df["volume"]
+
+    score = 0.0
+
+    # ── OBV trend (25 pts) ────────────────────────────────────────────────────
+    obv = (np.sign(close.diff()).fillna(0) * volume).cumsum()
+    if float(obv.iloc[-1]) > float(obv.iloc[-period]):
+        score += 25.0
+
+    # ── CMF — Chaikin Money Flow (25 pts, proportional) ───────────────────────
+    hl_range = (high - low).replace(0, np.nan)
+    mf_mult  = ((close - low) - (high - close)) / hl_range      # money-flow multiplier
+    mf_vol   = mf_mult.fillna(0) * volume
+    vol_roll = volume.rolling(period).sum()
+    cmf      = mf_vol.rolling(period).sum() / vol_roll.replace(0, np.nan)
+    cmf_val  = float(cmf.iloc[-1]) if not pd.isna(cmf.iloc[-1]) else 0.0
+    # +0.20 CMF → full 25 pts; negative → 0 pts
+    score += max(0.0, min(25.0, cmf_val * 125.0))
+
+    # ── A/D line trend (25 pts) ───────────────────────────────────────────────
+    ad_line = (mf_mult.fillna(0) * volume).cumsum()
+    if float(ad_line.iloc[-1]) > float(ad_line.iloc[-period]):
+        score += 25.0
+
+    # ── MFI — Money Flow Index (25 pts, proportional above 50) ───────────────
+    tp     = (high + low + close) / 3
+    raw_mf = tp * volume
+    pos_mf = raw_mf.where(tp > tp.shift(1), 0).rolling(14).sum()
+    neg_mf = raw_mf.where(tp <= tp.shift(1), 0).rolling(14).sum()
+    mfi    = 100 - 100 / (1 + pos_mf / neg_mf.replace(0, np.nan))
+    mfi_val = float(mfi.iloc[-1]) if not pd.isna(mfi.iloc[-1]) else 50.0
+    if mfi_val > 50:
+        # 50 → 0 pts, 100 → 25 pts
+        score += max(0.0, min(25.0, (mfi_val - 50.0) * 0.5))
+
+    return round(min(100.0, max(0.0, score)), 1)
+
+
+# ── Bull Exhaustion Warning ───────────────────────────────────────────────────
+
+def bull_exhaustion_warning(df: pd.DataFrame) -> str | None:
+    """Detect early signs of bull exhaustion to flag in the Notes column.
+
+    Three conditions must all be true:
+    1. RSI(14) > 70 — overbought momentum
+    2. Volume fading — last 5-bar avg < prior 5-bar avg × 0.75 (buyers drying up)
+    3. Price > 3% above EMA21 — extended from short-term mean
+
+    Returns a plain-text warning string, or None when no exhaustion is detected.
+    """
+    if len(df) < 20:
+        return None
+
+    close  = df["close"]
+    volume = df["volume"]
+
+    rsi_series = _compute_rsi(close, 14)
+    rsi_val    = float(rsi_series.iloc[-1]) if not pd.isna(rsi_series.iloc[-1]) else 50.0
+    if rsi_val <= 70:
+        return None
+
+    if len(volume) < 10:
+        return None
+    recent_vol = float(volume.iloc[-5:].mean())
+    prior_vol  = float(volume.iloc[-10:-5].mean())
+    if prior_vol <= 0 or recent_vol >= prior_vol * 0.75:
+        return None                          # Volume not fading enough
+
+    ema21 = close.ewm(span=21, adjust=False).mean()
+    e21   = float(ema21.iloc[-1])
+    curr  = float(close.iloc[-1])
+    if e21 <= 0 or (curr - e21) / e21 <= 0.03:
+        return None                          # Not extended enough
+
+    return f"Bull exhaustion: RSI {rsi_val:.0f}, vol fading"

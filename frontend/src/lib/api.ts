@@ -6,7 +6,7 @@ const BASE =
 
 export interface Setup {
   symbol: string;
-  setup_type: "EP" | "TB" | "PP" | "PULL" | "FBD";
+  setup_type: "EP" | "TB" | "PP" | "PULL" | "FBD" | "WYS";
   state: string;
   entry: number;
   stop: number;
@@ -24,6 +24,8 @@ export interface Setup {
   weinstein_stage: number;    // 1-4; 0 = insufficient data
   ad_net: number;             // O'Neill A/D net days (+ = accumulation)
   composite_score: number;    // Unified 0-100: pattern quality + RS + stage + A/D
+  rvol: number;               // Relative Volume: today / 20-day avg
+  isc_score: number;          // Institutional Composite Score: OBV+CMF+A/D+MFI → 0-100
 }
 
 export interface ScanParams {

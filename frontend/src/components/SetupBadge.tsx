@@ -4,6 +4,7 @@ const COLORS: Record<string, string> = {
   PP:   "bg-cyan-600 text-white",
   PULL: "bg-amber-500 text-white",
   FBD:  "bg-rose-600 text-white",
+  WYS:  "bg-violet-700 text-white",
   FLAG: "bg-blue-600 text-white",
 };
 
@@ -53,6 +54,37 @@ export function ADNetBadge({ net }: { net: number }) {
   return (
     <span className={`text-xs font-mono font-semibold ${positive ? "text-green-600" : "text-red-500"}`}>
       {positive ? "+" : ""}{net}
+    </span>
+  );
+}
+
+// ICS — Institutional Composite Score (0-100)
+// Green ≥75 (accumulation), Amber 40-74 (neutral), Red <40 (distribution)
+export function ICSBadge({ score }: { score: number }) {
+  const color =
+    score >= 75 ? "text-green-600 font-semibold" :
+    score >= 40 ? "text-amber-600" :
+    "text-red-500";
+  return (
+    <span
+      className={`group relative text-[10px] font-mono cursor-help ${color}`}
+      title="ICS: Institutional Composite Score (OBV + CMF + A/D line + MFI)"
+    >
+      ICS {score.toFixed(0)}
+      <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-60 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal">
+        Institutional Composite Score (0–100). Combines OBV trend, Chaikin Money Flow, A/D line trend, and MFI. ≥75 = clear accumulation. &lt;40 = distribution.
+      </span>
+    </span>
+  );
+}
+
+// RVOL — Relative Volume (today vs 20-day avg)
+// Purple ≥2× (surge), normal otherwise
+export function RVOLLabel({ rvol }: { rvol: number }) {
+  const color = rvol >= 2.0 ? "text-violet-600 font-semibold" : rvol >= 1.3 ? "text-gray-500" : "text-gray-400";
+  return (
+    <span className={`text-[10px] font-mono ${color}`}>
+      {rvol.toFixed(1)}×vol
     </span>
   );
 }

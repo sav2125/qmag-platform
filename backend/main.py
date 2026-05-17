@@ -58,6 +58,8 @@ class ScanResult(BaseModel):
     weinstein_stage: int = 0      # 1-4; 0 = insufficient data
     ad_net: int = 0               # O'Neill A/D net days (+ = accumulation)
     composite_score: float = 0.0  # Unified 0-100: pattern quality + RS + stage + A/D
+    rvol: float = 1.0             # Relative Volume: today / 20-day avg
+    isc_score: float = 0.0        # Institutional Composite Score (OBV+CMF+A/D+MFI → 0-100)
 
 
 class WatchlistItem(BaseModel):
@@ -94,6 +96,8 @@ def _setup_to_dict(s) -> dict:
         "weinstein_stage": s.weinstein_stage,
         "ad_net": s.ad_net,
         "composite_score": s.composite_score,
+        "rvol": s.rvol,
+        "isc_score": s.isc_score,
     }
 
 
@@ -144,7 +148,7 @@ def debug_fetch(symbol: str = "NVDA"):
 @app.get("/scan", response_model=list[ScanResult])
 def scan(
     universe: str = Query("sp500", description="sp500 | nasdaq100 | midcap | smallcap | all | tech | watchlist"),
-    setup: str | None = Query(None, description="ep | tb | pp | pull | fbd"),
+    setup: str | None = Query(None, description="ep | tb | pp | pull | fbd | wys"),
     min_rs: float = Query(50.0, ge=0, le=100),
     min_score: float = Query(0.0, ge=0, le=100),
     top: int = Query(20, ge=1, le=100),

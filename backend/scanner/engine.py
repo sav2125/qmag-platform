@@ -8,16 +8,20 @@ import pandas as pd
 
 from .fetcher import fetch_ohlcv, fetch_batch, get_universe_symbols
 from .patterns import (
-    Setup, detect_ep, detect_pp, detect_tb, detect_pull, detect_fbd,
+    Setup, detect_ep, detect_pp, detect_tb, detect_pull, detect_fbd, detect_wys,
     weinstein_stage, ad_days, overextension_penalty,
+    relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
 from .rs_rank import rs_score, rs_label, rank_universe
 
 logger = logging.getLogger(__name__)
 
-DETECTORS = [detect_ep, detect_tb, detect_pp, detect_pull, detect_fbd]
+# Ordered by detection priority — when multiple setups fire on the same symbol,
+# the one with the lower priority number wins.
+# WYS sits above PP/PULL/FBD because it requires confirmed prior accumulation range.
+DETECTORS = [detect_ep, detect_tb, detect_wys, detect_pp, detect_pull, detect_fbd]
 
-SETUP_PRIORITY = {"EP": 0, "TB": 1, "PP": 2, "PULL": 3, "FBD": 3, "FLAG": 4}
+SETUP_PRIORITY = {"EP": 0, "TB": 1, "WYS": 2, "PP": 3, "PULL": 3, "FBD": 4, "FLAG": 5}
 
 
 def _adr(df: pd.DataFrame, lookback: int = 20) -> float:
@@ -93,7 +97,8 @@ def _process_symbol(
             sf = setup_filter.upper()
             type_map = {
                 "EP": detect_ep, "TB": detect_tb,
-                "PP": detect_pp, "PULL": detect_pull, "FBD": detect_fbd,
+                "PP": detect_pp, "PULL": detect_pull,
+                "FBD": detect_fbd, "WYS": detect_wys,
             }
             if detect != type_map.get(sf):
                 continue
@@ -121,14 +126,22 @@ def _process_symbol(
     best.rs_score = round(raw_rs, 1)
     best.rs_label = rs_label(raw_rs)
 
-    # ── Enrichment: stage, A/D days, overextension penalty ───────────────────
+    # ── Enrichment ────────────────────────────────────────────────────────────
     best.weinstein_stage = weinstein_stage(df)
-    best.ad_net = ad_days(df)
+    best.ad_net          = ad_days(df)
+    best.rvol            = relative_volume(df)
+    best.isc_score       = institutional_composite_score(df)
 
+    # Overextension penalty: docks confidence when RSI > 80 or price far above EMA21
     penalty = overextension_penalty(df)
     if penalty > 0:
         best.confidence = round(max(0.30, best.confidence - penalty), 2)
         best.meta["overextension_penalty"] = penalty
+
+    # Bull exhaustion warning: appended to notes when RSI > 70 + vol fading + extended
+    warning = bull_exhaustion_warning(df)
+    if warning:
+        best.notes = (best.notes + " · " + warning) if best.notes else warning
 
     return best
 
