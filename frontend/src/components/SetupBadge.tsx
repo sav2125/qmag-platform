@@ -37,7 +37,7 @@ export function ProbGradeBadge({ grade, score }: { grade: string; score?: number
       className={`group relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold cursor-help ${c.text} ${c.bg} ${c.border}`}
       title={`P Score: probability-weighted signal voting (A≥75 / B≥60 / C≥45 / D<45)`}
     >
-      P{grade}
+      <span className="opacity-50 font-normal">P</span>{grade}
       {score !== undefined && <span className="font-mono font-normal opacity-70">{score.toFixed(0)}</span>}
       <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-64 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal">
         <strong>P Score</strong> — probability-weighted signal voting (0–100).<br />
