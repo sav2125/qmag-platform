@@ -166,6 +166,7 @@ def _process_symbol(
             ad_net=best.ad_net,
             ma_stack=_ma_stack_label(df),
             active_setups=[best],
+            weekly_dir=best.weekly_dir,
         )
         best.prob_score = ps["prob_score"]
         best.prob_grade = ps["prob_grade"]

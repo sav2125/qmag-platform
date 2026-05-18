@@ -364,11 +364,14 @@ contribution = strength × eff_weight × accuracy
 
       <Section id="pscore-signals" title="P Score: Signals, Weights & Accuracy">
         <p>
-          Every setup result uses these 12 signals. Each contributes to the P Score proportionally
-          to its effective weight and its historical accuracy factor:
+          Every setup result uses up to <strong>19 signals</strong> (setup patterns + technical
+          indicators). Each contributes to the P Score proportionally to its effective weight and
+          its historical accuracy factor. After all signals vote, a{" "}
+          <strong>weekly timeframe adjustment</strong> is applied as a flat bonus/penalty.
         </p>
 
-        <div className="overflow-x-auto mt-2">
+        <h3 className="font-semibold text-gray-800 mt-3 mb-1 text-sm">Setup Pattern Signals (highest weight)</h3>
+        <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-500 uppercase">
@@ -384,15 +387,9 @@ contribution = strength × eff_weight × accuracy
                 ["EP (Episodic Pivot)", "Trend", "3.0", "72%", "Confidence from detector"],
                 ["WYS (Wyckoff Spring)", "Trend", "3.0", "75%", "Confidence from detector"],
                 ["TB (Tight Base)", "Trend", "2.5", "70%", "Confidence from detector"],
-                ["Weinstein Stage", "Trend", "2.5", "72%", "1.0=S2, 0.5=S1, 0.0=S4"],
-                ["EMA Stack", "Trend", "1.5", "70%", "full_bull=0.9, partial_bull=0.6"],
-                ["ICS", "Trend", "1.2", "68%", "ICS score / 100"],
                 ["FBD (Failed Breakdown)", "Trend", "2.0", "68%", "Confidence from detector"],
                 ["PP (Pocket Pivot)", "Trend", "2.0", "65%", "Confidence from detector"],
-                ["MACD", "Trend", "1.0", "65%", "Bullish/bearish histogram sign"],
-                ["A/D Net", "Trend", "1.0", "65%", "Clipped ad_net / 10"],
                 ["PULL (EMA Pullback)", "Trend", "1.5", "63%", "Confidence from detector"],
-                ["RSI", "Mean Rev.", "1.0", "62%", "Distance from 50 ÷ 50"],
               ].map(([s, cls, w, acc, src]) => (
                 <tr key={s} className="border-b border-gray-100">
                   <td className="py-2 px-3 border border-gray-200 font-semibold">{s}</td>
@@ -402,6 +399,110 @@ contribution = strength × eff_weight × accuracy
                   <td className="py-2 px-3 border border-gray-200 font-mono text-center">{w}</td>
                   <td className="py-2 px-3 border border-gray-200 font-mono text-center text-indigo-700">{acc}</td>
                   <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{src}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="font-semibold text-gray-800 mt-4 mb-1 text-sm">Trend & Momentum Indicators</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Signal</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Class</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Base weight</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Accuracy</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Strength / Logic</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Weinstein Stage", "Trend", "2.5", "72%", "S2=1.0, S1=0.5; S3/S4 → bearish 0.7"],
+                ["EMA Stack", "Trend", "1.5", "70%", "full_bull=0.9, partial_bull=0.6; full_bear → bearish"],
+                ["Supertrend (10, 3.0)", "Trend", "1.0", "68%", "ATR-based trailing stop; direction flip = 0.7 strength"],
+                ["OBV", "Trend", "1.5", "65%", "Rising OBV over 20 bars → bullish institutional interest"],
+                ["CMF (20)", "Trend", "1.2", "64%", "Chaikin Money Flow; +0.05 threshold to filter noise"],
+                ["MACD", "Trend", "1.0", "65%", "Bullish/bearish histogram sign; strength from magnitude"],
+                ["A/D Net", "Trend", "1.0", "65%", "O'Neill accumulation days; clipped ad_net / 10"],
+                ["ICS", "Trend", "1.2", "68%", "Institutional Composite Score / 100"],
+                ["Keltner Channel (20, 1.5×)", "Trend", "0.85", "63%", "Price at/below lower KC = oversold bullish; above upper = bearish"],
+              ].map(([s, cls, w, acc, src]) => (
+                <tr key={s} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{s}</td>
+                  <td className="py-2 px-3 border border-gray-200">
+                    <span className={cls === "Trend" ? "text-green-700" : "text-amber-600"}>{cls}</span>
+                  </td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center">{w}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-indigo-700">{acc}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{src}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="font-semibold text-gray-800 mt-4 mb-1 text-sm">Mean-Reversion Indicators</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Signal</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Class</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Base weight</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Accuracy</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Strength / Logic</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["RSI (14)", "Mean Rev.", "1.0", "62%", "RSI < 40 = bullish (oversold); > 70 = bearish; distance from 50 ÷ 50"],
+                ["Stochastic %K (14,3)", "Mean Rev.", "0.8", "61%", "%K < 20 = bullish (oversold); > 80 = bearish; skips neutral zone"],
+                ["Bollinger Bands (20, 2σ)", "Mean Rev.", "0.85", "62%", "%B < 0.3 = near lower band = bullish bounce setup; > 0.7 = bearish"],
+              ].map(([s, cls, w, acc, src]) => (
+                <tr key={s} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{s}</td>
+                  <td className="py-2 px-3 border border-gray-200">
+                    <span className={cls === "Trend" ? "text-green-700" : "text-amber-600"}>{cls}</span>
+                  </td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center">{w}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-indigo-700">{acc}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{src}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="font-semibold text-gray-800 mt-4 mb-1 text-sm">Weekly Timeframe Adjustment (post-vote)</h3>
+        <p className="text-xs text-gray-600 mb-2">
+          After all signals vote, a flat bonus or penalty is added based on the weekly timeframe
+          direction. This is <em>not</em> a voting signal — it&apos;s an adjustment applied to the
+          total (ported directly from the reference implementation). The weekly direction is computed
+          by resampling the existing daily bars to weekly — no additional API call needed.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Condition</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Adjustment</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Rationale</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Bullish weekly + Stage 2", "+7.5 pts", "Highest conviction: daily setup aligns with weekly trend in the right stage"],
+                ["Bullish weekly (any stage)", "+5.5 pts", "Higher timeframe tailwind"],
+                ["Bearish weekly", "−6.0 pts", "Higher timeframe headwind — daily setup fighting an uphill battle"],
+                ["Neutral weekly + Stage 2", "+1.0 pts", "Slight bonus for being in the right stage despite neutral weekly"],
+                ["Neutral weekly (other stages)", "0 pts", "No adjustment"],
+              ].map(([cond, adj, rationale]) => (
+                <tr key={cond} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{cond}</td>
+                  <td className={`py-2 px-3 border border-gray-200 font-mono text-center ${adj.startsWith("+") ? "text-teal-700" : adj.startsWith("−") ? "text-red-600" : "text-gray-500"}`}>{adj}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{rationale}</td>
                 </tr>
               ))}
             </tbody>

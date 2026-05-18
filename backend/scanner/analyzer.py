@@ -486,6 +486,14 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         pat_pts    = 30.0
         pat_label  = "none"
 
+    # ── Weekly direction (pre-compute for P Score; full MTF built below) ─────
+    try:
+        _df_wk     = _resample_weekly(df)
+        _wk_sig    = _tf_signals(_df_wk, "Weekly")
+        _weekly_dir = _wk_sig.get("direction", "neutral")
+    except Exception:
+        _weekly_dir = "neutral"
+
     # ── P Score — probability-weighted signal voting ──────────────────────────
     try:
         ps_result = compute_prob_score(
@@ -495,6 +503,7 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
             ad_net=ad,
             ma_stack=ma_info["stack"],
             active_setups=active_setups,
+            weekly_dir=_weekly_dir,
         )
     except Exception:
         ps_result = {"prob_score": 0.0, "prob_grade": "D", "prob_direction": "neutral",
