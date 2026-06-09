@@ -475,7 +475,7 @@ function AnalyzeInner() {
                       // Compact source label
                       const shortSrc =
                         c.source === "ADNet"     ? "A/D"    :
-                        c.source === "TrendTmpl" ? "Trend"  :
+                        c.source === "TrendTmpl" ? "Minv"   :
                         c.source === "WeeklyTF"  ? "Weekly" :
                         c.source;
                       return (
@@ -497,7 +497,9 @@ function AnalyzeInner() {
                           </div>
                           {/* Hover tooltip — full breakdown */}
                           <span className="pointer-events-none absolute left-0 bottom-full mb-1 z-50 w-64 rounded-lg bg-gray-900 text-white text-[10px] p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-mono">
-                            {c.source} ({c.direction})<br />
+                            {(c.source === "TrendTmpl" ? "Minervini Trend Template"
+                              : c.source === "WeeklyTF" ? "Weekly timeframe adjustment"
+                              : c.source)} ({c.direction})<br />
                             str={c.strength.toFixed(2)} × w={c.weight} × acc={c.accuracy} × ×{c.regime_mult}<br />
                             = {c.contribution.toFixed(3)}
                             {c.detail && <><br />{c.detail}</>}
