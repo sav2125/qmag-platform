@@ -504,6 +504,7 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
             ma_stack=ma_info["stack"],
             active_setups=active_setups,
             weekly_dir=_weekly_dir,
+            rs_score=rs_raw_val,
         )
     except Exception:
         ps_result = {"prob_score": 0.0, "prob_grade": "D", "prob_direction": "neutral",

@@ -473,7 +473,11 @@ function AnalyzeInner() {
                       const bull = c.direction === "bullish";
                       const fill = bull ? "bg-teal-400" : "bg-red-300";
                       // Compact source label
-                      const shortSrc = c.source === "ADNet" ? "A/D" : c.source === "EMA" ? "EMA" : c.source;
+                      const shortSrc =
+                        c.source === "ADNet"     ? "A/D"    :
+                        c.source === "TrendTmpl" ? "Trend"  :
+                        c.source === "WeeklyTF"  ? "Weekly" :
+                        c.source;
                       return (
                         <div key={c.source} className="flex items-center gap-2 group relative cursor-help">
                           {/* Direction arrow + name */}
@@ -496,6 +500,7 @@ function AnalyzeInner() {
                             {c.source} ({c.direction})<br />
                             str={c.strength.toFixed(2)} × w={c.weight} × acc={c.accuracy} × ×{c.regime_mult}<br />
                             = {c.contribution.toFixed(3)}
+                            {c.detail && <><br />{c.detail}</>}
                           </span>
                         </div>
                       );

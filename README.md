@@ -182,7 +182,7 @@ Every scan result and analysis carries **two independent scores**, each producin
 | Score | Formula | Grade thresholds | What it measures |
 |-------|---------|-----------------|-----------------|
 | **Q Score** | `quality×60 + RS×25 + stage×10 + A/D×5` | A≥72 / B≥58 / C≥44 / D<44 | Qullamaggie's explicit methodology: tight stop, RS leader, Stage 2, accumulation |
-| **P Score** | `Σ (strength × weight × accuracy × regime_mult)` | A≥75 / B≥60 / C≥45 / D<45 | Probability-weighted signal voting across 7 independent signals |
+| **P Score** | `Σ (strength × weight × accuracy × regime_mult)` | A≥75 / B≥60 / C≥45 / D<45 | Probability-weighted signal voting across up to 20 independent signals + weekly-TF adjustment |
 
 Full algorithm reasoning (formulas, weights, thresholds, rationale) on the **[/scoring page](https://qmag-platform-1.onrender.com/scoring)** of the live site.
 
@@ -208,15 +208,22 @@ A: q_score >= 72    B: >= 58    C: >= 44    D: < 44
 
 #### P Score — Probability Scorer
 
-Ported from the `technical-analysis` reference repo. Each signal contributes: `strength × weight × accuracy × regime_multiplier`. Regime is inferred from Weinstein stage (S2=trend, S4=range, else transition). Agreement bonus of ×1.2 applied when ≥70% of signals agree.
+Ported from the `technical-analysis` reference repo. Each signal contributes: `strength × weight × accuracy × regime_multiplier`. Regime is inferred from Weinstein stage (S2=trend, S4=range, else transition). Agreement bonus of ×1.2 applied when ≥70% of signals agree. A weekly-timeframe adjustment (+7.5 bullish/S2 … −6.0 bearish) and overextension penalties are applied after the vote.
 
 ```
-Signals: RSI (w=1.0, acc=62%), MACD (w=1.0, acc=65%), EMA stack (w=1.5, acc=70%),
-         Stage (w=2.5, acc=72%), ICS (w=1.2, acc=68%), A/D Net (w=1.0, acc=65%),
-         Setup pattern (EP: w=3.0 acc=72% / TB: 2.5/70% / WYS: 3.0/75% / ...)
+Setup patterns:  EP (w=3.0 acc=72%), WYS (3.0/75%), TB (2.5/70%),
+                 FBD (2.0/68%), PP (2.0/65%), PULL (1.5/63%)
+Trend/momentum:  Stage (2.5/72%), Minervini Trend Template (1.8/72%),
+                 EMA stack (1.5/70%), OBV (1.5/65%), CMF (1.2/64%),
+                 ICS (1.2/68%), Supertrend (1.0/68%), MACD (1.0/65%),
+                 A/D Net (1.0/65%), Keltner Channels (0.85/63%)
+Mean-reversion:  RSI (1.0/62%), Bollinger %B (0.85/62%), Stochastic (0.8/61%)
+Post-vote:       Weekly-TF adjustment, overextension penalty
 
 P grade: A≥75 / B≥60 / C≥45 / D<45
 ```
+
+The **Minervini Trend Template** is Mark Minervini's 8-point SEPA leadership filter (price vs SMA 50/150/200, 200-SMA rising, 52-week price position, RS ≥ 70). Its strength = fraction of the 8 criteria met; the live count appears in the Analyze-page signal tooltip.
 
 **When both agree (QA + PA):** Maximum conviction — size up.
 **When they diverge:** Investigate why before trading — check the Analyzer page signal breakdown.

@@ -364,7 +364,7 @@ contribution = strength × eff_weight × accuracy
 
       <Section id="pscore-signals" title="P Score: Signals, Weights & Accuracy">
         <p>
-          Every setup result uses up to <strong>19 signals</strong> (setup patterns + technical
+          Every setup result uses up to <strong>20 signals</strong> (setup patterns + technical
           indicators). Each contributes to the P Score proportionally to its effective weight and
           its historical accuracy factor. After all signals vote, a{" "}
           <strong>weekly timeframe adjustment</strong> is applied as a flat bonus/penalty.
@@ -420,6 +420,7 @@ contribution = strength × eff_weight × accuracy
             <tbody>
               {[
                 ["Weinstein Stage", "Trend", "2.5", "72%", "S2=1.0, S1=0.5; S3/S4 → bearish 0.7"],
+                ["Minervini Trend Template", "Trend", "1.8", "72%", "Fraction of 8 SEPA criteria met (see below)"],
                 ["EMA Stack", "Trend", "1.5", "70%", "full_bull=0.9, partial_bull=0.6; full_bear → bearish"],
                 ["Supertrend (10, 3.0)", "Trend", "1.0", "68%", "ATR-based trailing stop; direction flip = 0.7 strength"],
                 ["OBV", "Trend", "1.5", "65%", "Rising OBV over 20 bars → bullish institutional interest"],
@@ -441,6 +442,35 @@ contribution = strength × eff_weight × accuracy
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <h3 className="font-semibold text-gray-800 text-sm mb-1">
+            Minervini Trend Template — the 8 criteria
+          </h3>
+          <p className="text-xs text-gray-600 mb-2">
+            Mark Minervini&apos;s structural leadership filter (from <em>Trade Like a Stock Market
+            Wizard</em>). It is emitted as a single voting signal whose <strong>strength = fraction
+            of the 8 criteria met</strong> (e.g. 7/8 → strength 0.88). It votes bullish when ≥ 50% of
+            criteria pass, bearish otherwise. Some criteria overlap the Weinstein Stage and EMA Stack
+            signals — that is why its weight (1.8) is moderate rather than top-tier. Its unique
+            contribution is the <strong>SMA200 alignment</strong> and <strong>52-week price
+            position</strong>, which no other signal captures.
+          </p>
+          <ol className="text-xs text-gray-700 list-decimal list-inside space-y-0.5">
+            <li>Price above both the 150-day AND 200-day SMA</li>
+            <li>150-day SMA above the 200-day SMA</li>
+            <li>200-day SMA trending up (rising vs ~1 month ago)</li>
+            <li>50-day SMA above both the 150-day and 200-day SMA</li>
+            <li>Price above the 50-day SMA</li>
+            <li>Price at least 30% above its 52-week low</li>
+            <li>Price within 25% of its 52-week high</li>
+            <li>RS rank ≥ 70</li>
+          </ol>
+          <p className="text-[11px] text-gray-500 mt-2">
+            The Analyze page shows the live count (e.g. <span className="font-mono">&quot;6/8
+            criteria met&quot;</span>) in the signal&apos;s hover tooltip.
+          </p>
         </div>
 
         <h3 className="font-semibold text-gray-800 mt-4 mb-1 text-sm">Mean-Reversion Indicators</h3>

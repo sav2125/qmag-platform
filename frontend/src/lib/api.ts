@@ -112,6 +112,7 @@ export interface ProbComponent {
   accuracy:     number;    // backtested accuracy factor
   regime_mult:  number;    // regime multiplier applied
   contribution: number;    // strength × weight × accuracy × regime_mult
+  detail?:      string;    // optional human-readable note (e.g. "7/8 criteria met")
 }
 
 export interface ChecklistItem {
