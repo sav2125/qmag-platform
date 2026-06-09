@@ -49,7 +49,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Q Grade + Q Score
 - **All US universe:** Alpaca `/v2/assets` endpoint, cached 24 hours; falls back to 1,000+ curated static list
 
 ### Frontend
-- **Analyze page** — Deep-dive for any individual stock: all 6 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 9-item signal checklist, early warnings, score breakdown, and **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls)
+- **Analyze page** — Deep-dive for any individual stock: all 6 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), early warnings, score breakdown, and **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls)
 - **Dashboard** — Scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
 - **Setup pages** — Deep-dive educational pages for EP, TB, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page

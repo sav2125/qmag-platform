@@ -26,7 +26,7 @@ from .patterns import (
     relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
 from .rs_rank import rs_score, rs_label
-from .prob_scorer import compute_prob_score
+from .prob_scorer import compute_prob_score, _trend_template
 
 logger = logging.getLogger(__name__)
 
@@ -128,9 +128,11 @@ def _ma_stack(close: pd.Series, ema21: pd.Series, ema50: pd.Series, sma150: pd.S
 def _checklist(
     stage: int, rsi_val: float, adx_val: float, macd_hist: float,
     ma: dict, rvol_val: float, ad: int, isc: float, rs_raw: float,
+    tt: tuple | None = None,
 ) -> list[dict]:
-    """9-item signal checklist. Each item: {label, status, detail}.
+    """10-item signal checklist. Each item: {label, status, detail}.
     status: "pass" | "warn" | "fail" | "neutral"
+    `tt` is the Minervini Trend Template result (dir, strength, passed, total).
     """
     items = []
 
@@ -211,6 +213,30 @@ def _checklist(
         items.append({"label": "RS vs SPY", "status": "warn",  "detail": f"RS {rs_raw:.0f} — matching SPY, not leading"})
     else:
         items.append({"label": "RS vs SPY", "status": "fail",  "detail": f"RS {rs_raw:.0f} — underperforming SPY"})
+
+    # 10 — Minervini Trend Template (8-point SEPA leadership filter)
+    if tt and tt[0] is not None and tt[3] > 0:
+        _, _, passed, total = tt
+        if passed >= 7:
+            st = "pass"
+            note = "textbook leadership structure"
+        elif passed >= 5:
+            st = "warn"
+            note = "mostly aligned — not yet a full leader"
+        else:
+            st = "fail"
+            note = "fails the trend template"
+        items.append({
+            "label":  "Minervini Trend",
+            "status": st,
+            "detail": f"{passed}/{total} criteria met — {note}",
+        })
+    else:
+        items.append({
+            "label":  "Minervini Trend",
+            "status": "neutral",
+            "detail": "Insufficient history (<200 bars for SMA200)",
+        })
 
     return items
 
@@ -464,7 +490,8 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
             logger.debug("Analyzer detector %s error on %s: %s", detect.__name__, symbol, e)
 
     # ── Checklist + warnings ──────────────────────────────────────────────────
-    checklist_items = _checklist(stage, rsi_val, adx_val, macd_hist, ma_info, rvol_val, ad, isc, rs_raw_val)
+    tt_result       = _trend_template(df, rs_raw_val)
+    checklist_items = _checklist(stage, rsi_val, adx_val, macd_hist, ma_info, rvol_val, ad, isc, rs_raw_val, tt_result)
     warning_items   = _warnings(df, exhaustion, penalty)
 
     # ── Best setup + composite score ──────────────────────────────────────────
