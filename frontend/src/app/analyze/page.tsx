@@ -626,6 +626,37 @@ function AnalyzeInner() {
             )}
           </Card>
 
+          {/* ── Row 4b: Minervini Trend Template ── */}
+          {data.trend_template && data.trend_template.total > 0 && (
+            <Card title={`Minervini Trend Template (${data.trend_template.passed}/${data.trend_template.total})`}>
+              <p className="text-xs text-gray-500 mb-3">
+                Mark Minervini&apos;s 8-point SEPA leadership filter. A full pass = textbook market-leader structure.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {data.trend_template.criteria.map((c) => (
+                  <div
+                    key={c.label}
+                    className={`flex items-start gap-2 rounded-lg border px-2.5 py-1.5 ${
+                      c.met ? "border-green-200 bg-green-50/60" : "border-red-200 bg-red-50/50"
+                    }`}
+                  >
+                    <span className={`text-sm leading-none mt-0.5 ${c.met ? "text-green-600" : "text-red-500"}`}>
+                      {c.met ? "✓" : "✗"}
+                    </span>
+                    <div className="min-w-0">
+                      <div className={`text-xs font-medium ${c.met ? "text-gray-700" : "text-gray-600"}`}>{c.label}</div>
+                      <div className="text-[10px] text-gray-400 font-mono truncate">{c.detail}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-3">
+                Contributes to the P Score as the <span className="font-semibold text-teal-600">Minv</span> signal.{" "}
+                <a href="/scoring#pscore-signals" className="text-indigo-400 hover:underline">Scoring docs →</a>
+              </p>
+            </Card>
+          )}
+
           {/* ── Row 5: Checklist + Warnings ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 

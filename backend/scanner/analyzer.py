@@ -216,7 +216,7 @@ def _checklist(
 
     # 10 — Minervini Trend Template (8-point SEPA leadership filter)
     if tt and tt[0] is not None and tt[3] > 0:
-        _, _, passed, total = tt
+        passed, total = tt[2], tt[3]
         if passed >= 7:
             st = "pass"
             note = "textbook leadership structure"
@@ -494,6 +494,14 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     checklist_items = _checklist(stage, rsi_val, adx_val, macd_hist, ma_info, rvol_val, ad, isc, rs_raw_val, tt_result)
     warning_items   = _warnings(df, exhaustion, penalty)
 
+    # Minervini Trend Template — per-criterion breakdown for the UI
+    _tt_dir, _tt_str, _tt_passed, _tt_total, _tt_criteria = tt_result
+    trend_template = {
+        "passed":   _tt_passed,
+        "total":    _tt_total,
+        "criteria": _tt_criteria,   # [{label, met, detail}]
+    }
+
     # ── Best (highest-confidence) Qullamaggie setup, if any fired ─────────────
     best = max(active_setups, key=lambda s: s.confidence) if active_setups else None
 
@@ -584,6 +592,7 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         # Derived
         "checklist":          checklist_items,
         "warnings":           warning_items,
+        "trend_template":     trend_template,
         # Multi-timeframe alignment
         "timeframe_alignment": mtf,
         # P Score

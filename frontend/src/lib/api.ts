@@ -150,6 +150,18 @@ export interface MAStack {
   sma150:              number | null;
 }
 
+export interface TrendTemplateCriterion {
+  label:  string;
+  met:    boolean;
+  detail: string;
+}
+
+export interface TrendTemplate {
+  passed:   number;
+  total:    number;
+  criteria: TrendTemplateCriterion[];
+}
+
 // ── Multi-timeframe types ──────────────────────────────────────────────────────
 
 export interface TimeframeSignal {
@@ -216,5 +228,6 @@ export interface SymbolAnalysis {
 
   checklist:           ChecklistItem[];
   warnings:            Warning[];
+  trend_template:      TrendTemplate;
   timeframe_alignment: MTFAlignment;
 }

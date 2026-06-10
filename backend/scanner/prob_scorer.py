@@ -305,7 +305,7 @@ def _stochastic_signal(df: pd.DataFrame, k: int = 14, d: int = 3) -> tuple[str |
 def _trend_template(
     df: pd.DataFrame,
     rs_score: float | None,
-) -> tuple[str | None, float, int, int]:
+) -> tuple[str | None, float, int, int, list[dict]]:
     """Mark Minervini's 8-point Trend Template (from "Trade Like a Stock Market Wizard").
 
     A structural leadership filter. The eight criteria:
@@ -318,14 +318,15 @@ def _trend_template(
       7. Price within 25% of its 52-week high
       8. RS rank >= 70  (only evaluated when rs_score is provided)
 
-    Returns (direction, strength, passed, total).
+    Returns (direction, strength, passed, total, criteria).
       direction = "bullish" when >=50% of criteria pass, else "bearish".
       strength  = pass fraction (bullish) or fail fraction (bearish), in 0-1.
-      Returns (None, 0, 0, 0) when there is insufficient history (<200 bars).
+      criteria  = list of {label, met, detail} dicts, one per criterion.
+      Returns (None, 0, 0, 0, []) when there is insufficient history (<200 bars).
     """
     close = df["close"]
     if len(close) < 200:
-        return None, 0.0, 0, 0
+        return None, 0.0, 0, 0, []
 
     price       = float(close.iloc[-1])
     sma50       = float(close.rolling(50).mean().iloc[-1])
@@ -335,32 +336,46 @@ def _trend_template(
     sma200_prev = float(sma200_s.iloc[-21]) if len(sma200_s) >= 21 else sma200  # ~1 month ago
 
     if any(pd.isna(x) for x in (sma50, sma150, sma200, sma200_prev)):
-        return None, 0.0, 0, 0
+        return None, 0.0, 0, 0, []
 
     lookback = min(len(close), 252)               # ~52 trading weeks
     window   = close.iloc[-lookback:]
     hi_52    = float(window.max())
     lo_52    = float(window.min())
 
-    checks: list[bool] = [
-        price > sma150 and price > sma200,        # 1
-        sma150 > sma200,                          # 2
-        sma200 > sma200_prev,                     # 3
-        sma50 > sma150 and sma50 > sma200,        # 4
-        price > sma50,                            # 5
-        lo_52 > 0 and price >= lo_52 * 1.30,      # 6
-        hi_52 > 0 and price >= hi_52 * 0.75,      # 7
+    pct_above_low  = (price / lo_52 - 1.0) * 100 if lo_52 > 0 else 0.0
+    pct_below_high = (1.0 - price / hi_52) * 100 if hi_52 > 0 else 100.0
+
+    # (label, met, detail) — detail shows the live values behind each check
+    criteria: list[dict] = [
+        {"label": "Price above 150 & 200-day SMA", "met": price > sma150 and price > sma200,
+         "detail": f"${price:.2f} vs SMA150 ${sma150:.2f} / SMA200 ${sma200:.2f}"},
+        {"label": "150-day SMA above 200-day SMA", "met": sma150 > sma200,
+         "detail": f"SMA150 ${sma150:.2f} vs SMA200 ${sma200:.2f}"},
+        {"label": "200-day SMA trending up", "met": sma200 > sma200_prev,
+         "detail": f"now ${sma200:.2f} vs ~1mo ago ${sma200_prev:.2f}"},
+        {"label": "50-day SMA above 150 & 200-day SMA", "met": sma50 > sma150 and sma50 > sma200,
+         "detail": f"SMA50 ${sma50:.2f} vs SMA150 ${sma150:.2f} / SMA200 ${sma200:.2f}"},
+        {"label": "Price above 50-day SMA", "met": price > sma50,
+         "detail": f"${price:.2f} vs SMA50 ${sma50:.2f}"},
+        {"label": "≥30% above 52-week low", "met": lo_52 > 0 and price >= lo_52 * 1.30,
+         "detail": f"{pct_above_low:.0f}% above low ${lo_52:.2f}"},
+        {"label": "Within 25% of 52-week high", "met": hi_52 > 0 and price >= hi_52 * 0.75,
+         "detail": f"{pct_below_high:.0f}% below high ${hi_52:.2f}"},
     ]
     if rs_score is not None:
-        checks.append(rs_score >= 70)             # 8
+        criteria.append(
+            {"label": "RS rank ≥ 70", "met": rs_score >= 70,
+             "detail": f"RS {rs_score:.0f}"}
+        )
 
-    total  = len(checks)
-    passed = sum(1 for c in checks if c)
+    total  = len(criteria)
+    passed = sum(1 for c in criteria if c["met"])
     frac   = passed / total if total else 0.0
 
     if frac >= 0.5:
-        return "bullish", frac, passed, total
-    return "bearish", (1.0 - frac), passed, total
+        return "bullish", frac, passed, total, criteria
+    return "bearish", (1.0 - frac), passed, total, criteria
 
 
 def _ht_adjustment(
@@ -481,7 +496,7 @@ def compute_prob_score(
         raw_signals.append(("Stage", s_dir, s_str))
 
     # Trend Template — Minervini 8-point structural leadership filter
-    tt_dir, tt_str, tt_passed, tt_total = _trend_template(df, rs_score)
+    tt_dir, tt_str, tt_passed, tt_total, _tt_criteria = _trend_template(df, rs_score)
     if tt_dir:
         raw_signals.append(("TrendTmpl", tt_dir, tt_str))
         signal_details["TrendTmpl"] = f"{tt_passed}/{tt_total} criteria met"
