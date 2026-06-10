@@ -199,6 +199,8 @@ Ported from the `technical-analysis` reference repo. Each signal contributes: `s
 
 **Anti-top-trap gate:** the weekly is a lagging signal that stays bullish after the daily rolls over (the signature of a local top). So the bullish weekly bonus only applies at full strength when the **daily vote is also bullish**; when the daily is neutral it is scaled ×0.2 (e.g. +7.5 → +1.5). The bearish-weekly penalty is never scaled.
 
+**Local-top / distribution penalty** (post-vote, long/neutral only, capped −8): docks points when a name shows topping behaviour even while still technically long — ≥3 distribution days in 10 (−3), MACD histogram fading at highs (−2), bearish RSI divergence (−3).
+
 ```
 Setup patterns:  EP (w=3.0 acc=72%), WYS (3.0/75%), TB (2.5/70%),
                  FBD (2.0/68%), PP (2.0/65%), PULL (1.5/63%)

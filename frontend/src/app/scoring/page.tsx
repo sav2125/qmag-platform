@@ -349,6 +349,42 @@ agreement_bonus = 1.20  # +20% to final score
 # When 7 out of 9 signals all say "bullish", the conviction
 # is qualitatively stronger than 5 out of 9.`}
         </CodeBlock>
+
+        <h3 className="font-semibold text-gray-800 mt-4 mb-1 text-sm">Local-top / distribution penalty (post-vote)</h3>
+        <p className="text-xs text-gray-600 mb-2">
+          A companion to the weekly-confirmation gate. The gate stops the lagging weekly from propping up a
+          neutral daily; this penalty actively docks points when a name shows <em>topping</em> behaviour
+          even while its daily is still technically long. It only applies to long / neutral (bullish-leaning)
+          names — a short-biased name is already scored down. Total capped at <strong>−8 pts</strong>.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Signature</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Penalty</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Why it matters at a top</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["≥3 distribution days in last 10", "−3.0", "O'Neill institutional-selling tell: down days on rising volume cluster near tops"],
+                ["MACD histogram fading at highs", "−2.0", "Histogram positive but falling 3 bars — buying pressure easing while price is elevated"],
+                ["Bearish RSI divergence", "−3.0", "Price prints a higher high but RSI prints a lower high — classic exhaustion signal"],
+              ].map(([sig, pen, why]) => (
+                <tr key={sig} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{sig}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-red-600">{pen}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{why}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[11px] text-gray-500 mt-2">
+          These stack with the RSI/EMA21 overextension penalty and show up in the Analyze page&apos;s P Score
+          breakdown notes (e.g. <span className="font-mono">&quot;3 distribution days in last 10&quot;</span>).
+        </p>
       </Section>
 
       <Section id="pscore-regime" title="P Score: Regime Multipliers">

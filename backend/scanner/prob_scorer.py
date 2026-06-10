@@ -117,6 +117,16 @@ RSI_EXHAUSTION_THRESHOLD  = 80.0
 EMA21_EXTENSION_THRESHOLD = 0.08
 OVEREXT_PENALTY_SCALE     = 0.5
 
+# ── Local-top / distribution penalty constants ───────────────────────────────
+# These catch topping signatures that the still-long daily + lagging weekly can
+# miss: institutional selling and momentum failing right at the highs.
+DIST_DAYS_WINDOW        = 10    # look-back for the distribution-day cluster
+DIST_DAYS_THRESHOLD     = 3     # ≥3 distribution days in the window = cluster
+DIST_CLUSTER_PENALTY    = 3.0
+MACD_FADE_PENALTY       = 2.0   # MACD histogram rolling over from positive
+RSI_DIVERGENCE_PENALTY  = 3.0   # price higher high, RSI lower high
+DISTRIBUTION_PENALTY_CAP = 8.0  # max total from this penalty
+
 P_GRADE_THRESHOLDS = {"A": 75, "B": 60, "C": 45}
 
 
@@ -133,14 +143,78 @@ def _mult(source: str, regime: str) -> float:
     return REGIME_MULT.get(regime, {}).get(sig_cls, 1.0)
 
 
-def _rsi(close: pd.Series, period: int = 14) -> float:
+def _rsi_series(close: pd.Series, period: int = 14) -> pd.Series:
     delta = close.diff()
     gain  = delta.clip(lower=0).ewm(com=period - 1, adjust=False).mean()
     loss  = (-delta.clip(upper=0)).ewm(com=period - 1, adjust=False).mean()
     rs    = gain / loss.replace(0, float("nan"))
-    series = 100 - 100 / (1 + rs)
-    val = series.iloc[-1]
+    return 100 - 100 / (1 + rs)
+
+
+def _rsi(close: pd.Series, period: int = 14) -> float:
+    val = _rsi_series(close, period).iloc[-1]
     return float(val) if not pd.isna(val) else 50.0
+
+
+def _distribution_penalty(df: pd.DataFrame, direction_out: str) -> tuple[float, list[str]]:
+    """Local-top / distribution penalty (post-vote).
+
+    Catches topping signatures that a still-long daily + lagging weekly miss:
+      1. Distribution-day cluster — ≥3 down days on rising volume in 10 bars
+         (O'Neill institutional-selling tell)
+      2. MACD histogram rolling over from positive — momentum fading at highs
+      3. Bearish RSI divergence — price prints a higher high while RSI prints a
+         lower high
+
+    Only applied to long / neutral (bullish-leaning) names — a short-biased name
+    is already scored down. Returns (penalty_pts, notes), capped at the cap.
+    """
+    if direction_out == "short" or len(df) < 30:
+        return 0.0, []
+
+    close = df["close"]
+    vol   = df["volume"]
+    penalty = 0.0
+    notes: list[str] = []
+
+    # 1) Distribution-day cluster
+    dist = 0
+    for i in range(max(1, len(df) - DIST_DAYS_WINDOW), len(df)):
+        c, pc = float(close.iloc[i]), float(close.iloc[i - 1])
+        v, pv = float(vol.iloc[i]),   float(vol.iloc[i - 1])
+        if pc > 0 and (c - pc) / pc <= -0.002 and v > pv:
+            dist += 1
+    if dist >= DIST_DAYS_THRESHOLD:
+        penalty += DIST_CLUSTER_PENALTY
+        notes.append(f"{dist} distribution days in last {DIST_DAYS_WINDOW} — institutional selling −{DIST_CLUSTER_PENALTY:.1f}pts")
+
+    # 2) MACD histogram fading from positive (3-bar decline while > 0)
+    ema12 = close.ewm(span=12, adjust=False).mean()
+    ema26 = close.ewm(span=26, adjust=False).mean()
+    hist  = (ema12 - ema26) - (ema12 - ema26).ewm(span=9, adjust=False).mean()
+    if len(hist) >= 4:
+        h = [float(hist.iloc[-i]) for i in range(1, 5)]  # h[0] = latest
+        if h[0] > 0 and h[0] < h[1] < h[2]:
+            penalty += MACD_FADE_PENALTY
+            notes.append(f"MACD histogram fading at highs −{MACD_FADE_PENALTY:.1f}pts")
+
+    # 3) Bearish RSI divergence — recent higher high in price, lower high in RSI
+    rsi_s = _rsi_series(close, 14)
+    look  = 20
+    if len(close) > look + 5:
+        recent = close.iloc[-5:]                 # the most recent swing
+        prior  = close.iloc[-(look + 5):-5]      # the prior swing window
+        if not prior.empty:
+            recent_hi_idx = recent.idxmax()
+            prior_hi_idx  = prior.idxmax()
+            if float(recent.max()) >= float(prior.max()):       # price = higher/equal high
+                rsi_recent = float(rsi_s.loc[recent_hi_idx])
+                rsi_prior  = float(rsi_s.loc[prior_hi_idx])
+                if not (pd.isna(rsi_recent) or pd.isna(rsi_prior)) and rsi_recent < rsi_prior - 2:
+                    penalty += RSI_DIVERGENCE_PENALTY
+                    notes.append(f"bearish RSI divergence (RSI {rsi_recent:.0f} < {rsi_prior:.0f} at a higher price) −{RSI_DIVERGENCE_PENALTY:.1f}pts")
+
+    return min(penalty, DISTRIBUTION_PENALTY_CAP), notes
 
 
 def _macd_hist(close: pd.Series) -> tuple[float, float]:
@@ -659,6 +733,12 @@ def compute_prob_score(
             p = min(10.0, (ext - EMA21_EXTENSION_THRESHOLD) * 100 * OVEREXT_PENALTY_SCALE)
             penalty += p
             penalty_notes.append(f"+{ext*100:.0f}% above EMA21 −{p:.1f}pts")
+
+    # Local-top / distribution penalty — institutional selling + momentum failing at highs
+    dist_pen, dist_notes = _distribution_penalty(df, direction_out)
+    if dist_pen > 0:
+        penalty += dist_pen
+        penalty_notes.extend(dist_notes)
 
     composite = max(0.0, composite - penalty)
 
