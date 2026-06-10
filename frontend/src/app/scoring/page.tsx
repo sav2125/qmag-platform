@@ -300,12 +300,20 @@ contribution = strength × eff_weight × accuracy
 
         <h3 className="font-semibold text-gray-800 mt-4 mb-1 text-sm">Weekly Timeframe Adjustment (post-vote)</h3>
         <p className="text-xs text-gray-600 mb-2">
-          After all signals vote, a flat bonus or penalty is added based on the weekly timeframe
-          direction. This is <em>not</em> a voting signal — it&apos;s an adjustment applied to the
-          total (ported directly from the reference implementation). The weekly direction is computed
-          by resampling the existing daily bars to weekly — no additional API call needed.
+          After all signals vote, a bonus or penalty is added based on the weekly timeframe direction.
+          This is <em>not</em> a voting signal — it&apos;s an adjustment applied to the total. The weekly
+          direction is computed by resampling the existing daily bars to weekly — no additional API call.
         </p>
-        <div className="overflow-x-auto">
+        <Warn>
+          <strong>Daily-confirmation gate (anti-top-trap):</strong> the weekly is a <em>lagging</em> signal —
+          it stays bullish well after the daily has rolled over, which is exactly what happens at a local top.
+          To stop the weekly from propping up scores near tops, the bullish bonus only applies at full
+          strength when the <strong>daily vote is also bullish</strong> (direction = long). When the daily has
+          rolled over to <strong>neutral</strong>, the bonus is scaled by <code className="font-mono bg-amber-100 px-1 rounded">×0.2</code>{" "}
+          (e.g. +7.5 → +1.5). The bearish-weekly <em>penalty</em> is never scaled — a weekly headwind is a
+          real risk regardless of the daily.
+        </Warn>
+        <div className="overflow-x-auto mt-2">
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-500 uppercase">
@@ -316,11 +324,12 @@ contribution = strength × eff_weight × accuracy
             </thead>
             <tbody>
               {[
-                ["Bullish weekly + Stage 2", "+7.5 pts", "Highest conviction: daily setup aligns with weekly trend in the right stage"],
-                ["Bullish weekly (any stage)", "+5.5 pts", "Higher timeframe tailwind"],
-                ["Bearish weekly", "−6.0 pts", "Higher timeframe headwind — daily setup fighting an uphill battle"],
-                ["Neutral weekly + Stage 2", "+1.0 pts", "Slight bonus for being in the right stage despite neutral weekly"],
-                ["Neutral weekly (other stages)", "0 pts", "No adjustment"],
+                ["Bullish weekly + Stage 2 + daily long", "+7.5 pts", "Highest conviction: daily and weekly both confirm in the right stage"],
+                ["Bullish weekly (any stage) + daily long", "+5.5 pts", "Higher timeframe tailwind confirming a live daily signal"],
+                ["Bullish weekly but daily NOT long (neutral)", "×0.2 (e.g. +1.5)", "Daily has rolled over — likely a local top; weekly tailwind heavily discounted"],
+                ["Bearish weekly", "−6.0 pts", "Higher timeframe headwind — daily setup fighting an uphill battle (never scaled)"],
+                ["Neutral weekly + Stage 2 + daily long", "+1.0 pts", "Slight bonus for the right stage despite a neutral weekly"],
+                ["Otherwise", "0 pts", "No adjustment"],
               ].map(([cond, adj, rationale]) => (
                 <tr key={cond} className="border-b border-gray-100">
                   <td className="py-2 px-3 border border-gray-200 font-semibold">{cond}</td>

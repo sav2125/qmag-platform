@@ -197,6 +197,8 @@ Full algorithm reasoning (formulas, weights, thresholds, rationale) on the **[/s
 
 Ported from the `technical-analysis` reference repo. Each signal contributes: `strength × weight × accuracy × regime_multiplier`. Regime is inferred from Weinstein stage (S2=trend, S4=range, else transition). Agreement bonus of ×1.2 applied when ≥70% of signals agree. A weekly-timeframe adjustment (+7.5 bullish/S2 … −6.0 bearish) and overextension penalties are applied after the vote.
 
+**Anti-top-trap gate:** the weekly is a lagging signal that stays bullish after the daily rolls over (the signature of a local top). So the bullish weekly bonus only applies at full strength when the **daily vote is also bullish**; when the daily is neutral it is scaled ×0.2 (e.g. +7.5 → +1.5). The bearish-weekly penalty is never scaled.
+
 ```
 Setup patterns:  EP (w=3.0 acc=72%), WYS (3.0/75%), TB (2.5/70%),
                  FBD (2.0/68%), PP (2.0/65%), PULL (1.5/63%)

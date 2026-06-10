@@ -105,6 +105,11 @@ HT_ALIGNED_DIRECTION_BONUS  = 4.0   # weekly direction aligns with daily
 HT_SUPPORTIVE_STAGE_BONUS   = 2.0   # weekly also in S2 advance
 HT_STRONG_TREND_BONUS       = 1.5   # weekly trend score > 55 (we approximate via weekly_dir==bullish)
 HT_OPPOSING_DIRECTION_PENALTY = 6.0  # weekly opposes the daily signal
+# The weekly tailwind only CONFIRMS a live daily bullish signal — it must never
+# manufacture one. When the daily vote has rolled over to neutral (the signature
+# of a local top, where the daily deteriorates before the lagging weekly), the
+# bullish weekly bonus is scaled down sharply so it can't prop up the score.
+HT_UNCONFIRMED_SCALE        = 0.2   # multiplier on the weekly bonus when daily ≠ long
 HT_NEUTRAL_SUPPORT_BONUS    = 1.0   # weekly neutral but in same stage
 
 # ── Overextension penalty constants ──────────────────────────────────────────
@@ -383,33 +388,43 @@ def _ht_adjustment(
     stage: int,
     direction_out: str,
 ) -> tuple[float, str | None]:
-    """Higher-timeframe (weekly) score adjustment — post-vote flat bonus/penalty.
+    """Higher-timeframe (weekly) score adjustment — post-vote bonus/penalty.
 
-    Mirrors config.yaml → scoring.higher_timeframe_confirmation.
-    Only applied when the dominant direction is long (bullish bias).
+    The weekly tailwind only *confirms* a live daily bullish signal; it must
+    never *manufacture* one. When the daily vote has rolled over to neutral
+    (the signature of a local top, where the daily deteriorates before the
+    lagging weekly), the bullish bonus is scaled by HT_UNCONFIRMED_SCALE so it
+    cannot prop up the score. The bearish-weekly *penalty* is never scaled — a
+    weekly headwind is a real risk regardless of the daily.
     """
-    if direction_out not in ("long", "neutral"):
+    if direction_out == "short":
         # For short setups, opposing logic would mirror; skip for now
         return 0.0, None
 
     if weekly_dir == "bullish":
+        # Scale the tailwind down unless the daily itself is confirming (long).
+        scale = 1.0 if direction_out == "long" else HT_UNCONFIRMED_SCALE
         adj  = HT_ALIGNED_DIRECTION_BONUS
-        note = f"+{HT_ALIGNED_DIRECTION_BONUS:.1f} weekly direction aligns"
         if stage == 2:
-            adj  += HT_SUPPORTIVE_STAGE_BONUS
-            note += f" +{HT_SUPPORTIVE_STAGE_BONUS:.1f} S2 support"
-        # Approximate strong_trend_bonus: weekly bullish always qualifies
-        adj  += HT_STRONG_TREND_BONUS
-        note += f" +{HT_STRONG_TREND_BONUS:.1f} strong trend"
-        return adj, note
+            adj += HT_SUPPORTIVE_STAGE_BONUS
+        adj += HT_STRONG_TREND_BONUS   # weekly bullish ⇒ strong-trend proxy
+        adj *= scale
+        if scale < 1.0:
+            note = f"+{adj:.1f} weekly bullish ×{scale:.1f} (daily not confirming)"
+        elif stage == 2:
+            note = f"+{adj:.1f} weekly bullish + S2 + strong-trend confirm"
+        else:
+            note = f"+{adj:.1f} weekly bullish + strong-trend confirm"
+        return round(adj, 2), note
 
     if weekly_dir == "bearish":
+        # Headwind always counts at full strength (makes the score more conservative).
         adj  = -HT_OPPOSING_DIRECTION_PENALTY
         note = f"−{HT_OPPOSING_DIRECTION_PENALTY:.1f} weekly direction opposes"
         return adj, note
 
-    # neutral weekly
-    if stage == 2:
+    # neutral weekly — only a token bonus, and only when the daily is confirming
+    if stage == 2 and direction_out == "long":
         adj  = HT_NEUTRAL_SUPPORT_BONUS
         note = f"+{HT_NEUTRAL_SUPPORT_BONUS:.1f} weekly neutral / S2 support"
         return adj, note
