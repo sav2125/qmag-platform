@@ -45,7 +45,7 @@ export default function Dashboard() {
   const [universe, setUniverse] = useState("sp500");
   const [setupFilter, setSetupFilter] = useState("");
   const [minRs, setMinRs] = useState(50);
-  const [minScore, setMinScore] = useState(0);   // Q Score threshold (0–100)
+  const [minScore, setMinScore] = useState(0);   // P Score threshold (0–100)
   const [gradeFilter, setGradeFilter] = useState<"" | "A" | "AB">(""); // post-scan client filter
   const [top, setTop] = useState(20);
   const [minAdr, setMinAdr] = useState(0);
@@ -102,14 +102,14 @@ export default function Dashboard() {
     }
   }, [universe, canSnapshot]);
 
-  // Client-side grade filter applied after scan results arrive
-  const visibleSetups = gradeFilter === "A"  ? setups.filter((s) => s.grade === "A")
-                      : gradeFilter === "AB" ? setups.filter((s) => s.grade === "A" || s.grade === "B")
+  // Client-side P-grade filter applied after scan results arrive
+  const visibleSetups = gradeFilter === "A"  ? setups.filter((s) => s.prob_grade === "A")
+                      : gradeFilter === "AB" ? setups.filter((s) => s.prob_grade === "A" || s.prob_grade === "B")
                       : setups;
 
   const counts = {
-    A: setups.filter((s) => s.grade === "A").length,
-    B: setups.filter((s) => s.grade === "B").length,
+    A: setups.filter((s) => s.prob_grade === "A").length,
+    B: setups.filter((s) => s.prob_grade === "B").length,
     ep: setups.filter((s) => s.setup_type === "EP").length,
   };
 
@@ -148,7 +148,7 @@ export default function Dashboard() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              Min Score ({minScore})
+              Min P Score ({minScore})
               <span className="ml-1 text-gray-400 font-normal">(0–100)</span>
             </label>
             <input type="range" min={0} max={90} step={5} value={minScore}
@@ -274,7 +274,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: "Total Setups", value: setups.length, color: "text-indigo-600" },
-            { label: "Grade A", value: counts.A, color: "text-green-600" },
+            { label: "P Grade A", value: counts.A, color: "text-green-600" },
             { label: "Episodic Pivots", value: counts.ep, color: "text-purple-600" },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">

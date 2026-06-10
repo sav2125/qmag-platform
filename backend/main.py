@@ -48,7 +48,6 @@ class ScanResult(BaseModel):
     t2: float
     rr: float
     confidence: float
-    grade: str                    # Q grade (A≥72 / B≥58 / C≥44 / D<44)
     rs_score: float
     rs_label: str
     price: float
@@ -57,8 +56,7 @@ class ScanResult(BaseModel):
     meta: dict
     weinstein_stage: int = 0      # 1-4; 0 = insufficient data
     ad_net: int = 0               # O'Neill A/D net days (+ = accumulation)
-    q_score: float = 0.0          # Q Score: quality×60 + RS×25 + stage×10 + A/D×5
-    prob_score: float = 0.0       # P Score: probability-weighted signal voting (0–100)
+    prob_score: float = 0.0       # P Score: probability-weighted signal voting (0–100) — the single score
     prob_grade: str = "D"         # P grade (A≥75 / B≥60 / C≥45 / D<45)
     rvol: float = 1.0             # Relative Volume: today / 20-day avg
     isc_score: float = 0.0        # Institutional Composite Score (OBV+CMF+A/D+MFI → 0-100)
@@ -213,9 +211,9 @@ def scan(
                 }
                 for fut in as_completed(futs):
                     hit = fut.result()
-                    if hit and hit.composite_score >= min_score:
+                    if hit and hit.prob_score >= min_score:
                         results.append(hit)
-            results.sort(key=lambda s: -s.composite_score)
+            results.sort(key=lambda s: -s.prob_score)
             results = results[:top]
         else:
             results = run_scan(

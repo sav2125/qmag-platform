@@ -16,14 +16,8 @@ export function SetupBadge({ type }: { type: string }) {
   );
 }
 
-// Q Grade — Qullamaggie formula (A≥72 / B≥58 / C≥44 / D<44)
-export function GradeBadge({ grade }: { grade: string }) {
-  const c = { A: "text-green-600", B: "text-blue-600", C: "text-amber-600", D: "text-gray-400" }[grade] ?? "text-gray-400";
-  return <span className={`font-bold text-sm ${c}`}>{grade}</span>;
-}
-
-// P Grade — probability scorer (A≥75 / B≥60 / C≥45 / D<45)
-// Uses a teal/cyan palette to visually distinguish it from the Q Grade.
+// P Grade — probability scorer (A≥75 / B≥60 / C≥45 / D<45) — the single grade
+// Teal/cyan palette.
 export function ProbGradeBadge({ grade, score }: { grade: string; score?: number }) {
   const cfg: Record<string, { text: string; bg: string; border: string }> = {
     A: { text: "text-teal-700",  bg: "bg-teal-50",  border: "border-teal-300"  },

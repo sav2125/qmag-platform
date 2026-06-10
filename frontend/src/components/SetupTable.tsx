@@ -1,7 +1,7 @@
 "use client";
 
 import type { Setup } from "@/lib/api";
-import { SetupBadge, GradeBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel, WeeklyDirBadge } from "./SetupBadge";
+import { SetupBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel, WeeklyDirBadge } from "./SetupBadge";
 
 interface Props {
   setups: Setup[];
@@ -122,10 +122,9 @@ export function SetupTable({ setups, loading }: Props) {
             <th className="text-right py-3 px-3">RS</th>
             <th className="text-center py-3 px-3">
               <span className="group relative cursor-help">
-                Grades
+                Score
                 <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-72 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
-                  <strong>Q Grade</strong> — Qullamaggie formula: quality×60 + RS×25 + stage×10 + A/D×5. A≥72 / B≥58 / C≥44 / D&lt;44.<br /><br />
-                  <strong>P Grade</strong> (teal) — probability-weighted signal voting: RSI, MACD, EMA stack, stage, ICS, A/D Net, setup. A≥75 / B≥60 / C≥45 / D&lt;45.<br /><br />
+                  <strong>P Score</strong> (teal) — probability-weighted signal voting across up to 20 signals (RSI, MACD, EMA stack, stage, Minervini Trend Template, OBV, CMF, ICS, A/D Net, setup pattern, …). A≥75 / B≥60 / C≥45 / D&lt;45.<br /><br />
                   <strong>W ▲ / W — / W ▼</strong> — weekly timeframe direction (SMA30 = Weinstein 30-week MA).
                 </span>
               </span>
@@ -225,19 +224,9 @@ export function SetupTable({ setups, loading }: Props) {
                   {s.rs_score.toFixed(0)}
                 </td>
 
-                {/* Q Grade + Q Score / P Grade + P Score / Weekly dir */}
+                {/* Score (P Score) + Weekly dir */}
                 <td className="py-3 px-3 text-center">
-                  {/* Q Grade row */}
-                  <div className="flex items-center justify-center gap-1">
-                    <GradeBadge grade={s.grade} />
-                    <span className="text-[10px] text-gray-400 font-mono">
-                      Q{s.q_score?.toFixed(0) ?? "—"}
-                    </span>
-                  </div>
-                  {/* P Grade row */}
-                  <div className="mt-1">
-                    <ProbGradeBadge grade={s.prob_grade ?? "D"} score={s.prob_score} />
-                  </div>
+                  <ProbGradeBadge grade={s.prob_grade ?? "D"} score={s.prob_score} />
                   {/* Weekly TF direction */}
                   <span className="block mt-1">
                     <WeeklyDirBadge dir={s.weekly_dir ?? "neutral"} />

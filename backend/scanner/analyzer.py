@@ -494,24 +494,8 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     checklist_items = _checklist(stage, rsi_val, adx_val, macd_hist, ma_info, rvol_val, ad, isc, rs_raw_val, tt_result)
     warning_items   = _warnings(df, exhaustion, penalty)
 
-    # ── Best setup + composite score ──────────────────────────────────────────
-    best = max(active_setups, key=lambda s: s.composite_score) if active_setups else None
-
-    if best:
-        comp_score = best.composite_score
-        grade_val  = best.grade
-        pat_pts    = round(best.quality_score * 60, 1)
-        pat_label  = best.setup_type
-    else:
-        # No pattern firing — compute a symbol-level score with quality_score=0.50
-        base       = 0.50 * 60
-        rs_pts_val = rs_raw_val * 0.25
-        stg_pts    = {2: 10.0, 1: 4.0, 3: 2.0, 4: 0.0}.get(stage, 5.0)
-        ad_pts     = max(-5.0, min(5.0, ad * 0.5))
-        comp_score = round(min(100.0, max(0.0, base + rs_pts_val + stg_pts + ad_pts)), 1)
-        grade_val  = "A" if comp_score >= 72 else "B" if comp_score >= 58 else "C" if comp_score >= 44 else "D"
-        pat_pts    = 30.0
-        pat_label  = "none"
+    # ── Best (highest-confidence) Qullamaggie setup, if any fired ─────────────
+    best = max(active_setups, key=lambda s: s.confidence) if active_setups else None
 
     # ── Weekly direction (pre-compute for P Score; full MTF built below) ─────
     try:
@@ -554,17 +538,6 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     monthly_tf = _tf_signals(df_monthly, "Monthly")
     mtf        = _mtf_alignment(daily_tf, weekly_tf, monthly_tf)
 
-    # ── Score breakdown ───────────────────────────────────────────────────────
-    stg_pts_val = {2: 10.0, 1: 4.0, 3: 2.0, 4: 0.0}.get(stage, 5.0)
-    ad_pts_val  = round(max(-5.0, min(5.0, ad * 0.5)), 1)
-    score_breakdown = {
-        "pattern": {"pts": pat_pts,                    "max": 60, "label": f"Pattern quality ({pat_label})"},
-        "rs":      {"pts": round(rs_raw_val * 0.25, 1), "max": 25, "label": f"RS {rs_raw_val:.0f} ({rs_lbl})"},
-        "stage":   {"pts": stg_pts_val,                "max": 10, "label": f"Weinstein {['?','S1','S2','S3','S4'][stage] if 1<=stage<=4 else '?'}"},
-        "ad":      {"pts": ad_pts_val,                 "max":  5, "label": f"A/D Net ({ad:+d})"},
-        "total":   comp_score,
-    }
-
     # ── Serialise setups ──────────────────────────────────────────────────────
     def _sd(s) -> dict:
         return {
@@ -577,8 +550,6 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
             "rr":              s.rr,
             "risk_pct":        round((s.entry - s.stop) / s.entry * 100, 1) if s.entry > 0 else 0,
             "confidence":      s.confidence,
-            "q_score":         s.composite_score,   # Q Score (Qullamaggie formula)
-            "grade":           s.grade,
             "notes":           s.notes,
         }
 
@@ -589,9 +560,7 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "pct_change":    pct_change,
         "rvol":          rvol_val,
         "vol_ratio_50d": vol_ratio,
-        # Scoring — Q Score (Qullamaggie formula)
-        "q_score":         comp_score,
-        "grade":           grade_val,
+        # Direction + relative strength (P Score is the single score, emitted below)
         "direction":       direction,
         "rs_score":        rs_raw_val,
         "rs_label":        rs_lbl,
@@ -615,7 +584,6 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         # Derived
         "checklist":          checklist_items,
         "warnings":           warning_items,
-        "score_breakdown":    score_breakdown,
         # Multi-timeframe alignment
         "timeframe_alignment": mtf,
         # P Score

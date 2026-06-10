@@ -18,7 +18,7 @@ A full-stack trading scanner that identifies Kristjan Qullamaggie's trading setu
 | **FBD** | Failed Breakdown | Price breaks below support 0.4–6%, snaps back above within 1–3 bars; trapped shorts fuel the reversal |
 | **WYS** | Wyckoff Spring | Shakeout ≤3% below a tight accumulation range (15% range, 40 bars), snap-back within 3 bars; highest-conviction bear trap |
 
-Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · Q Grade + Q Score · P Grade + P Score · Risk% · Weinstein Stage · A/D Net · Weekly direction**
+Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score · Setup · Risk% · Weinstein Stage · A/D Net · Weekly direction**
 
 ---
 
@@ -175,36 +175,23 @@ When RSI > 80 or price is >8% above EMA21, a penalty is applied to the confidenc
 - EMA21 extension penalty: up to 10 pts when price > 8% above EMA21
 - Maximum total penalty: 20 pts. Shown as "Overextended (-Xpts)" in the notes column.
 
-### Dual Scoring: Q Score + P Score
+### Scoring: P Score (the single score) + Qullamaggie setups
 
-Every scan result and analysis carries **two independent scores**, each producing its own letter grade:
+Every scan result and analysis carries one score — the **P Score** — plus a flag for which Qullamaggie
+**setup** (if any) is firing. The P Score answers *"how strong is the overall evidence?"*; the setup
+defines *"what kind of entry is this?"* (and supplies the entry / stop / targets).
 
-| Score | Formula | Grade thresholds | What it measures |
+| | Formula | Grade thresholds | What it measures |
 |-------|---------|-----------------|-----------------|
-| **Q Score** | `quality×60 + RS×25 + stage×10 + A/D×5` | A≥72 / B≥58 / C≥44 / D<44 | Qullamaggie's explicit methodology: tight stop, RS leader, Stage 2, accumulation |
-| **P Score** | `Σ (strength × weight × accuracy × regime_mult)` | A≥75 / B≥60 / C≥45 / D<45 | Probability-weighted signal voting across up to 20 independent signals + weekly-TF adjustment |
+| **P Score** | `Σ (strength × weight × accuracy × regime_mult)` + weekly-TF adj − penalties | A≥75 / B≥60 / C≥45 / D<45 | Probability-weighted signal voting across up to 20 independent signals |
+| **Setup** | detector-defined (EP / TB / WYS / PP / PULL / FBD) | — | Whether a tradeable Qullamaggie entry exists right now |
+
+> **Note:** an earlier version also showed a separate fixed "Q Score" (`quality×60 + RS×25 + stage×10 + A/D×5`).
+> It was retired to avoid two competing numbers — its ingredients (RS, Weinstein stage, A/D, the firing
+> setup pattern, and stop tightness via detector confidence) all live on as weighted signals inside the P Score.
+> Scan results sort by P Score and the `min_score` filter applies to it.
 
 Full algorithm reasoning (formulas, weights, thresholds, rationale) on the **[/scoring page](https://qmag-platform-1.onrender.com/scoring)** of the live site.
-
-#### Q Score — Qullamaggie Formula
-
-```
-# Step 1 — quality score (adjusts confidence for stop width and R:R)
-stop_factor   = clip(1 - stop_pct / 0.15, 0.40, 1.00)   # wide stop → lower score
-rr_factor     = clip(rr / 2.0, 0.50, 1.20)               # poor R:R → lower; great R:R → +20% bonus
-quality_score = min(1.0, confidence x stop_factor x rr_factor)
-
-# Step 2 — Q Score (0-100)
-base     = quality_score x 60    # pattern quality:  0-60 pts  (60% weight)
-rs_pts   = rs_score x 0.25       # relative strength: 0-25 pts  (25% weight)
-stg_pts  = {S2:10, S1:4, S3:2, S4:0, unknown:5}   # Weinstein: 0-10 pts (10% weight)
-ad_pts   = clamp(ad_net x 0.5, -5, +5)             # O'Neill A/D: ±5 pts  (5% weight)
-
-q_score  = base + rs_pts + stg_pts + ad_pts
-
-# Step 3 — Q grade thresholds (calibrated to real detector confidence ranges)
-A: q_score >= 72    B: >= 58    C: >= 44    D: < 44
-```
 
 #### P Score — Probability Scorer
 
@@ -225,10 +212,11 @@ P grade: A≥75 / B≥60 / C≥45 / D<45
 
 The **Minervini Trend Template** is Mark Minervini's 8-point SEPA leadership filter (price vs SMA 50/150/200, 200-SMA rising, 52-week price position, RS ≥ 70). Its strength = fraction of the 8 criteria met; the live count appears in the Analyze-page signal tooltip.
 
-**When both agree (QA + PA):** Maximum conviction — size up.
-**When they diverge:** Investigate why before trading — check the Analyzer page signal breakdown.
+**P Grade A + a firing setup:** Maximum conviction — size up.
+**P Grade A but no setup firing:** Strong trend, no clean entry yet — add to watchlist and wait for a trigger.
+**Low P Grade + a firing setup:** Entry exists but evidence is weak/mixed — reduce size or pass; check the Analyzer page signal breakdown.
 
-A great pattern with weak RS or non-Stage-2 **cannot** Q-grade A — intentional. Qullamaggie only trades Stage 2 leaders with strong RS.
+Because RS, Weinstein stage, and the firing setup are high-weight P Score signals, a great pattern in a weak-RS or non-Stage-2 stock still **cannot** reach P Grade A — intentional. Qullamaggie only trades Stage 2 leaders with strong RS.
 
 ---
 

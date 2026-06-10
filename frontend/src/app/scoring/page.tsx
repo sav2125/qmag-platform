@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Scoring Algorithm — Qullamaggie Platform",
-  description: "Full explanation of how the composite score, grade, and quality signals are computed",
+  description: "Full explanation of how the P Score, grade, setups, and quality signals are computed",
 };
 
 // ── Reusable section wrapper ─────────────────────────────────────────────────
@@ -44,12 +44,7 @@ function Warn({ children }: { children: React.ReactNode }) {
 
 const TOC = [
   { id: "overview",     label: "Overview" },
-  // Q Score
-  { id: "qscore",       label: "Q Score — Qullamaggie Formula" },
-  { id: "quality",      label: "  Step 1 — Quality Score" },
-  { id: "composite",    label: "  Step 2 — Composite Score" },
-  { id: "grade",        label: "  Step 3 — Grade Thresholds" },
-  // P Score
+  // P Score — the single score
   { id: "pscore",       label: "P Score — Probability Scorer" },
   { id: "pscore-signals",  label: "  P Signals & Weights" },
   { id: "pscore-regime",   label: "  Regime Multipliers" },
@@ -97,236 +92,34 @@ export default function ScoringPage() {
       {/* Overview */}
       <Section id="overview" title="🗺️ Overview">
         <p>
-          Every scan result carries <strong>two independent scores</strong>, each producing its own letter grade:
+          Every scan result carries a single <strong>P Score</strong> (0–100) plus a flag for which
+          Qullamaggie <strong>setup</strong> (if any) is currently firing. The P Score answers
+          <em> &quot;how strong is the overall evidence?&quot;</em>; the setup tells you <em>&quot;what
+          kind of entry is this?&quot;</em>
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-            <div className="font-bold text-indigo-800 mb-1">Q Score — Qullamaggie Formula</div>
-            <div className="text-xs text-indigo-700 space-y-1">
-              <p>A fixed 4-component formula based on Kristjan Qullamaggie&apos;s methodology:</p>
-              <code className="block font-mono bg-indigo-100 px-2 py-1 rounded text-[11px]">
-                quality×60 + RS×25 + stage×10 + A/D×5
-              </code>
-              <p>Grade: <strong>A≥72 / B≥58 / C≥44 / D&lt;44</strong></p>
-            </div>
-          </div>
-          <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-            <div className="font-bold text-teal-800 mb-1">P Score — Probability Scorer</div>
-            <div className="text-xs text-teal-700 space-y-1">
-              <p>A signal-voting model ported from the <em>technical-analysis</em> reference repo:</p>
-              <code className="block font-mono bg-teal-100 px-2 py-1 rounded text-[11px]">
-                Σ (strength × weight × accuracy × regime_mult)
-              </code>
-              <p>Grade: <strong>A≥75 / B≥60 / C≥45 / D&lt;45</strong></p>
-            </div>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mt-3">
+          <div className="font-bold text-teal-800 mb-1">P Score — Probability Scorer (the single score)</div>
+          <div className="text-xs text-teal-700 space-y-1">
+            <p>A signal-voting model ported from the <em>technical-analysis</em> reference repo:</p>
+            <code className="block font-mono bg-teal-100 px-2 py-1 rounded text-[11px]">
+              Σ (strength × weight × accuracy × regime_mult)  + weekly-TF adjustment − penalties
+            </code>
+            <p>Grade: <strong>A≥75 / B≥60 / C≥45 / D&lt;45</strong></p>
           </div>
         </div>
         <Note>
-          <strong>Why two scores?</strong> The Q Score is anchored to Qullamaggie&apos;s explicit methodology —
-          simple, interpretable, formula-driven. The P Score independently measures signal alignment across
-          multiple indicators with backtested accuracy factors and regime-aware weighting. When both agree
-          (e.g. QA + PA), conviction is highest. When they disagree, investigate why before trading.
+          <strong>What about the Qullamaggie setups?</strong> The setup detectors (EP, TB, WYS, PP, PULL, FBD)
+          still run on every stock — they decide <em>whether a tradeable entry exists</em> and define the
+          entry / stop / targets. They are <strong>not</strong> a separate score. When analyzing a stock you
+          simply see which setup is firing (or &quot;None&quot;), and each firing setup also votes inside the
+          P Score with a high weight. One number, one verdict.
         </Note>
-      </Section>
-
-      {/* Q Score — header section */}
-      <Section id="qscore" title="📐 Q Score — Qullamaggie Formula">
-        <p>
-          The Q Score is a <strong>fixed, transparent formula</strong> directly derived from Kristjan Qullamaggie&apos;s
-          publicly described methodology. It bundles pattern quality, relative strength, Weinstein stage,
-          and institutional footprint into a single 0–100 number. The goal: rank setups so the genuinely
-          best opportunities — tight pattern, RS leader, Stage 2, institutional accumulation — float to
-          the top.
-        </p>
-        <p>Scoring happens in three steps:</p>
-        <ol className="list-decimal list-inside space-y-1 pl-2">
-          <li><strong>Quality score</strong> — adjusts raw pattern confidence for stop width and R:R</li>
-          <li><strong>Q Score (composite)</strong> — adds RS, Weinstein stage, and A/D net on top</li>
-          <li><strong>Q Grade</strong> — maps Q Score to A/B/C/D via calibrated thresholds</li>
-        </ol>
         <Note>
-          <strong>Why one unified score?</strong> Early versions showed RS, stage, and A/D as display-only
-          columns. They looked nice but didn&apos;t affect ranking. A strong RS 90 stock with a mediocre pattern
-          ranked the same as a weak RS 30 stock with the same pattern. The Q Score fixes this: all signals
-          directly affect the grade, so an A grade truly means &quot;best across every dimension.&quot;
+          <strong>History:</strong> earlier versions also showed a separate &quot;Q Score&quot; (a fixed
+          Qullamaggie formula: quality×60 + RS×25 + stage×10 + A/D×5). It was retired to avoid two competing
+          numbers — its ingredients (RS, Weinstein stage, A/D, setup pattern, stop tightness) all live on as
+          weighted signals inside the P Score.
         </Note>
-      </Section>
-
-      {/* Step 1 — Quality Score */}
-      <Section id="quality" title="Step 1 — Quality Score">
-        <p>
-          Raw pattern <strong>confidence</strong> (0.0–1.0) is output by each detector (EP, TB, PP, PULL, FBD).
-          Confidence alone is a poor ranking signal because a pattern with a 10% stop width and 1:1 R:R can
-          score identically to one with a 2% stop and 4:1 R:R. The quality score corrects for this.
-        </p>
-
-        <CodeBlock>{`# stop_factor: penalises wide stops
-# 0% stop → 1.00 (no penalty)
-# 7.5% stop → 0.50 (half credit)
-# ≥15% stop → 0.40 (floor — still tradeable but tight)
-stop_pct    = (entry - stop) / entry
-stop_factor = clip(1 - stop_pct / 0.15, 0.40, 1.00)
-
-# rr_factor: rewards good risk:reward
-# R:R = 1.0 → 0.50 (unacceptable, barely viable)
-# R:R = 2.0 → 1.00 (target — neutral)
-# R:R ≥ 2.4 → 1.20 (bonus for exceptional setups)
-rr_factor = clip(rr / 2.0, 0.50, 1.20)
-
-# quality_score: capped at 1.0
-quality_score = min(1.0, confidence × stop_factor × rr_factor)`}
-        </CodeBlock>
-
-        <h3 className="font-semibold text-gray-800 mt-2">Why these numbers?</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse mt-2">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 uppercase">
-                <th className="text-left py-2 px-3 border border-gray-200">Parameter</th>
-                <th className="text-left py-2 px-3 border border-gray-200">Value</th>
-                <th className="text-left py-2 px-3 border border-gray-200">Reasoning</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["stop_factor floor", "0.40", "A 15%+ stop is too wide for Qullamaggie's style but not unacceptable — it still gets 40% credit rather than zero"],
-                ["stop_factor divisor", "0.15 (15%)", "Qullamaggie rarely takes setups with stops wider than 10–12%. 15% is the absolute outer limit."],
-                ["rr target", "2.0×", "Minimum viable R:R for a swing trade targeting at least 2× the risk"],
-                ["rr cap", "1.20", "Capped so exceptional R:R can't mask a terrible pattern — maximum 20% bonus"],
-                ["quality_score cap", "1.0", "Prevents the rr bonus from inflating the score above the natural ceiling"],
-              ].map(([p, v, r]) => (
-                <tr key={p} className="border-b border-gray-100">
-                  <td className="py-2 px-3 border border-gray-200 font-mono text-indigo-700">{p}</td>
-                  <td className="py-2 px-3 border border-gray-200 font-mono">{v}</td>
-                  <td className="py-2 px-3 border border-gray-200 text-gray-600">{r}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3 className="font-semibold text-gray-800 mt-4">Example</h3>
-        <CodeBlock>{`# EP with confidence=0.85, stop_pct=6%, R:R=3.0
-stop_factor   = clip(1 - 0.06/0.15, 0.40, 1.00) = clip(0.60, …) = 0.60
-rr_factor     = clip(3.0/2.0, 0.50, 1.20)        = clip(1.50, …) = 1.20
-quality_score = min(1.0, 0.85 × 0.60 × 1.20)    = min(1.0, 0.612) = 0.612`}
-        </CodeBlock>
-      </Section>
-
-      {/* Step 2 — Composite Score */}
-      <Section id="composite" title="Step 2 — Composite Score (0–100)">
-        <p>
-          The composite score adds market context signals on top of the pattern quality:
-        </p>
-
-        <CodeBlock>{`# ── Component breakdown ──────────────────────────────────────
-base     = quality_score × 60      # pattern quality:  0–60 pts
-rs_pts   = rs_score × 0.25         # relative strength: 0–25 pts
-stg_pts  = {S2:10, S1:4, S3:2, S4:0, unknown:5}  # Weinstein: 0–10 pts
-ad_pts   = clamp(ad_net × 0.5, -5, +5)            # A/D net:  -5 to +5 pts
-
-composite = base + rs_pts + stg_pts + ad_pts   # 0–100`}
-        </CodeBlock>
-
-        <h3 className="font-semibold text-gray-800 mt-2">Weight rationale</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse mt-2">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 uppercase">
-                <th className="text-left py-2 px-3 border border-gray-200">Signal</th>
-                <th className="text-left py-2 px-3 border border-gray-200">Max pts</th>
-                <th className="text-left py-2 px-3 border border-gray-200">% of total</th>
-                <th className="text-left py-2 px-3 border border-gray-200">Why this weight?</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["Pattern quality", "60", "60%", "The chart pattern is the primary signal — without a real setup, everything else is noise"],
-                ["Relative Strength", "25", "25%", "Qullamaggie explicitly filters for RS leaders. A great pattern in a laggard stock is far less likely to work"],
-                ["Weinstein Stage", "10", "10%", "Stage 2 is a necessary condition, not just a nice-to-have. Non-S2 setups are penalised hard (S3=2pts, S4=0pts)"],
-                ["A/D Net", "±5", "±5%", "A tiebreaker, not a primary signal. Institutional footprint is confirming evidence — used to tip close calls"],
-              ].map(([s, m, p, r]) => (
-                <tr key={s} className="border-b border-gray-100">
-                  <td className="py-2 px-3 border border-gray-200 font-semibold">{s}</td>
-                  <td className="py-2 px-3 border border-gray-200 font-mono text-center">{m}</td>
-                  <td className="py-2 px-3 border border-gray-200 font-mono text-center text-indigo-700">{p}</td>
-                  <td className="py-2 px-3 border border-gray-200 text-gray-600">{r}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h3 className="font-semibold text-gray-800 mt-4">Perfect score example</h3>
-        <CodeBlock>{`# EP: confidence=0.90, stop_pct=4%, R:R=3.5, RS=90, Stage 2, A/D net=+8
-stop_factor   = clip(1 - 0.04/0.15, …) = 0.733
-rr_factor     = clip(3.5/2.0, …)       = 1.20  (capped)
-quality_score = min(1.0, 0.90 × 0.733 × 1.20) = min(1.0, 0.792) = 0.792
-
-base     = 0.792 × 60  = 47.5
-rs_pts   = 90 × 0.25   = 22.5
-stg_pts  = 10          (S2)
-ad_pts   = clamp(8×0.5, -5, +5) = +5.0
-
-composite = 47.5 + 22.5 + 10 + 5 = 85.0  → Grade A`}
-        </CodeBlock>
-
-        <Warn>
-          <strong>Design intent:</strong> A great pattern with weak RS or non-Stage-2 <em>cannot</em> reach
-          Grade A. For example, RS=30 + Stage 3 caps the external signal contribution at{" "}
-          <code className="font-mono bg-amber-100 px-1 rounded">30×0.25 + 2 = 9.5 pts</code> versus the
-          maximum 35 pts from a leader in Stage 2. This is intentional — Qullamaggie only trades leaders
-          in uptrends.
-        </Warn>
-      </Section>
-
-      {/* Step 3 — Grade */}
-      <Section id="grade" title="Step 3 — Grade Thresholds">
-        <CodeBlock>{`A  →  composite ≥ 72   (elite setup — all signals aligned)
-B  →  composite ≥ 58   (good setup — most signals positive)
-C  →  composite ≥ 44   (marginal — something is weak)
-D  →  composite  < 44   (avoid — multiple signals poor)`}
-        </CodeBlock>
-
-        <h3 className="font-semibold text-gray-800 mt-2">Calibration story</h3>
-        <p>
-          The original thresholds (A≥80, B≥65, C≥50) were set theoretically. After testing with real data,
-          a textbook-perfect setup — high confidence EP, tight stop, 3:1 R:R, RS 90, Stage 2,
-          accumulation — only scored <strong>74.9</strong>. That should clearly be an A.
-        </p>
-        <p>
-          The root cause: pattern confidence outputs from the detectors typically range 0.60–0.90, not
-          0.90–1.00. A confidence of 0.85 with a good stop and R:R gives quality_score ≈ 0.75, which
-          means <code className="font-mono bg-gray-100 px-1 rounded">base = 45 pts</code> — not 60.
-          The thresholds were recalibrated to match real-world detector outputs:
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse mt-2">
-            <thead>
-              <tr className="bg-gray-50 text-gray-500 uppercase">
-                <th className="text-left py-2 px-3 border border-gray-200">Grade</th>
-                <th className="text-left py-2 px-3 border border-gray-200">Old threshold</th>
-                <th className="text-left py-2 px-3 border border-gray-200">New threshold</th>
-                <th className="text-left py-2 px-3 border border-gray-200">What it represents</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["A", "≥ 80", "≥ 72", "Strong pattern + RS leader + Stage 2 + some accumulation"],
-                ["B", "≥ 65", "≥ 58", "Good pattern with one signal slightly weak"],
-                ["C", "≥ 50", "≥ 44", "Pattern exists but RS, stage, or A/D is poor"],
-                ["D", "< 50", "< 44", "Multiple signals negative — not worth trading"],
-              ].map(([g, o, n, w]) => (
-                <tr key={g} className="border-b border-gray-100">
-                  <td className="py-2 px-3 border border-gray-200 font-bold text-indigo-700">{g}</td>
-                  <td className="py-2 px-3 border border-gray-200 font-mono line-through text-gray-400">{o}</td>
-                  <td className="py-2 px-3 border border-gray-200 font-mono font-semibold">{n}</td>
-                  <td className="py-2 px-3 border border-gray-200 text-gray-600">{w}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </Section>
 
       {/* ── P SCORE ──────────────────────────────────────────────────────────── */}
@@ -351,12 +144,12 @@ contribution = strength × eff_weight × accuracy
 
 # Raw score = dominant_side_total / dominant_max
 # Composite = min(100, raw_score × 100 × agreement_bonus)
-# Then apply overextension penalty (same RSI/EMA21 rules as Q Score)`}
+# Then apply the weekly-TF adjustment and overextension penalty (RSI>80 / >8% above EMA21)`}
         </CodeBlock>
 
         <Note>
-          <strong>P Score vs Q Score:</strong> The Q Score is a fixed formula — it always gives the same
-          weights. The P Score adapts: in a trending regime, trend signals are worth more; in a ranging
+          <strong>Why a voting model?</strong> Instead of a fixed formula with constant weights, the P Score
+          adapts to the market regime: in a trending regime, trend signals are worth more; in a ranging
           regime, mean-reversion signals get a boost. An agreement bonus rewards when ≥70% of signals agree,
           reflecting the principle that conviction grows when independent indicators converge.
         </Note>
@@ -592,7 +385,7 @@ agreement_bonus = 1.20  # +20% to final score
       </Section>
 
       <Section id="pscore-grades" title="P Score: Grade Thresholds">
-        <CodeBlock>{`# P Grade thresholds (different from Q Grade — higher bar for A)
+        <CodeBlock>{`# P Grade thresholds
 A  →  prob_score ≥ 75   (strong signal alignment — high probability setup)
 B  →  prob_score ≥ 60   (good alignment — most signals agree)
 C  →  prob_score ≥ 45   (partial alignment — some signals conflict)
@@ -603,21 +396,21 @@ D  →  prob_score  < 45  (weak alignment — signals disagreeing or absent)`}
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-500 uppercase">
-                <th className="text-left py-2 px-3 border border-gray-200">Condition</th>
+                <th className="text-left py-2 px-3 border border-gray-200">P Grade + setup</th>
                 <th className="text-left py-2 px-3 border border-gray-200">Interpretation</th>
                 <th className="text-left py-2 px-3 border border-gray-200">Trade implication</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ["QA + PA", "Both formulas agree: elite setup", "Maximum conviction — size up"],
-                ["QA + PB", "Q says elite, P says good", "Strong setup — normal size"],
-                ["QB + PA", "P more confident than Q formula", "Worth investigating — check chart"],
-                ["QA + PD", "Signals diverging sharply", "Pattern strong but signals mixed — wait or reduce size"],
-                ["QD + PD", "Both poor", "Skip — no edge"],
+                ["PA + setup firing", "Strong evidence and a defined entry", "Maximum conviction — size up"],
+                ["PB + setup firing", "Good evidence with a defined entry", "Normal size"],
+                ["PA, no setup firing", "Strong trend but no clean entry yet", "Add to watchlist — wait for a setup to trigger"],
+                ["PC / PD + setup firing", "Entry exists but evidence is weak/mixed", "Reduce size or pass — check the conflicting signals"],
+                ["PD, no setup", "No edge", "Skip"],
               ].map(([c, i, t]) => (
                 <tr key={c} className="border-b border-gray-100">
-                  <td className="py-2 px-3 border border-gray-200 font-mono font-semibold text-indigo-700">{c}</td>
+                  <td className="py-2 px-3 border border-gray-200 font-mono font-semibold text-teal-700">{c}</td>
                   <td className="py-2 px-3 border border-gray-200 text-gray-700">{i}</td>
                   <td className="py-2 px-3 border border-gray-200 text-gray-600">{t}</td>
                 </tr>
@@ -627,10 +420,9 @@ D  →  prob_score  < 45  (weak alignment — signals disagreeing or absent)`}
         </div>
 
         <Warn>
-          <strong>P Grade is not a replacement for Q Grade</strong> — it&apos;s a second opinion.
-          The P Score uses backtested accuracy estimates (not live-calibrated against your broker fills).
-          Treat it as a signal-alignment gauge: when it agrees with Q, trade normally. When it disagrees,
-          reduce size and investigate the conflicting signals on the Analyzer page.
+          <strong>The P Score uses backtested accuracy estimates</strong> — not live-calibrated against your
+          broker fills. Treat it as a signal-alignment gauge, and always confirm the entry, stop, and targets
+          from the firing setup on the Analyzer page before trading.
         </Warn>
       </Section>
 
@@ -762,8 +554,8 @@ ad_net = acc_days - dist_days`}
       <Section id="overext" title="Signal: Overextension Penalty">
         <p>
           When a stock is already over-extended (RSI in overbought territory, or price far above its
-          short-term mean), chasing the entry carries higher reversal risk. The penalty is applied
-          directly to the raw pattern confidence <em>before</em> the composite score is computed.
+          short-term mean), chasing the entry carries higher reversal risk. The penalty docks the raw
+          pattern confidence, and the P Score applies the same RSI/EMA21 overextension rules after the vote.
         </p>
 
         <CodeBlock>{`# RSI penalty — each point above RSI 80 costs 0.5 pts
@@ -931,9 +723,9 @@ ADX  = ewm(DX, span=14)       # range 0–100, direction-agnostic`}
         </div>
 
         <Note>
-          <strong>ADX is checklist-only — it does not feed the composite score.</strong>{" "}
+          <strong>ADX is checklist-only — it does not feed the P Score.</strong>{" "}
           A strong EP setup can fire on a low-ADX day (the catalyst itself creates the momentum).
-          Adding ADX to the composite would unfairly penalise early breakouts before trend strength
+          Adding ADX to the score would unfairly penalise early breakouts before trend strength
           has had time to register. Use it as confirmation: high ADX (30+) makes existing setups
           more reliable, but a low ADX alone is not a reason to skip an otherwise excellent setup.
         </Note>
@@ -956,15 +748,15 @@ ADX  = ewm(DX, span=14)       # range 0–100, direction-agnostic`}
 avg_20  = volume.iloc[-21:-1].mean()   # excludes today
 rvol    = round(today_volume / avg_20, 2)
 
-# Display colour thresholds (frontend only — not in composite score)
+# Display colour thresholds (frontend only — not a P Score signal)
 ≥ 2.0×  → violet/purple  (volume surge — strong participation)
 ≥ 1.3×  → gray           (above average, worth noting)
 < 1.3×  → light gray     (ordinary volume)`}
         </CodeBlock>
         <Note>
-          <strong>Why not in the composite score?</strong> RVOL is a raw daily number that&apos;s already
+          <strong>Why not a P Score signal?</strong> RVOL is a raw daily number that&apos;s already
           partially captured by the pattern detectors themselves — EP requires ≥2× vol, TB requires
-          ≥1.2× vol, PP compares to the highest down-day volume. Adding it again to the composite
+          ≥1.2× vol, PP compares to the highest down-day volume. Adding it again as its own signal
           would double-count it. It&apos;s shown as context, not scored.
         </Note>
       </Section>
@@ -1023,10 +815,10 @@ ICS = obv_pts + cmf_pts + ad_pts + mfi_pts`}
           </table>
         </div>
         <Note>
-          <strong>ICS vs A/D Net in the composite score:</strong> The A/D Net (O&apos;Neil style day count)
-          contributes ±5 pts to the composite score. ICS is shown separately as additional context —
-          it&apos;s a more comprehensive signal but uses a different methodology. Together they give you
-          both the &quot;discrete day&quot; view (A/D Net) and the &quot;continuous flow&quot; view (ICS).
+          <strong>ICS vs A/D Net in the P Score:</strong> both vote in the P Score — A/D Net (O&apos;Neil
+          style day count) at weight 1.0 and ICS at weight 1.2. They use different methodologies, so
+          together they give you both the &quot;discrete day&quot; view (A/D Net) and the
+          &quot;continuous flow&quot; view (ICS).
         </Note>
       </Section>
 
@@ -1161,30 +953,32 @@ T2     = range_high + (range_high - range_floor)  # measured move`}
         <ul className="list-disc list-inside pl-2 space-y-1 text-gray-600">
           <li>The stock is in a confirmed uptrend (Weinstein Stage)</li>
           <li>The stock is outperforming the market (RS)</li>
-          <li>Institutions are buying or selling (A/D Net)</li>
-          <li>The stop loss is tight enough to make the trade viable (stop_factor)</li>
-          <li>The R:R justifies the risk (rr_factor)</li>
+          <li>Institutions are buying or selling (A/D Net, ICS, OBV, CMF)</li>
+          <li>The higher timeframe agrees (weekly direction)</li>
+          <li>The structure is that of a market leader (Minervini Trend Template)</li>
         </ul>
         <p className="mt-2">
-          The composite score bundles all of this into one number so the grade reflects the full
-          picture — not just the shape on the chart.
+          The <strong>P Score</strong> bundles all of this into one number — a weighted, regime-aware vote
+          across up to 20 signals — so the grade reflects the full picture, not just the shape on the chart.
+          The firing <strong>setup</strong> (EP, TB, …) then tells you the specific entry, stop, and targets.
         </p>
 
-        <h3 className="font-semibold text-gray-800 mt-4">Why not weight pattern quality even higher?</h3>
+        <h3 className="font-semibold text-gray-800 mt-4">One score, not two</h3>
         <p>
-          60% feels low for the primary signal, but consider: a perfect EP in a Stage 4 declining
-          stock (RS=20, S4) would score <code className="font-mono bg-gray-100 px-1 rounded">
-          60 + 5 + 0 + neutral = ~65</code> — Grade B at best. That&apos;s intentional.
-          Qullamaggie would never take that trade, and the scanner shouldn&apos;t give it Grade A either.
+          An earlier version of this tool also showed a fixed &quot;Q Score&quot; formula
+          (quality×60 + RS×25 + stage×10 + A/D×5) side-by-side with the P Score. Two competing numbers
+          created more confusion than insight, so the Q Score was retired. Everything it measured — RS
+          leadership, Weinstein stage, A/D accumulation, the firing setup pattern, and stop tightness via
+          each detector&apos;s confidence — now lives on as weighted signals <em>inside</em> the P Score.
         </p>
 
         <h3 className="font-semibold text-gray-800 mt-4">Comparison with the technical-analysis reference repo</h3>
         <p>
           The <em>technical-analysis</em> reference repo uses a config-driven probability scorer with
           backtested accuracy factors, regime multipliers, and signal-class categorisation. We have
-          ported this architecture as the <strong>P Score</strong>, using our six setup types as primary
-          signals and recalibrating the accuracy factors against publicly available win-rate estimates.
-          The ICS (OBV + CMF + A/D line + MFI) was also ported as a standalone display signal.
+          ported this architecture as the <strong>P Score</strong> — now the single score — using our six
+          setup types as high-weight signals and recalibrating the accuracy factors against publicly
+          available win-rate estimates.
         </p>
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">

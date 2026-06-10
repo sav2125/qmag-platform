@@ -3,7 +3,7 @@
 import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, type SymbolAnalysis, type ActiveSetup, type ChecklistItem, type Warning, type TimeframeSignal } from "@/lib/api";
-import { SetupBadge, GradeBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
+import { SetupBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
 
 // ── Small reusable UI pieces ──────────────────────────────────────────────────
 
@@ -100,8 +100,7 @@ function SetupCard({ s, highlight = false }: { s: ActiveSetup; highlight?: boole
           {highlight && <span className="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded font-bold">BEST</span>}
         </div>
         <div className="flex items-center gap-2">
-          <GradeBadge grade={s.grade} />
-          <span className="text-[10px] text-gray-400 font-mono">Q{s.q_score.toFixed(0)}</span>
+          <span className="text-[10px] text-gray-400 font-mono">conf {(s.confidence * 100).toFixed(0)}%</span>
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2 text-xs">
@@ -127,25 +126,6 @@ function SetupCard({ s, highlight = false }: { s: ActiveSetup; highlight?: boole
       {s.notes && (
         <p className="text-[11px] text-gray-500 mt-2 italic">{s.notes}</p>
       )}
-    </div>
-  );
-}
-
-// ── Score bar ─────────────────────────────────────────────────────────────────
-
-function ScoreBar({ label, pts, max }: { label: string; pts: number; max: number }) {
-  const pct  = Math.max(0, Math.min(100, (Math.abs(pts) / max) * 100));
-  const neg  = pts < 0;
-  const fill = neg ? "bg-red-400" : pts > max * 0.7 ? "bg-green-500" : "bg-indigo-400";
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-44 text-xs text-gray-600 shrink-0">{label}</div>
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${fill}`} style={{ width: `${pct}%` }} />
-      </div>
-      <div className="w-20 text-right text-xs font-mono text-gray-700">
-        {neg ? "" : "+"}{pts.toFixed(1)} / {max}
-      </div>
     </div>
   );
 }
@@ -368,26 +348,13 @@ function AnalyzeInner() {
               </div>
             </Card>
 
-            {/* Q Score + P Score card */}
+            {/* P Score card (the single score) */}
             <Card className="md:col-span-1">
 
-              {/* ── Dual score header ── */}
+              {/* ── Score header: P Score + Qullamaggie setup status ── */}
               <div className="flex gap-4 mb-3">
 
-                {/* Q Score — Qullamaggie formula */}
-                <div className="flex-1 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2.5 text-center">
-                  <div className="text-[9px] font-semibold text-indigo-400 uppercase tracking-wide mb-0.5">Q Score</div>
-                  <div className="flex items-baseline justify-center gap-1.5">
-                    <span className="text-2xl font-bold font-mono text-indigo-700">{data.q_score.toFixed(0)}</span>
-                    <span className="text-xs text-indigo-400">/100</span>
-                  </div>
-                  <div className="mt-1">
-                    <GradeBadge grade={data.grade} />
-                    <div className="text-[9px] text-indigo-400 mt-0.5">Qullamaggie grade</div>
-                  </div>
-                </div>
-
-                {/* P Score — probability-weighted signal voting */}
+                {/* P Score — the single probability score */}
                 <div className="flex-1 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2.5 text-center">
                   <div className="text-[9px] font-semibold text-teal-500 uppercase tracking-wide mb-0.5">P Score</div>
                   <div className="flex items-baseline justify-center gap-1.5">
@@ -398,6 +365,31 @@ function AnalyzeInner() {
                     <ProbGradeBadge grade={data.prob_grade ?? "D"} />
                     <div className="text-[9px] text-teal-400 mt-0.5">Signal voting grade</div>
                   </div>
+                </div>
+
+                {/* Qullamaggie setup status — does a Q setup fire? */}
+                <div className={`flex-1 rounded-lg px-3 py-2.5 text-center border ${
+                  data.best_setup ? "bg-purple-50 border-purple-200" : "bg-gray-50 border-gray-200"
+                }`}>
+                  <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Qullamaggie Setup</div>
+                  {data.best_setup ? (
+                    <>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <SetupBadge type={data.best_setup.setup_type} />
+                        <span className="text-[10px] text-purple-600 font-semibold capitalize">{data.best_setup.state}</span>
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        {data.active_setups.length > 1
+                          ? `+${data.active_setups.length - 1} more firing`
+                          : "fires now"}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-base font-bold text-gray-400 mt-1">None</div>
+                      <div className="text-[9px] text-gray-400 mt-0.5">no setup firing</div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -417,46 +409,6 @@ function AnalyzeInner() {
                     <div className="text-[9px] text-gray-400">regime</div>
                   </div>
                 )}
-              </div>
-
-              {/* Q Score breakdown — mini bars */}
-              <div className="border-t border-gray-100 pt-2.5 space-y-1.5">
-                <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  Q Score breakdown
-                </div>
-                {(["pattern", "rs", "stage", "ad"] as const).map((k) => {
-                  const c = data.score_breakdown[k];
-                  const pct  = Math.max(0, Math.min(100, Math.abs(c.pts) / c.max * 100));
-                  const neg  = c.pts < 0;
-                  const fill = neg
-                    ? "bg-red-300"
-                    : pct >= 80 ? "bg-green-500"
-                    : pct >= 50 ? "bg-indigo-400"
-                    : "bg-gray-300";
-                  const shortLabel = { pattern: "Pattern", rs: "RS", stage: "Stage", ad: "A/D" }[k];
-                  return (
-                    <div key={k} className="flex items-center gap-2 group relative cursor-help">
-                      <div className="w-12 text-[10px] text-gray-500 shrink-0">{shortLabel}</div>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${fill}`} style={{ width: `${pct}%` }} />
-                      </div>
-                      <div className={`text-[10px] font-mono w-10 text-right shrink-0 ${neg ? "text-red-500" : "text-gray-600"}`}>
-                        {neg ? "" : "+"}{c.pts.toFixed(0)}/{c.max}
-                      </div>
-                      <span className="pointer-events-none absolute left-0 bottom-full mb-1 z-50 w-56 rounded-lg bg-gray-900 text-white text-[10px] p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl">
-                        {c.label}
-                      </span>
-                    </div>
-                  );
-                })}
-                <p className="text-[9px] text-gray-400 pt-0.5 leading-relaxed">
-                  Pattern quality:{" "}
-                  <span className="font-mono font-semibold text-gray-500">
-                    {(data.score_breakdown.pattern.pts / 60 * 100).toFixed(0)}%
-                  </span>
-                  {" "}= confidence × stop tightness × R:R ·{" "}
-                  <a href="/scoring" className="text-indigo-400 hover:underline">Scoring docs →</a>
-                </p>
               </div>
 
               {/* P Score breakdown — per-signal contribution bars */}
@@ -661,7 +613,7 @@ function AnalyzeInner() {
             ) : (
               <div className="space-y-3">
                 {data.active_setups
-                  .sort((a, b) => b.q_score - a.q_score)
+                  .sort((a, b) => b.confidence - a.confidence)
                   .map((s, i) => (
                     <SetupCard key={s.setup_type} s={s} highlight={i === 0 && data.active_setups.length > 1} />
                   ))}
@@ -686,22 +638,6 @@ function AnalyzeInner() {
             </Card>
 
             <div className="space-y-4">
-
-              {/* Score breakdown */}
-              <Card title="Score Breakdown">
-                <div className="space-y-2.5">
-                  {(["pattern","rs","stage","ad"] as const).map((k) => {
-                    const c = data.score_breakdown[k];
-                    return <ScoreBar key={k} label={c.label} pts={c.pts} max={c.max} />;
-                  })}
-                  <div className="border-t border-gray-100 pt-2 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-600">Total</span>
-                    <span className="text-lg font-bold font-mono text-indigo-600">
-                      {data.score_breakdown.total.toFixed(0)} / 100
-                    </span>
-                  </div>
-                </div>
-              </Card>
 
               {/* Warnings */}
               {data.warnings.length > 0 && (

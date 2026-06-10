@@ -225,11 +225,11 @@ def scan(
         for fut in as_completed(futures):
             try:
                 hit = fut.result()
-                if hit and hit.composite_score >= min_score:
+                if hit and hit.prob_score >= min_score:
                     results.append(hit)
             except Exception as e:
                 logger.debug("scan error %s: %s", futures[fut], e)
 
-    # Sort by composite_score descending (already incorporates grade, RS, stage, A/D)
-    results.sort(key=lambda s: -s.composite_score)
+    # Sort by P Score descending — the single score (probability-weighted signal voting)
+    results.sort(key=lambda s: -s.prob_score)
     return results[:top_n]

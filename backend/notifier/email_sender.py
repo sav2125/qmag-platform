@@ -50,7 +50,7 @@ def build_html(setups: list["Setup"], scan_date: date | None = None) -> str:
           <td style="padding:10px 8px;text-align:right;color:#16a34a;">${s.t2:.2f}</td>
           <td style="padding:10px 8px;text-align:right;color:{rr_color};font-weight:700;">{s.rr:.1f}x</td>
           <td style="padding:10px 8px;text-align:right;">{s.rs_score:.0f}</td>
-          <td style="padding:10px 8px;text-align:center;color:{_grade_color(s.grade)};font-weight:700;">{s.grade}</td>
+          <td style="padding:10px 8px;text-align:center;color:{_grade_color(s.prob_grade)};font-weight:700;">P{s.prob_grade} <span style="color:#6b7280;font-weight:400;">{s.prob_score:.0f}</span></td>
           <td style="padding:10px 8px;color:#6b7280;font-size:12px;">{s.notes}</td>
         </tr>"""
 
@@ -91,7 +91,7 @@ def build_html(setups: list["Setup"], scan_date: date | None = None) -> str:
             <th style="padding:8px;text-align:right;">T2</th>
             <th style="padding:8px;text-align:right;">R:R</th>
             <th style="padding:8px;text-align:right;">RS</th>
-            <th style="padding:8px;text-align:center;">Grade</th>
+            <th style="padding:8px;text-align:center;">P Score</th>
             <th style="padding:8px;text-align:left;">Notes</th>
           </tr>
         </thead>
