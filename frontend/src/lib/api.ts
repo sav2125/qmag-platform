@@ -6,7 +6,7 @@ const BASE =
 
 export interface Setup {
   symbol: string;
-  setup_type: "EP" | "TB" | "PP" | "PULL" | "FBD" | "WYS";
+  setup_type: "EP" | "TB" | "VCP" | "PP" | "PULL" | "FBD" | "WYS";
   state: string;
   entry: number;
   stop: number;

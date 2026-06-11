@@ -27,6 +27,7 @@ import numpy as np
 WEIGHTS: dict[str, float] = {
     # ── Setup patterns ────────────────────────────────────────────────────────
     "EP":          3.0,   # stage2_breakout
+    "VCP":         2.8,   # Minervini volatility contraction pattern
     "TB":          2.5,   # wyckoff_accumulation_sos
     "WYS":         3.0,   # wyckoff_accumulation_spring
     "PP":          2.0,   # volume_breakout
@@ -53,6 +54,7 @@ WEIGHTS: dict[str, float] = {
 # ── Accuracy factors (backtested win-rates from signal_weights.yaml) ──────────
 ACCURACY: dict[str, float] = {
     "EP":         0.72,
+    "VCP":        0.72,
     "TB":         0.70,
     "WYS":        0.75,
     "PP":         0.65,
@@ -77,7 +79,7 @@ ACCURACY: dict[str, float] = {
 # Source: scripts/scoring/regime.py — TREND_SOURCES / MEAN_REVERSION_SOURCES.
 SIGNAL_CLASS: dict[str, str] = {
     # Trend-following
-    "EP": "trend", "TB": "trend", "WYS": "trend",
+    "EP": "trend", "VCP": "trend", "TB": "trend", "WYS": "trend",
     "PP": "trend", "PULL": "trend", "FBD": "trend",
     "Stage": "trend", "TrendTmpl": "trend", "EMA": "trend", "Supertrend": "trend",
     "OBV": "trend", "CMF": "trend", "MACD": "trend",

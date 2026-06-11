@@ -621,7 +621,7 @@ function AnalyzeInner() {
             )}
             {data.active_setups.length === 0 && (
               <div className="mt-3 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
-                <strong>Setup detector legend:</strong> EP (catalyst surge), TB (tight base breakout), WYS (Wyckoff spring), PP (pocket pivot), PULL (EMA21 pullback), FBD (failed breakdown)
+                <strong>Setup detector legend:</strong> EP (catalyst surge), TB (tight base breakout), VCP (volatility contraction), WYS (Wyckoff spring), PP (pocket pivot), PULL (EMA21 pullback), FBD (failed breakdown)
               </div>
             )}
           </Card>

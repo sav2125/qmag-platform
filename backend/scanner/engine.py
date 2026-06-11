@@ -8,7 +8,7 @@ import pandas as pd
 
 from .fetcher import fetch_ohlcv, fetch_batch, get_universe_symbols
 from .patterns import (
-    Setup, detect_ep, detect_pp, detect_tb, detect_pull, detect_fbd, detect_wys,
+    Setup, detect_ep, detect_pp, detect_tb, detect_pull, detect_fbd, detect_wys, detect_vcp,
     weinstein_stage, ad_days, overextension_penalty,
     relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 # Ordered by detection priority — when multiple setups fire on the same symbol,
 # the one with the lower priority number wins.
 # WYS sits above PP/PULL/FBD because it requires confirmed prior accumulation range.
-DETECTORS = [detect_ep, detect_tb, detect_wys, detect_pp, detect_pull, detect_fbd]
+DETECTORS = [detect_ep, detect_tb, detect_vcp, detect_wys, detect_pp, detect_pull, detect_fbd]
 
-SETUP_PRIORITY = {"EP": 0, "TB": 1, "WYS": 2, "PP": 3, "PULL": 3, "FBD": 4, "FLAG": 5}
+SETUP_PRIORITY = {"EP": 0, "TB": 1, "VCP": 2, "WYS": 3, "PP": 4, "PULL": 4, "FBD": 5, "FLAG": 6}
 
 
 def _ma_stack_label(df: pd.DataFrame) -> str:
@@ -113,7 +113,7 @@ def _process_symbol(
         if setup_filter:
             sf = setup_filter.upper()
             type_map = {
-                "EP": detect_ep, "TB": detect_tb,
+                "EP": detect_ep, "TB": detect_tb, "VCP": detect_vcp,
                 "PP": detect_pp, "PULL": detect_pull,
                 "FBD": detect_fbd, "WYS": detect_wys,
             }
@@ -121,7 +121,7 @@ def _process_symbol(
                 continue
 
         try:
-            hit = detect(df, max_base_bars=max_base_bars) if detect == detect_tb else detect(df)
+            hit = detect(df, max_base_bars=max_base_bars) if detect in (detect_tb, detect_vcp) else detect(df)
         except Exception as e:
             logger.debug("%s detector error on %s: %s", detect.__name__, symbol, e)
             continue

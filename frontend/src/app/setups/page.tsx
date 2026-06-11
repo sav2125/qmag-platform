@@ -42,6 +42,26 @@ const SETUPS = [
     target: "Measured move: depth of base added to breakout point",
   },
   {
+    slug: "vcp",
+    name: "Volatility Contraction Pattern",
+    short: "VCP",
+    color: "bg-fuchsia-100 border-fuchsia-400 text-fuchsia-800",
+    badge: "bg-fuchsia-600",
+    icon: "🪗",
+    tagline: "Mark Minervini's signature: a coil that tightens before it springs",
+    description:
+      "A VCP forms as a leading stock digests a prior advance through a series of progressively shallower pullbacks — e.g. 25%, then 12%, then 6% — with volume drying up into the apex. Each contraction shakes out weaker holders until supply is exhausted, setting up a breakout above the pivot (the high of the final contraction) on expanding volume.",
+    criteria: [
+      "Stock in a confirmed uptrend (above a rising 50-day SMA)",
+      "≥2 pullbacks, each progressively tighter than the last (the 'T' count)",
+      "Final contraction is tight (≤15%, ideally <8%)",
+      "Volume dries up from the first contraction to the last",
+      "Pivot = high of the final contraction; price coiling just under it or breaking out just above",
+    ],
+    risk: "Stop below the low of the final (tightest) contraction",
+    target: "2× / 4× risk; trail as the post-breakout advance extends",
+  },
+  {
     slug: "pp",
     name: "Pocket Pivot",
     short: "PP",

@@ -1,6 +1,7 @@
 const COLORS: Record<string, string> = {
   EP:   "bg-purple-600 text-white",
   TB:   "bg-green-600 text-white",
+  VCP:  "bg-fuchsia-600 text-white",
   PP:   "bg-cyan-600 text-white",
   PULL: "bg-amber-500 text-white",
   FBD:  "bg-rose-600 text-white",

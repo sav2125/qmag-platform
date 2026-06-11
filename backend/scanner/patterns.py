@@ -698,6 +698,161 @@ def detect_wys(df: pd.DataFrame) -> Setup | None:
     return None
 
 
+# ── VCP — Volatility Contraction Pattern (Minervini) ──────────────────────────
+
+def detect_vcp(df: pd.DataFrame, max_base_bars: int = 500) -> Setup | None:
+    """Mark Minervini's signature Volatility Contraction Pattern.
+
+    A VCP is a series of *progressively tighter* pullbacks as a stock digests a
+    prior advance — e.g. a 25% pullback, then 12%, then 6% — with volume drying
+    up into the apex, followed by a breakout above the pivot (the high of the
+    final contraction) on expanding volume.
+
+    Detection:
+      1. Must be in an uptrend (price above the 50-day SMA).
+      2. Find fractal swing highs/lows; build the contraction sequence
+         (each peak → the lowest trough before the next peak).
+      3. Require ≥2 contractions that progressively tighten (≤1 wiggle), with a
+         tight final contraction (≤15%).
+      4. Volume should dry up from the first contraction to the last.
+      5. Pivot = the most recent swing high; price must be near (≤8% below) or
+         above it.
+
+    State: "breakout" when price > pivot, else "setup" (coiling under the pivot).
+    Entry = pivot breakout level (or current price on a live breakout);
+    stop = last contraction low; targets = 2× / 4× risk.
+    """
+    if len(df) < 40:
+        return None
+
+    high, low, close, volume = df["high"], df["low"], df["close"], df["volume"]
+    n = len(df)
+    price = float(close.iloc[-1])
+
+    # 1) Uptrend context — VCP forms after an advance, not in a downtrend
+    sma50 = close.rolling(50).mean()
+    if pd.isna(sma50.iloc[-1]) or price < float(sma50.iloc[-1]):
+        return None
+
+    window = min(max_base_bars, 120, n - 2)
+    if window < 20:
+        return None
+    seg_start = n - window
+
+    # 2) Fractal swing highs / lows (k-bar) within the base window
+    k = 3
+    sw_high: list[tuple[int, float]] = []
+    sw_low:  list[tuple[int, float]] = []
+    for i in range(seg_start + k, n - k):
+        win_h = high.iloc[i - k: i + k + 1]
+        win_l = low.iloc[i - k: i + k + 1]
+        if float(high.iloc[i]) >= float(win_h.max()):
+            sw_high.append((i, float(high.iloc[i])))
+        if float(low.iloc[i]) <= float(win_l.min()):
+            sw_low.append((i, float(low.iloc[i])))
+
+    if len(sw_high) < 2 or len(sw_low) < 1:
+        return None
+
+    # 3) Build contractions: each swing high → lowest trough before the next high
+    contractions: list[dict] = []
+    for j, (hi_idx, hi_px) in enumerate(sw_high):
+        next_hi_idx = sw_high[j + 1][0] if j + 1 < len(sw_high) else n
+        seg_lows = [(li, lp) for (li, lp) in sw_low if hi_idx < li < next_hi_idx]
+        if not seg_lows or hi_px <= 0:
+            continue
+        tr_idx, tr_px = min(seg_lows, key=lambda x: x[1])
+        depth = (hi_px - tr_px) / hi_px
+        if depth < 0.02:                 # ignore noise — a contraction is a real pullback
+            continue
+        contractions.append({
+            "peak_idx": hi_idx, "peak": hi_px,
+            "trough_idx": tr_idx, "trough": tr_px,
+            "depth": depth,
+        })
+
+    if len(contractions) < 2:
+        return None
+
+    # Keep the trailing run (up to 4) of tightening contractions
+    tail   = contractions[-4:]
+    depths = [c["depth"] for c in tail]
+    T      = len(tail)
+    final_depth = depths[-1]
+
+    if final_depth > 0.15:               # final contraction must be tight
+        return None
+    if final_depth >= depths[0]:         # net tightening required vs the first
+        return None
+    if final_depth > depths[-2] * 1.05:  # final must not EXPAND vs the prior one
+        return None
+    # at most one non-tightening step in the middle
+    tightening_steps = sum(1 for a, b in zip(depths, depths[1:]) if b <= a * 1.05)
+    if tightening_steps < (T - 1) - 1:
+        return None
+
+    # Base must be CURRENT — the final contraction's peak must be recent, not a
+    # months-old structure the price has already run far above.
+    if (n - 1) - tail[-1]["peak_idx"] > 35:
+        return None
+
+    # 4) Volume dry-up: first contraction vs last
+    first_c, last_c = tail[0], tail[-1]
+    early_vol  = float(volume.iloc[first_c["peak_idx"]: first_c["trough_idx"] + 1].mean())
+    recent_vol = float(volume.iloc[last_c["peak_idx"]:].mean())
+    vol_dry       = early_vol > 0 and recent_vol < early_vol
+    vol_dry_score = max(0.0, min(1.0, (early_vol - recent_vol) / early_vol)) if early_vol > 0 else 0.0
+
+    # 5) Pivot = most recent swing high. Price must be *near* it — coiling just
+    #    below (setup) or freshly broken out just above. Far above ⇒ the move is
+    #    already extended and this is not an actionable VCP entry.
+    pivot    = float(last_c["peak"])
+    last_low = float(last_c["trough"])
+    if not (pivot * 0.92 <= price <= pivot * 1.05):
+        return None
+
+    state = "breakout" if price > pivot else "setup"
+    entry = round(price, 2) if state == "breakout" else round(pivot * 1.001, 2)
+    stop  = round(last_low * 0.99, 2)
+    if entry <= stop:
+        return None
+    risk = entry - stop
+    t1   = round(entry + 2 * risk, 2)
+    t2   = round(entry + 4 * risk, 2)
+
+    vm = volume.rolling(50).mean().iloc[-1]
+    breakout_vol = (not pd.isna(vm)) and vm > 0 and float(volume.iloc[-1]) > vm * 1.3
+
+    # Confidence
+    conf = 0.45
+    conf += min(0.15, (T - 2) * 0.05)                       # more contractions
+    conf += 0.15 * max(0.0, 1.0 - final_depth / 0.12)       # final tightness
+    conf += 0.15 * vol_dry_score                            # volume dry-up
+    if state == "breakout" and breakout_vol:
+        conf += 0.07                                        # breakout on volume
+    conf = round(min(0.92, conf), 2)
+
+    return Setup(
+        symbol="", setup_type="VCP", state=state,
+        entry=entry, stop=stop, t1=t1, t2=t2, rr=_rr(entry, stop, t2),
+        confidence=conf, rs_score=0, rs_label="",
+        price=round(price, 2),
+        pct_change=round((price / float(close.iloc[-2]) - 1) * 100, 2) if len(df) > 1 else 0,
+        notes=(
+            f"{T}T VCP · final {round(final_depth*100,1)}% tight · "
+            f"{'vol dry-up' if vol_dry else 'vol flat'} · pivot ${round(pivot,2)}"
+        ),
+        meta={
+            "contractions": T,
+            "depths_pct":   [round(d * 100, 1) for d in depths],
+            "final_depth_pct": round(final_depth * 100, 1),
+            "pivot": round(pivot, 2),
+            "vol_dry": vol_dry,
+            "vol_dry_score": round(vol_dry_score, 2),
+        },
+    )
+
+
 # ── Relative Volume ───────────────────────────────────────────────────────────
 
 def relative_volume(df: pd.DataFrame, period: int = 20) -> float:

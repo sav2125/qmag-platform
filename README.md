@@ -13,6 +13,7 @@ A full-stack trading scanner that identifies Kristjan Qullamaggie's trading setu
 |-------|------|--------|
 | **EP** | Episodic Pivot | Catalyst gap/surge ≥5% on ≥2× avg volume; tight consolidation follows; entry on breakout above EP high |
 | **TB** | Tight Base | Flat base ≤8–10% range, resistance retested ≥2×, volume breakout; base can be 2 weeks to 5 years |
+| **VCP** | Volatility Contraction Pattern | Minervini's signature: ≥2 progressively tighter pullbacks + volume dry-up, in an uptrend; breakout above the pivot (final-contraction high) |
 | **PP** | Pocket Pivot | Up-day volume exceeds the highest down-day volume in the prior 10 days, above 10-day MA, EMA21 > EMA50 |
 | **PULL** | EMA Pullback | Stage 2 uptrend (EMA21 > EMA50, rising), price touched EMA21 in last 1–5 bars, RSI 38–68 |
 | **FBD** | Failed Breakdown | Price breaks below support 0.4–6%, snaps back above within 1–3 bars; trapped shorts fuel the reversal |
@@ -26,7 +27,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 
 ### Scanner
 - **8 stock universes** — Full S&P 500 (503 stocks, live), Nasdaq 100, Large Cap (S&P 500 + Nasdaq), Mid Cap (S&P 400, 369 stocks), Small Cap (Alpaca universe minus large/mid), All US Equities (~7,000), Tech Leaders (30), My Watchlist
-- **6 setup types** — EP, TB, PP, PULL, FBD (Failed Breakdown / bear trap), WYS (Wyckoff Spring)
+- **7 setup types** — EP, TB, VCP (Minervini Volatility Contraction), PP, PULL, FBD (Failed Breakdown / bear trap), WYS (Wyckoff Spring)
 - **Advanced filters** — Min RS, Min ADR%, Min daily % change, Above EMA21/50, Max Base Length (TB only, up to 5 years), Top N results
 - **State classification** — Breakout (enter now), In Base (set alert), Active (enter near market)
 - **Action hints** — Context-aware "Enter now / Enter near mkt / Alert at $X.XX (+X%)" per state
@@ -49,9 +50,9 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **All US universe:** Alpaca `/v2/assets` endpoint, cached 24 hours; falls back to 1,000+ curated static list
 
 ### Frontend
-- **Analyze page** — Deep-dive for any individual stock: all 6 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), early warnings, score breakdown, and **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls)
+- **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, early warnings, and **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls)
 - **Dashboard** — Scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
-- **Setup pages** — Deep-dive educational pages for EP, TB, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
+- **Setup pages** — Deep-dive educational pages for EP, TB, VCP, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page
 - **Scoring page** — Full algorithm reasoning: every formula, every weight, every threshold, and the WHY behind each design decision
 - **Watchlist** — Persistent per-symbol list scanned separately
@@ -135,7 +136,7 @@ For Gmail, generate an **App Password** at [myaccount.google.com/apppasswords](h
 | Filter | Description |
 |--------|-------------|
 | **Universe** | Which stock list to scan |
-| **Setup Filter** | EP / TB / PP / PULL / FBD — leave blank for all |
+| **Setup Filter** | EP / TB / VCP / PP / PULL / FBD / WYS — leave blank for all |
 | **Min RS** | Minimum Relative Strength score vs SPY (0-100) |
 | **Top N** | Return only the top N results sorted by quality score x RS |
 | **Min ADR%** | Average Daily Range % — filters out low-volatility stocks |
@@ -202,8 +203,8 @@ Ported from the `technical-analysis` reference repo. Each signal contributes: `s
 **Local-top / distribution penalty** (post-vote, long/neutral only, capped −8): docks points when a name shows topping behaviour even while still technically long — ≥3 distribution days in 10 (−3), MACD histogram fading at highs (−2), bearish RSI divergence (−3).
 
 ```
-Setup patterns:  EP (w=3.0 acc=72%), WYS (3.0/75%), TB (2.5/70%),
-                 FBD (2.0/68%), PP (2.0/65%), PULL (1.5/63%)
+Setup patterns:  EP (w=3.0 acc=72%), WYS (3.0/75%), VCP (2.8/72%),
+                 TB (2.5/70%), FBD (2.0/68%), PP (2.0/65%), PULL (1.5/63%)
 Trend/momentum:  Stage (2.5/72%), Minervini Trend Template (1.8/72%),
                  EMA stack (1.5/70%), OBV (1.5/65%), CMF (1.2/64%),
                  ICS (1.2/68%), Supertrend (1.0/68%), MACD (1.0/65%),
@@ -272,7 +273,7 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | `GET` | `/health` | Health check + current date |
 | `GET` | `/scan` | Run scanner, returns setup list. Add `?cached=true` for instant snapshot-based results |
 | `POST` | `/scan/refresh` | Force-rebuild today's snapshot for a given universe (`{"universe": "sp500"}`) |
-| `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 6 setups, RSI/MACD/ADX, checklist, warnings, score breakdown, multi-timeframe alignment |
+| `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 7 setups, RSI/MACD/ADX, checklist, warnings, trend-template criteria, multi-timeframe alignment |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
 | `GET` | `/watchlist` | Get saved watchlist symbols |
 | `POST` | `/watchlist` | Add symbol to watchlist |
@@ -309,7 +310,7 @@ qmag-platform/
 │   ├── .python-version          Pins Python 3.12 for Render
 │   ├── scanner/
 │   │   ├── fetcher.py           Alpaca OHLCV fetcher, universe lists, rate limiting
-│   │   ├── patterns.py          EP, TB, PP, PULL, FBD detectors + enrichment helpers
+│   │   ├── patterns.py          EP, TB, VCP, WYS, PP, PULL, FBD detectors + enrichment helpers
 │   │   ├── rs_rank.py           IBD-style RS score vs SPY
 │   │   └── engine.py            Scan orchestration, filters, enrichment, quality grading
 │   └── notifier/

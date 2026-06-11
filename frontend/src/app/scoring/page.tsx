@@ -157,7 +157,7 @@ contribution = strength × eff_weight × accuracy
 
       <Section id="pscore-signals" title="P Score: Signals, Weights & Accuracy">
         <p>
-          Every setup result uses up to <strong>20 signals</strong> (setup patterns + technical
+          Every setup result uses up to <strong>21 signals</strong> (setup patterns + technical
           indicators). Each contributes to the P Score proportionally to its effective weight and
           its historical accuracy factor. After all signals vote, a{" "}
           <strong>weekly timeframe adjustment</strong> is applied as a flat bonus/penalty.
@@ -179,6 +179,7 @@ contribution = strength × eff_weight × accuracy
               {[
                 ["EP (Episodic Pivot)", "Trend", "3.0", "72%", "Confidence from detector"],
                 ["WYS (Wyckoff Spring)", "Trend", "3.0", "75%", "Confidence from detector"],
+                ["VCP (Volatility Contraction)", "Trend", "2.8", "72%", "Confidence from detector"],
                 ["TB (Tight Base)", "Trend", "2.5", "70%", "Confidence from detector"],
                 ["FBD (Failed Breakdown)", "Trend", "2.0", "68%", "Confidence from detector"],
                 ["PP (Pocket Pivot)", "Trend", "2.0", "65%", "Confidence from detector"],
@@ -1004,7 +1005,7 @@ T2     = range_high + (range_high - range_floor)  # measured move`}
         </ul>
         <p className="mt-2">
           The <strong>P Score</strong> bundles all of this into one number — a weighted, regime-aware vote
-          across up to 20 signals — so the grade reflects the full picture, not just the shape on the chart.
+          across up to 21 signals — so the grade reflects the full picture, not just the shape on the chart.
           The firing <strong>setup</strong> (EP, TB, …) then tells you the specific entry, stop, and targets.
         </p>
 

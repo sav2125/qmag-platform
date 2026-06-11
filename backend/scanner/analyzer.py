@@ -21,7 +21,7 @@ import pandas as pd
 
 from .fetcher import fetch_ohlcv
 from .patterns import (
-    detect_ep, detect_tb, detect_pp, detect_pull, detect_fbd, detect_wys,
+    detect_ep, detect_tb, detect_pp, detect_pull, detect_fbd, detect_wys, detect_vcp,
     weinstein_stage, ad_days, overextension_penalty,
     relative_volume, institutional_composite_score, bull_exhaustion_warning,
 )
@@ -470,9 +470,9 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
 
     # ── Run all detectors (no RS/price filters — show everything) ─────────────
     active_setups: list = []
-    for detect in [detect_ep, detect_tb, detect_wys, detect_pp, detect_pull, detect_fbd]:
+    for detect in [detect_ep, detect_tb, detect_vcp, detect_wys, detect_pp, detect_pull, detect_fbd]:
         try:
-            hit = detect(df, max_base_bars=500) if detect == detect_tb else detect(df)
+            hit = detect(df, max_base_bars=500) if detect in (detect_tb, detect_vcp) else detect(df)
             if hit is None:
                 continue
             hit.symbol        = symbol
