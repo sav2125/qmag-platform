@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { api, type Setup, type ScanParams } from "@/lib/api";
 import { SetupTable } from "@/components/SetupTable";
+import MarketPositioningPanel from "@/components/MarketPositioning";
 
 const UNIVERSES = [
   { value: "all",        label: "All US Equities (~7 000 stocks)" },
@@ -124,6 +125,9 @@ export default function Dashboard() {
           Scan for Qullamaggie setups with actionable entry, stop, and targets.
         </p>
       </div>
+
+      {/* Market positioning — forward-looking regime dial */}
+      <MarketPositioningPanel />
 
       {/* Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">

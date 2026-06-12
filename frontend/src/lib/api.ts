@@ -98,7 +98,44 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ universe }),
     }),
+
+  positioning: () => req<MarketPositioning>("/market/positioning"),
 };
+
+// ── Market positioning types ──────────────────────────────────────────────────
+
+export interface COTContract {
+  net_pct_oi: number;   // leveraged-funds net position as % of open interest
+  z: number;            // z-score vs ~3y of weekly history
+  date: string;
+}
+
+export interface MarketPositioning {
+  as_of: string;
+  cot: {
+    es: COTContract | null;
+    nq: COTContract | null;
+    avg_z: number;
+    state: "crowded_short" | "neutral" | "crowded_long";
+    vote: number;
+  } | null;
+  put_call: {
+    ratio: number;        // SPY put/call volume ratio (near-dated)
+    put_vol: number;
+    call_vol: number;
+    state: "fear" | "neutral" | "complacent";
+    vote: number;
+  } | null;
+  naaim: {
+    value: number;        // 0–200 average manager exposure
+    z: number;
+    date: string | null;
+    state: "washed_out" | "neutral" | "fully_invested";
+    vote: number;
+  } | null;
+  sources_available: number;
+  dial: { score: number; label: string; detail: string };
+}
 
 // ── Analyze types ─────────────────────────────────────────────────────────────
 

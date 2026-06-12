@@ -96,10 +96,22 @@ def health():
     return {"status": "ok", "date": date.today().isoformat()}
 
 
+@app.get("/market/positioning")
+def market_positioning(refresh: bool = False):
+    """Market positioning panel — CFTC COT leveraged funds, SPY put/call ratio,
+    NAAIM exposure, combined into a contrarian regime dial. Cached 12h."""
+    from scanner.positioning import get_positioning
+    try:
+        return get_positioning(force=refresh)
+    except Exception as e:
+        logger.exception("Positioning error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/analyze/{symbol}")
 def analyze(symbol: str):
-    """Full single-symbol analysis: all 6 setups, RSI/MACD/ADX, MA stack,
-    Weinstein stage, A/D Net, ICS, RVOL, checklist, warnings, score breakdown."""
+    """Full single-symbol analysis: all 7 setups, RSI/MACD/ADX, MA stack,
+    Weinstein stage, A/D Net, ICS, RVOL, checklist, warnings."""
     from scanner.analyzer import analyze_symbol
     from scanner.fetcher import fetch_ohlcv
 

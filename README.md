@@ -49,9 +49,15 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **S&P 500 constituents:** Fetched from [datasets/s-and-p-500-companies](https://github.com/datasets/s-and-p-500-companies) GitHub CSV, cached 24 hours, falls back to hardcoded 100-stock sample
 - **All US universe:** Alpaca `/v2/assets` endpoint, cached 24 hours; falls back to 1,000+ curated static list
 
+### Market Positioning (forward-looking regime layer)
+- **CFTC COT** — leveraged-funds (hedge fund / CTA proxy) net position in E-mini S&P 500 + Nasdaq futures, z-scored vs ~3 years (free Socrata API, weekly)
+- **SPY put/call ratio** — computed from Alpaca options data across near-dated expirations (daily); fear ≥2.0 / complacency ≤1.1
+- **NAAIM Exposure Index** — active-manager equity exposure scraped from naaim.org (weekly); washed-out <30 / fully-invested >90
+- **Contrarian regime dial** — each source votes at extremes (fear = +1, crowded = −1); dial −3…+3 shown on the Dashboard as a sizing/aggression gate. Cached 12h. `GET /market/positioning`
+
 ### Frontend
 - **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, early warnings, and **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls)
-- **Dashboard** — Scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
+- **Dashboard** — Market Positioning panel (regime dial), scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
 - **Setup pages** — Deep-dive educational pages for EP, TB, VCP, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page
 - **Scoring page** — Full algorithm reasoning: every formula, every weight, every threshold, and the WHY behind each design decision
@@ -274,6 +280,7 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | `GET` | `/scan` | Run scanner, returns setup list. Add `?cached=true` for instant snapshot-based results |
 | `POST` | `/scan/refresh` | Force-rebuild today's snapshot for a given universe (`{"universe": "sp500"}`) |
 | `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 7 setups, RSI/MACD/ADX, checklist, warnings, trend-template criteria, multi-timeframe alignment |
+| `GET` | `/market/positioning` | Market positioning panel: CFTC COT, SPY put/call, NAAIM + contrarian regime dial. Cached 12h; `?refresh=true` to force |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
 | `GET` | `/watchlist` | Get saved watchlist symbols |
 | `POST` | `/watchlist` | Add symbol to watchlist |
@@ -312,6 +319,7 @@ qmag-platform/
 │   │   ├── fetcher.py           Alpaca OHLCV fetcher, universe lists, rate limiting
 │   │   ├── patterns.py          EP, TB, VCP, WYS, PP, PULL, FBD detectors + enrichment helpers
 │   │   ├── rs_rank.py           IBD-style RS score vs SPY
+│   │   ├── positioning.py       Market positioning: CFTC COT, SPY put/call, NAAIM + regime dial
 │   │   └── engine.py            Scan orchestration, filters, enrichment, quality grading
 │   └── notifier/
 │       └── email_sender.py      HTML email digest builder + SMTP sender

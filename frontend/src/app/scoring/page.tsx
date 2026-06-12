@@ -59,6 +59,7 @@ const TOC = [
   { id: "ics",          label: "Signal: ICS (Institutional Composite)" },
   { id: "exhaustion",   label: "Signal: Bull Exhaustion Warning" },
   { id: "wys",          label: "Setup: Wyckoff Spring (WYS)" },
+  { id: "positioning",  label: "Market Positioning Dial" },
   { id: "philosophy",   label: "Design Philosophy" },
 ];
 
@@ -987,6 +988,72 @@ T2     = range_high + (range_high - range_floor)  # measured move`}
             </tbody>
           </table>
         </div>
+      </Section>
+
+      {/* Market Positioning Dial */}
+      <Section id="positioning" title="🧭 Market Positioning Dial">
+        <p>
+          Everything above is computed from <em>price and volume</em> — which makes it inherently
+          backward-looking. The Market Positioning panel on the Dashboard adds the one genuinely
+          forward-looking dimension available for free: <strong>who is exposed, and how crowded is
+          the boat?</strong> Positioning extremes are contrarian — maximum fear precedes rallies
+          (forced sellers are done), maximum complacency precedes air pockets (no marginal buyer left).
+        </p>
+
+        <div className="overflow-x-auto mt-2">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 border border-gray-200">Source</th>
+                <th className="text-left py-2 px-3 border border-gray-200">What it measures</th>
+                <th className="text-left py-2 px-3 border border-gray-200">Contrarian extremes</th>
+                <th className="text-center py-2 px-3 border border-gray-200">Updates</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["CFTC COT — leveraged funds", "Net position of hedge funds / CTAs in E-mini S&P 500 + Nasdaq futures, as % of open interest, z-scored vs ~3 years of weekly history. The closest free proxy to 'CTA positioning'.", "z ≤ −1.5 = crowded short (squeeze fuel, +1) · z ≥ +1.5 = crowded long (no marginal buyer, −1)", "Weekly (Fri, data as of Tue)"],
+                ["SPY put/call volume ratio", "Puts ÷ calls traded across SPY expirations within ~35 days, computed from Alpaca options data. A hedging-demand gauge. (CBOE's equity-only ratio blocks server access — SPY skews put-heavy, so thresholds are calibrated for it.)", "≥ 2.0 = fear extreme (+1) · ≤ 1.1 = call-chasing complacency (−1)", "Daily"],
+                ["NAAIM Exposure Index", "Average equity exposure reported by active money managers (0 = flat, 200 = leveraged long). Scraped from naaim.org's weekly publication.", "< 30 = washed out (+1) · > 90 = fully invested (−1)", "Weekly (Wed)"],
+              ].map(([src, what, ext, upd]) => (
+                <tr key={src} className="border-b border-gray-100">
+                  <td className="py-2 px-3 border border-gray-200 font-semibold">{src}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{what}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-gray-600 text-[11px]">{ext}</td>
+                  <td className="py-2 px-3 border border-gray-200 text-center text-[11px]">{upd}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="font-semibold text-gray-800 mt-4">The dial</h3>
+        <CodeBlock>{`# Each source votes contrarian at extremes:
+#   fear / washed-out / crowded-short   → +1  (opportunity)
+#   neutral                             →  0
+#   complacent / crowded-long           → −1  (reduce aggression)
+dial = sum(votes)        # −3 … +3
+
++2/+3  Fear extreme — breakouts have fuel, historically the best forward returns
++1     Cautiously supportive
+ 0     Neutral — trade the setups, normal sizing
+−1     Getting crowded — tighten stops
+−2/−3  Complacent / crowded — late-cycle, smaller size, defensive`}
+        </CodeBlock>
+
+        <Note>
+          <strong>How to use it with the scanner:</strong> the dial is a <em>sizing and aggression
+          gate</em>, not a per-stock signal — exactly how Qullamaggie sizes up or down with market
+          conditions. A P-Grade A breakout in a +2 environment deserves full size; the same setup at
+          −2 deserves a starter position and a tighter leash. The dial deliberately does NOT feed the
+          P Score — it describes the market, not the stock.
+        </Note>
+        <Warn>
+          <strong>Caveats:</strong> COT data is as-of Tuesday published Friday (3-day lag); NAAIM is a
+          survey of a subset of managers; the SPY P/C proxy uses static thresholds until enough
+          history accumulates to use percentiles. Positioning extremes can stay extreme for weeks —
+          they are context, not timing triggers.
+        </Warn>
       </Section>
 
       {/* Design Philosophy */}
