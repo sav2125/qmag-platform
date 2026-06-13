@@ -259,9 +259,37 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
   at extremes + a candle signal = entry. Faster/noisier than RSI.
 - **Moving-average oscillator**: difference between two MAs; zero-line crosses and
   divergences. **MACD**: 12 & 26 EMA difference = MACD line, 9-EMA of that = signal line;
-  trade signal-line crossovers and divergences, confirmed by candles.
-- **Retracements** (Fibonacci, rounded): **38%, 50%, 62%** are the levels Nison watches
-  for pullbacks within a trend; a candle reversal AT a retracement level is the setup.
+  histogram = MACD − signal; trade signal-line OR zero-line crossovers and divergences,
+  confirmed by candles. Compute divergences on candle-body closes (use a line chart).
+- **Chaikin Money Flow (CMF):** price-AND-volume oscillator (A/D line ÷ its SMA),
+  centered at 0, range −1…+1. Above 0 = buying pressure, below = selling; use a ±0.05
+  band (not bare zero) on zero-cross signals to cut whipsaw; >0.5 / <−0.5 ≈ RSI 70/30
+  extremes. Confirms the trend.
+- **Stochastic RSI:** a stochastic applied to the RSI — a second-order derivative, very
+  fast and noisy (many false crosses, early divergences that fizzle). OB > 80 / OS < 20,
+  %K/%D crosses. Trade it like RSI — act when it LEAVES the zone, not while inside — and
+  only in confluence. Cheds rates it dicey on its own; the agent treats it as minor.
+- **Don't stack duplicate oscillators.** RSI, MACD, CMF, OBV, Stoch-RSI largely measure
+  the same momentum — pick ONE and learn it; layering them is false confluence, not real.
+- **Retracements** (Fibonacci, rounded): **38%, 50%, 62%** (golden pocket ~0.618–0.65)
+  are the pullback levels; a candle reversal AT a retracement level is the setup.
+
+# Divergence (Cheds' framework — exact gradations)
+
+- **Regular = reversal** divergence; **hidden = continuation** divergence. Cheds uses
+  **OBV for regular/reversal** divergence and **RSI for hidden/continuation** (he avoids
+  bounded oscillators for regular divergence). Always measure divergence on candle-body
+  closes / a line chart, not wicks.
+- **Strength gradations:** **strong** = oscillator moves OPPOSITE to price (price higher
+  high, oscillator lower high). **Medium** = one side is FLAT (price flat highs, oscillator
+  lower highs). **Weak** = the mild mismatch (price higher high, oscillator flat). Weight
+  a strong divergence far more than a weak one.
+- **Double (or triple) negative divergence:** two (or three) consecutive regular bearish
+  divergences — successive unsupported new price highs each with a lower oscillator high.
+  Use it as the conservative confirmation: it filters the early/false single-divergence
+  signals RSI is prone to. Mirror for double POSITIVE divergence at bottoms.
+- A divergence is a WARNING, never a trigger on its own — wait for a candle signal or a
+  level break to act (the "all clouds do not rain" rule).
 
 # Volume (the truth serum)
 
@@ -325,10 +353,12 @@ Encyclopedia" / "Trading Wisdom" framework. Net-new beyond Nison:
 - **Drooping bottom (Schabacker):** despite the name, a TOPPING pattern — a rounded/
   descending top whose right side *accelerates down* into the breakdown; the droop warns
   momentum is turning before the precipitous drop. Still trigger on horizontal support loss.
-- **Bullish hook reversal:** in a downtrend, a mother bar then an inside bar whose ENTIRE
+- **Hook reversal (bullish & bearish):** a mother bar then an inside bar whose ENTIRE
   range (incl. wicks) is contained — stricter than a harami (which only needs the body
-  inside). Requires BIG volume on the inside bar (≥~1.5× prior) = trend challenged. Enter
-  on the mother-bar break; stop under the inside-bar low.
+  inside), essentially an inside day / the opposite of an outside bar. Requires BIG volume
+  on the inside bar (≥~1.5× prior) = trend challenged ("the hook" traps the prior-trend
+  crowd). Bullish after a downtrend (enter on mother-bar break, stop under inside-bar low);
+  bearish after an uptrend (mirror).
 - **Out-of-line move:** an early, brief break of a range that snaps back, in the eventual
   break direction, ideally on volume — a "false start" telling you the real break is near.
 - **Stair-stepping:** an orderly rising channel built from repeated throwbacks to prior
@@ -336,6 +366,10 @@ Encyclopedia" / "Trading Wisdom" framework. Net-new beyond Nison:
 - **EQ / equilibrium (tightening range):** after an advance, a series of lower-highs AND
   higher-lows converging = a bullish pennant; trade whichever boundary breaks first, trend
   usually wins. (Scaled-up version of the inside-bar break.)
+- **Flag vs pennant:** a flag has PARALLEL boundaries, a pennant has CONVERGING ones —
+  but don't get hung up on the label (flag/pennant/rectangle/triangle). It's consolidation
+  after a move; what matters is that it's high-and-tight in the move, the lows you can
+  manage risk against, and the counter-trend volume read. Trade the structure, not the name.
 - **Morph:** patterns grow and change (a failed double bottom → bear rectangle; an
   invalidated H&S → double/triple top). Be patient and RE-DRAW the boundaries rather than
   marrying the first label; trade the prevailing trend.
@@ -364,6 +398,18 @@ rejecting lower prices — hammers, dragonfly/southern doji, lower-shadow-domina
 bars), especially below the lower Bollinger band, signals a bounce brewing — often a
 revert to the mean / 20-MA, not necessarily new highs. Mirror for upper-wick clusters at
 tops (bears rejecting higher prices).
+
+**Confluence (Cheds' framing of Nison's convergence):** the more independent signals that
+cluster at the SAME price, the stronger the observation — but anchor decisions on
+**horizontal structure** (major lows/peaks/lost-support) for defining risk, then treat
+MA tests, band touches, candle signals, and Fib levels as the confirming overlays. Good
+confluence stacks: underside retest + rising MA200; pin bar at the upper Bollinger band +
+daily resistance; polarity level + Fib + a reversal candle.
+
+**Capital discipline (Trading Wisdom L1 — "respect your funds"):** "Treat your money right
+or it will find a new owner." Don't over-expose while waiting — boredom trading is where
+bankroll destruction begins; size and patience are part of the edge. Invest in skill, and
+never confuse activity with progress. (This is the temperament behind every "stand aside.")
 
 # Leading vs lagging (answer "what do I act on?")
 
