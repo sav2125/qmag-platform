@@ -128,13 +128,15 @@ core edge over bar charts.
 - **Shooting star** (top): small body at bottom, long upper shadow ≥ 2× body, after a
   rally. **Inverted hammer** (bottom): same shape after a decline — needs bullish
   confirmation (close above its body) because intra-bar it's actually bearish behavior.
-- **Doji**: open ≈ close. **Northern doji** (in rallies) = potent warning, especially
+- **Doji**: open ≈ close (body ≤ ~5% of the bar's range — more body than that and it's a
+  *spinning top*, not a doji). **Northern doji** (in rallies) = potent warning, especially
   after a tall white candle (market "tired"; high of doji/prior candle = resistance —
   a close above it "refreshes" the market). **Southern doji** (in declines) usually
   FAILS as a bottom signal — sellers don't tire the way buyers do. Doji inside a box
-  range = no forecasting value. Variants: gravestone (close at low — bearish at tops),
-  dragonfly (close at high — bullish after declines), long-legged/rickshaw man
-  (indecision), tri-star (rare, major).
+  range = no forecasting value. Variants: gravestone (open/close at the low, long upper
+  shadow — bearish after an advance, needs volume + a prior trend), dragonfly (close at
+  high — bullish after declines), long-legged/rickshaw man (indecision), tri-star (rare,
+  major). Like all candle signals, a doji needs a preceding trend and volume to matter.
 - **Marubozu**: full body, no shadows — maximum one-sided conviction (continuation).
 - **Spinning top / high-wave**: small body (long shadows for high-wave) — force
   dissipating; meaningful mid-trend or as star of a 3-candle pattern.
@@ -177,8 +179,12 @@ core edge over bar charts.
   rounding/warning variants — supply/demand exhaustion at extremes. Towers signal LATE
   (you must wait for the confirming tall opposite-color candle) — the earlier harami or
   doji inside the structure often gives the timelier warning.
-- **Three mountains / three Buddha** (Japanese H&S): neckline, once broken, becomes
-  resistance — re-tests that fail at it (bearish upper shadows) confirm the top.
+- **Three mountains / three Buddha** (Japanese H&S, regular & inverted): play it exactly
+  like a head & shoulders. Ideal volume DECLINES across the three peaks (most on the first,
+  least on the third) then expands on the neckline break. Trade the break, OR — often the
+  better trade — the **invalidation** (a break back through the right "Buddha"/shoulder),
+  which is a failed reversal = powerful signal the other way. Measured move = head-to-
+  neckline height. Neckline, once broken, flips to resistance; failed re-tests confirm.
 
 **Windows (gaps):** the WHOLE window is the S/R zone. Rising window = support on
 pullbacks (price may bounce before fully filling it); falling window = resistance.
@@ -271,6 +277,10 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
   only in confluence. Cheds rates it dicey on its own; the agent treats it as minor.
 - **Don't stack duplicate oscillators.** RSI, MACD, CMF, OBV, Stoch-RSI largely measure
   the same momentum — pick ONE and learn it; layering them is false confluence, not real.
+- **ADX** measures the EXISTENCE/strength of a trend, NOT its direction (built from DI+/
+  DI− and ATR-14). >25 = trending (ride it / its pullbacks), <20–25 = no trend / sideways.
+  Crucial filter: MA crosses, breakouts, and trend signals are meaningful in a high-ADX
+  market and noise in a low-ADX one.
 - **Retracements** (Fibonacci, rounded): **38%, 50%, 62%** (golden pocket ~0.618–0.65)
   are the pullback levels; a candle reversal AT a retracement level is the setup.
 
@@ -410,6 +420,32 @@ daily resistance; polarity level + Fib + a reversal candle.
 or it will find a new owner." Don't over-expose while waiting — boredom trading is where
 bankroll destruction begins; size and patience are part of the edge. Invest in skill, and
 never confuse activity with progress. (This is the temperament behind every "stand aside.")
+
+**More from the curriculum (order flow, charting methods, technique):**
+- **Pattern failure = a powerful signal the other way.** Any failed/invalidated pattern
+  (a H&S whose right shoulder invalidates, a failed breakdown, a spring) is among the best
+  setups — the trapped crowd becomes fuel. Always know a pattern's confirmation level AND
+  its invalidation level; a failed reversal is a momentum trade in the opposite direction.
+- **Red light → orange light → green light** (trend-change phasing): tops/bottoms are slow
+  to form — a trend slows, flattens, then turns, giving multiple "bites at the apple."
+  Green = the two-level-filter break / recapture of a key lost level. Don't guess the exact
+  turn; identify which phase the chart is in and act on green.
+- **Fair Value Gap (FVG):** a 3-candle imbalance where candle-1 and candle-3 ranges DON'T
+  overlap (bullish: c1 high < c3 low; bearish: c1 low > c3 high) — a sign of forceful,
+  institutional-driven movement / overextension. Price often retraces INTO the gap before
+  continuing: ~25% (a quick "order-flow entry" tag), ~50% (the "consequent encroachment"),
+  or a full fill — drop to a lower timeframe at the gap to find an entry. Not guaranteed in
+  strong trends. The agent uses it as an overextension/retrace tell, not a standalone system.
+- **Order book — loading wall & prop bid:** a large SELL wall is often NOT bearish — it can
+  be a big holder capping price to keep accumulating before a move up (bullish; watch for
+  the wall to be pulled). A "prop bid" is the mirror deception: a fake large bid set to lure
+  retail to buy just above it while the placer distributes. Read walls as intent, not fear.
+- **Invert the chart (TradingView Alt+I) to check bias** — flip it and re-read; if the
+  inverted chart looks "obviously" weak/strong, trust that fresh read. A cheap antidote to
+  tunnel vision before risking money.
+- **Point & Figure (PnF):** time-independent charting — X columns (up), O columns (down),
+  a box size (ATR or fixed $/%), and a 3-box reversal to switch columns. Filters noise to
+  show pure trend/momentum; a CMT topic, rarely used live, but useful for clean S/R.
 
 # Leading vs lagging (answer "what do I act on?")
 
