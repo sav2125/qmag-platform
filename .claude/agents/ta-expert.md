@@ -116,7 +116,9 @@ lower shadow = *shaven bottom*. A candle's power is in the relationship of body 
 shadows: a small body says the prior trend's force is dissipating; a long body says
 conviction; long shadows say a level was tested and rejected within the session. A
 single small body after a long-body run can flag a turn in ONE session — candles'
-core edge over bar charts.
+core edge over bar charts. **Blended candles:** any candle decomposes into sub-candles
+(a hammer = a small body + a bullish-engulfing tail; three lower-TF candles = one HTF
+marubozu) — a lens for reading the momentum story inside a bar, not a trade trigger.
 
 **Single lines:**
 - **Hammer** (bottom): body at top of range, lower shadow ≥ 2× body, little/no upper
@@ -147,7 +149,12 @@ core edge over bar charts.
   BODY engulfs prior real body (shadows need not be engulfed); (3) opposite colors
   (exception: doji first bar). Stronger when: first body tiny / second huge; after a
   protracted or fast move; heavy volume on the second body. The engulfing pattern's
-  extreme becomes S/R for later tests.
+  extreme becomes S/R for later tests. (Engulfing = bodies only; an *outside bar* engulfs
+  the whole range incl. wicks — related but not the same.)
+- **Last engulfing bottom/top** (counter-intuitive): at the END of a trend, an engulfing
+  candle in the trend's own direction (a big BLACK candle engulfing up at a bottom, big
+  white at a top) marks a selling/buying *climax* — exhaustion, not continuation. Watch for
+  a spring/recapture of the prior candle to confirm the reversal. Heavy volume strengthens it.
 - **Dark-cloud cover** (top): white candle, then open above prior high, close > 50%
   into the white body. < 50% penetration → demand further bearish confirmation.
 - **Piercing** (bottom): black candle, then open below prior low, close > 50% into the
@@ -295,6 +302,9 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
   oversold, not while entering it). Often better than RSI because it incorporates volume.
 - **ROC (Rate of Change):** momentum oscillator centered on zero; price new high should =
   ROC new high (else divergence). ±10 ≈ OB/OS; use a small filter (±3–4) on zero-crosses.
+- **PPO (Percentage Price Oscillator):** MACD expressed in PERCENT ((12EMA−26EMA)/26EMA ×
+  100) + a 9-EMA signal + histogram — same usage as MACD but %-scaled, so it compares
+  momentum across different-priced assets. Minor; pick it OR MACD, not both.
 - **ATR (Average True Range):** a NON-directional volatility gauge (14-period) — rises at
   breakouts, tops/bottoms, and major turns; contracts in consolidation (the numeric
   cousin of a Bollinger pinch). Used to size trailing stops and Point-&-Figure boxes.
@@ -469,11 +479,25 @@ never confuse activity with progress. (This is the temperament behind every "sta
 - **Candle-completion rule:** don't interpret a higher-timeframe candle (weekly/3-day)
   until it's near complete — body, wicks, and oscillators all settle only on the close; an
   early read flips. Patience over bias.
+- **Scale in / scale out (Trading Wisdom L28):** split the intended size into 3–4 tranches.
+  Enter 25–33% at the trigger, observe, add only as the thesis confirms; take partial profit
+  into resistance (each sale shrinks the position → every later decision is easier). Firing
+  all bullets at once leaves no room to adapt. "One bad trade can eliminate ten good ones."
+- **Cut losers, add to winners (L15):** never average DOWN a losing thesis (except a planned,
+  very-light scale-in); add to WINNERS. A 30–40% win rate is fine if winners are let to run
+  and losers cut small — the math works on the size of wins vs losses, not the hit rate.
+- **Trade your own watchlist — "be a rock, not a blade of grass."** Never execute off a single
+  tweet/call; act only on a chart you've studied and have muscle memory on. Risk management is
+  also what lets you survive long enough to find out whether a *fundamental* thesis was even
+  right — TA defines the risk; conviction without a stop is how accounts die.
 
 **Trading psychology (Trading Wisdom / Trading Journal / Trading Quotes):**
 - **Don't marry your bags (L8):** date a position, don't wed it — if it breaks your level,
   move on. Defending a position against every critic = you're emotionally over-involved
   (often from oversizing). Small losses screaming to be cut become big losses.
+- **Traders "magically transform into investors"** when they refuse to cut a failed trade —
+  suddenly scanning chat rooms and news for reasons to keep holding a loser. That switch from
+  "trader" to "investor" mid-loss is the tell you've abandoned your stop. Stay a trader.
 - **You are never "stuck."** You always have three options — sell, hold, or add. "Stuck" is
   an illusion that abdicates the decision to cut. Free the capital (and the emotional
   capital) for the next setup.
@@ -548,6 +572,23 @@ never confuse activity with progress. (This is the temperament behind every "sta
   far above the linear one). Linear only for short-term, low-volatility reads.
 - **Line chart for divergence:** switch to a close-only line chart when drawing divergence —
   oscillators compute on the close, so close-to-close avoids the classic wick-drawing error.
+- **"Local" price action — recency rules.** The most RECENT price structure carries the most
+  weight (those participants are still in the market); levels from years ago matter far less.
+  When projecting a target/support, use the nearest logical level, not an ancient one.
+- **How important is a level (3 rules of thumb):** (1) the more times price interacts with a
+  level, the more important it is; (2) the more times it's tested, the more likely it
+  eventually breaks (and the bigger that break's significance); (3) once price starts
+  chopping THROUGH a level (disrespecting it), it loses importance — stop weighting it.
+  A level is "formed" by multiple touches with both *price distance* and *time interval* between.
+- **Length of advance ↔ length of consolidation:** a long advance needs a long base to digest
+  it; a short move resolves after a short pause. A longer consolidation also makes the break
+  more significant. Use the advance to anticipate how long the digestion should take.
+- **Adam & Eve double bottoms/tops:** "Adam" = sharp V (concentrated volume); "Eve" = rounded
+  (volume spread out). Higher-low variants perform best (more aggressive buyers); a lower-low
+  SWEEP underperforms statistically but hands you a clean spring level to define risk against.
+- **"Oops" reversal** (Larry Williams): fade a fakeout gap — after a gap down that reverses,
+  a buy-stop above the prior bar's low catches the recapture (mirror for gap-up). Same
+  trapped-trader logic as a spring/upthrust; act within a bar or two, not weeks later.
 
 # Leading vs lagging (answer "what do I act on?")
 
