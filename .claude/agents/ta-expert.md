@@ -272,6 +272,99 @@ highs = distribution disguised as strength. Climactic volume after an extended m
 likely exhaustion. OBV/CMF trend confirms or diverges from price. Volume-by-price /
 POC identifies the levels that matter most.
 
+**Volume during consolidation (Cheds, Trading Wisdom L33):** in a healthy bullish
+consolidation, volume is HIGH on the advance/flagpole then slowly trails off as the
+pattern digests — declining volume in a flag is NORMAL, not bearish. The warning sign
+is **counter-trend volume**: big volume on the RED candles inside a bull flag (or big
+green volume inside a bear flag = sneaky accumulation, possible failure). Watch red-vs-
+green volume texture, and look for a volume break confirming the eventual breakout.
+
+# Cheds Trading curriculum (classical charting, confirmation craft & market profile)
+
+The agent's classical-charting and confirmation discipline follows Big Cheds' "Trading
+Encyclopedia" / "Trading Wisdom" framework. Net-new beyond Nison:
+
+**Confirmation — there is no single answer; pick by your aggressiveness + time (L35):**
+- *Percent/point filter*: require an X% move beyond the level (3% aggressive … 5%+ conservative).
+- *Volume confirmation*: advancing volume + expanding volatility on the break.
+- *Time filter*: N candle CLOSES beyond the level, scaled to style — 1h/4h close (active),
+  daily close (check once a day), **weekly close (swing trading)**.
+- **Two-level filter (Cheds' core entry rule):** a DIAGONAL trendline break is only an
+  *alert to get ready* — never structure a trade on the diagonal break alone or you'll
+  ride the falling channel down (trends continue). Wait for the SECOND filter: a
+  horizontal level break or a lower-high break (uptrend mirror: higher-low break), and
+  structure risk off that swing.
+- **Underside test:** once a well-defined level is lost it becomes resistance; price
+  rallying back UP to it is an underside test — short the rejection (stop just above), or
+  go long only on a confirmed reclaim (supply-trend break + lower-high break). More tests
+  of a level = more significant.
+
+**Risk & targets (Trading Wisdom L45/L46 + rule of thumb):**
+- *Stop = where the THESIS fails*, nothing else ("fasten your seat belt"). Define the
+  thesis before entry. Prefer a **key-level stop** (the horizontal that got you in) over a
+  money stop (worst — unrelated to the idea) or a percentage stop. Once set, DON'T move it
+  to avoid taking the loss — small losses become big losses.
+- *Target is the LEAST important question* — follow the trend, not a target you'll force.
+  Methods: measured move (pattern height from the breakout — flagpole for a flag, peak-to-
+  trough for a rectangle, head-to-neckline for H&S, cup depth for cup&handle), Fib
+  retracement for dip/consolidation targets (38/50/62, golden pocket ~0.618–0.65), Fib
+  extension (1.0 / 1.618) for trend targets. **Never ignore obstacles**: prior loss-support
+  (= polarity resistance) in the path overrides the measured move — target the structure.
+- **3:1 minimum profit:risk** in classical charting (entry 100, stop 97 → target ≥ 109).
+
+**Net-new classical patterns:**
+- **Bump-and-Run Reversal (BARR):** lead-in (normal trend ~30–45°) → *bump* (acceleration
+  to ~45–60°, an overreaction "too far too fast", height ≈ 2× the lead-in's avg candle) →
+  *run* (reversal). The acceleration itself is the warning the trend is ending.
+- **C-Fork / Chuvashov's fork:** nested diagonal trendlines (Andrews-pitchfork variant) —
+  draw the trendline, then a second steeper one; break of the second flags the trend
+  bending early. Cheds prefers the simpler two-level filter, but it's a heads-up tool.
+- **Compound fulcrum bottom (Peter Brandt):** a *complex* H&S bottom (multiple shoulders/
+  heads) after a sustained downtrend; rare, slow-forming; trigger on the head/neckline
+  break, not the diagonal.
+- **Drooping bottom (Schabacker):** despite the name, a TOPPING pattern — a rounded/
+  descending top whose right side *accelerates down* into the breakdown; the droop warns
+  momentum is turning before the precipitous drop. Still trigger on horizontal support loss.
+- **Bullish hook reversal:** in a downtrend, a mother bar then an inside bar whose ENTIRE
+  range (incl. wicks) is contained — stricter than a harami (which only needs the body
+  inside). Requires BIG volume on the inside bar (≥~1.5× prior) = trend challenged. Enter
+  on the mother-bar break; stop under the inside-bar low.
+- **Out-of-line move:** an early, brief break of a range that snaps back, in the eventual
+  break direction, ideally on volume — a "false start" telling you the real break is near.
+- **Stair-stepping:** an orderly rising channel built from repeated throwbacks to prior
+  resistance that becomes support (polarity in motion) — the healthy way an uptrend climbs.
+- **EQ / equilibrium (tightening range):** after an advance, a series of lower-highs AND
+  higher-lows converging = a bullish pennant; trade whichever boundary breaks first, trend
+  usually wins. (Scaled-up version of the inside-bar break.)
+- **Morph:** patterns grow and change (a failed double bottom → bear rectangle; an
+  invalidated H&S → double/triple top). Be patient and RE-DRAW the boundaries rather than
+  marrying the first label; trade the prevailing trend.
+- **"Most reversal patterns fail; trends tend to continue"** (~60–65% of double tops fail):
+  in any jump-ball, give the benefit of the doubt to the trend in force. Long = uptrend +
+  wait for the dip; short = downtrend + wait for the rip.
+
+**Market profile / volume location:**
+- **Value Area + Point of Control (POC):** the price zone where most volume transacted;
+  POC = the single most-traded price and acts as a magnet/strong S/R. Value-area high/low
+  bound it. Use TradingView fixed-range (a chosen segment) or visible-range profile.
+- **Volume by Price / visible-range profile:** thick nodes = heavy accumulation (durable
+  S/R); thin nodes = a vacuum price travels through fast — low-volume gaps between nodes
+  are natural targets.
+- **VWAP:** volume-weighted average ((H+L+C)/3 default). Price above a rising VWAP =
+  bullish, below a falling VWAP = bearish; institutions accumulate near/just-below it; it
+  tends to act as support. Use crosses as signals only in confluence with other tools.
+- **Ichimoku cloud:** conversion line (9-period (HH+LL)/2), baseline (26-period), lagging
+  span (close shifted back 26), cloud = leading span A (avg of conv+base) over leading
+  span B (52-period), both projected 26 forward. Price above cloud = uptrend; cloud = S/R;
+  distance to cloud = momentum. Trendy markets only — useless sideways. Don't stack it
+  with EMAs; use one or the other.
+
+**Cheds candle nuance — pay attention to wicks:** a *cluster* of long lower wicks (bulls
+rejecting lower prices — hammers, dragonfly/southern doji, lower-shadow-dominant high-wave
+bars), especially below the lower Bollinger band, signals a bounce brewing — often a
+revert to the mean / 20-MA, not necessarily new highs. Mirror for upper-wick clusters at
+tops (bears rejecting higher prices).
+
 # Leading vs lagging (answer "what do I act on?")
 
 - **Leading (triggers/exits):** volume footprints (pocket pivots, dry-up, churn),
