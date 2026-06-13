@@ -137,8 +137,10 @@ marubozu) — a lens for reading the momentum story inside a bar, not a trade tr
   FAILS as a bottom signal — sellers don't tire the way buyers do. Doji inside a box
   range = no forecasting value. Variants: gravestone (open/close at the low, long upper
   shadow — bearish after an advance, needs volume + a prior trend), dragonfly (close at
-  high — bullish after declines), long-legged/rickshaw man (indecision), tri-star (rare,
-  major). Like all candle signals, a doji needs a preceding trend and volume to matter.
+  high — bullish after declines), long-legged/rickshaw man (indecision), and tri-star —
+  three (or more) doji in a row after a strong move = a major loss of momentum, often the
+  seed of a tower top/bottom; rare but potent. Like all candle signals, a doji needs a
+  preceding trend and volume to matter.
 - **Marubozu**: full body, no shadows — maximum one-sided conviction (continuation).
 - **Spinning top / high-wave**: small body (long shadows for high-wave) — force
   dissipating; meaningful mid-trend or as star of a 3-candle pattern.
@@ -297,6 +299,10 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
   DI− and ATR-14). >25 = trending (ride it / its pullbacks), <20–25 = no trend / sideways.
   Crucial filter: MA crosses, breakouts, and trend signals are meaningful in a high-ADX
   market and noise in a low-ADX one.
+- **Overbought ≠ sell, oversold ≠ buy.** The only way to get overbought is to be strongly
+  bullish, and trends continue — the biggest up-moves happen WHILE overbought. So don't fade
+  an OB/OS reading; if anything, OB favors the long. When you do use the level, act on the
+  zone EXIT (buy as it leaves oversold / a failure swing), never while it's entering.
 - **MFI (Money Flow Index):** essentially a volume-weighted RSI — typical price (H+L+C)/3
   × volume, 14-period, bounded 0–100, OB > 80 / OS < 20. Use like RSI (buy as it leaves
   oversold, not while entering it). Often better than RSI because it incorporates volume.
@@ -510,6 +516,15 @@ never confuse activity with progress. (This is the temperament behind every "sta
   emotion (often imported from life), step back; don't let self-doubt snowball.
 - **Keep a trade journal:** thesis → stop/invalidation → mindfulness check → result →
   lessons. The discipline of writing it surfaces tilt, overconfidence, and repeated mistakes.
+- **Uncomfortable or scared in a trade?** That fear means you lack conviction/a plan OR (very
+  often) your size is too big — cut the position in half and it becomes manageable. Smaller
+  positions are easier to hold because each is a smaller % of risk assets. Exit and re-enter
+  only with both conviction and a plan.
+- **Experience comes first (L6):** knowing the rules gets you to the table; experience —
+  surviving and managing risk — keeps you there. Most of the edge is built studying AWAY from
+  the screen (weekends marking charts), not just in the trade.
+- **Embrace the hurt:** use the pain/frustration of a bad loss as fuel to study harder and
+  "get a few more punches in next time" — don't let it destroy confidence. The path is long.
 
 **More from the curriculum (order flow, charting methods, technique):**
 - **Pattern failure = a powerful signal the other way.** Any failed/invalidated pattern
@@ -589,6 +604,22 @@ never confuse activity with progress. (This is the temperament behind every "sta
 - **"Oops" reversal** (Larry Williams): fade a fakeout gap — after a gap down that reverses,
   a buy-stop above the prior bar's low catches the recapture (mirror for gap-up). Same
   trapped-trader logic as a spring/upthrust; act within a bar or two, not weeks later.
+- **J-hook** (bullish continuation): in a strong uptrend, a peak then a *shallow* pullback to
+  support that hooks back up — really just a lower-high break in a trend, but the shallow
+  (high-and-tight) consolidation is the tell that bulls are aggressive. Trade the continuation.
+- **Specialist breakout = liquidity grab:** a false break of a well-defined level on HIGH
+  volume that snaps back into the range — traps breakout traders, then reverses. Same family
+  as spring/upthrust; the high-volume failed break is the signal.
+- **Funding rates (crypto perpetuals):** positive funding = longs pay shorts (crowded-long,
+  perp > index → bullish sentiment); negative = shorts pay longs (crowded-short). EXTREMES
+  are contrarian sentiment tells (like the positioning dial); small readings = noise.
+- **Cycle theory (overview):** markets move in nested cycles. Key ideas — *harmonicity*
+  (a dominant cycle has ½/⅓ sub-harmonics), *summation* (price = composite of all cycles),
+  *synchronicity* (smaller cycles bottom with larger ones), *proportionality* (bigger
+  amplitude = longer cycle), *translation* (a LEFT-translated peak — early — signals a weak
+  cycle; RIGHT-translated — late peak — a strong one), *inversions* (an expected low prints
+  a high). Maps onto the four market stages (base/advance/top/decline). Use as context, not
+  a timing trigger.
 
 # Leading vs lagging (answer "what do I act on?")
 
