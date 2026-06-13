@@ -25,6 +25,20 @@ trade). This is the workflow validated on NVTS/HOOD reads.
    specific prices/levels; tighten prose but lose no substance. If the agent flags a
    platform/detector bug (e.g. nonsensical setup targets), surface it.
 
+4. **Render an annotated candlestick chart** (the user is a visual learner — do this every
+   time, in the MAIN thread, since `show_widget` is not available to subagents). Use the
+   `CHART SPEC` the agent returns (section F below) plus the raw OHLCV it already fetched.
+   - Call `mcp__visualize__read_me` with `modules: ["chart"]` **silently** first (do not
+     narrate it), then `mcp__visualize__show_widget`.
+   - Build it as an HTML `<canvas>` chart with the OHLCV embedded as a JS literal and a draw
+     script (Chart.js has no native candlesticks; hand-draw them — see the NVTS widget for the
+     reference implementation). Detect `prefers-color-scheme` for dark mode; green up / red
+     down candles; thin 21-EMA line; dashed horizontal S/R level lines with on-chart labels;
+     a volume strip with the climax bar highlighted; and numbered circle markers for the key
+     candle/pattern events, with a numbered legend listing each event's date + price.
+   - Keep all explanatory prose in your response text, not inside the widget (a compact legend
+     is fine). After the chart, give a 3–4 bullet "what the picture shows" tied to the markers.
+
 ## Non-negotiables (the agent enforces these; verify they're present before relaying)
 
 - **Data before opinion** — the agent must fetch live data first; if data is unavailable it
@@ -79,6 +93,17 @@ trade). This is the workflow validated on NVTS/HOOD reads.
 > structural stop, T1/T2 (method), R:R (reject < 2:1 for swing entries), size tied to the
 > positioning dial, explicit invalidation, and what would change your mind.
 >
+> **F) CHART SPEC (for visual rendering)** — emit a compact, machine-readable block the main
+> thread can turn into an annotated candlestick chart. Include exactly:
+> - `window`: how many of the most recent daily bars to plot (default ~40).
+> - `levels`: each horizontal S/R line as `{price, label, type}` where type ∈
+>   support|resistance|polarity|climax (these become the dashed level lines).
+> - `emas`: which moving averages to overlay (e.g. 21, 50) with their current values.
+> - `events`: the key candle/pattern callouts as an ordered list of
+>   `{date, price, side: high|low, note}` (climax/doji, engulfing, hammer/shelf hold, gap,
+>   rejection wick, etc.) — these become the numbered markers + legend.
+> Use only dates/prices verified against the fetched OHLC.
+>
 > Cite specific prices/dates from the fetched data only. If a detector/setup looks broken
 > (e.g. targets below entry), flag it rather than relaying it as a signal.
 
@@ -89,3 +114,7 @@ trade). This is the workflow validated on NVTS/HOOD reads.
 - If the user cites a specific pattern someone called ("X says this is a Y"), the agent's
   pattern-claim-verification routine applies — verify it against the numbers, report
   confirmed vs unconfirmed with the exact trigger/target/failure levels.
+- The chart is part of the deliverable, not an extra. The subagent can't call `show_widget`,
+  so the agent supplies the `CHART SPEC` (section F) and the **main thread renders it** —
+  candles + 21-EMA + dashed S/R levels + volume strip + numbered event markers. Reference
+  build: the NVTS widget (`nvts_dual_lens_candlestick_chart`).
