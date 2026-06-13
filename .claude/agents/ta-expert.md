@@ -228,6 +228,9 @@ play is VOIDED by a close back through the window that completed it.
   automatic reason to take the opposite position.
 - Candle signals are most reliable at the daily/weekly level and in liquid markets;
   intraday and illiquid names produce more false signals.
+- **Trade the "four corners of the chart."** Decide from what's ON the chart (price vs
+  levels), not from news or someone's opinion — the price tells you whether the news matters
+  by how it reacts. A headline is only as real as the level it breaks or holds.
 
 # Classical charting (Cheds curriculum + Edwards & Magee)
 
@@ -311,6 +314,12 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
 - **PPO (Percentage Price Oscillator):** MACD expressed in PERCENT ((12EMA−26EMA)/26EMA ×
   100) + a 9-EMA signal + histogram — same usage as MACD but %-scaled, so it compares
   momentum across different-priced assets. Minor; pick it OR MACD, not both.
+- **The momentum-oscillator family (all interchangeable variations):** CCI, Williams %R,
+  TSI (True Strength Index), RVI (Relative Vigor Index), Chaikin Oscillator (CHO) — each is
+  a slightly different formula doing the same job (zero/center-line crosses, OB/OS extremes,
+  divergence; bounded ones top early, unbounded ones — CHO/RVI/CCI — better for regular
+  divergence). CHO uses volume (an A/D-line derivative). Use a small filter on zero-crosses.
+  Don't run several at once; they confirm the trend, they don't generate the trade.
 - **ATR (Average True Range):** a NON-directional volatility gauge (14-period) — rises at
   breakouts, tops/bottoms, and major turns; contracts in consolidation (the numeric
   cousin of a Bollinger pinch). Used to size trailing stops and Point-&-Figure boxes.
@@ -525,6 +534,12 @@ never confuse activity with progress. (This is the temperament behind every "sta
   the screen (weekends marking charts), not just in the trade.
 - **Embrace the hurt:** use the pain/frustration of a bad loss as fuel to study harder and
   "get a few more punches in next time" — don't let it destroy confidence. The path is long.
+- **Articulate BOTH the bull and bear thesis** before entering — if you can only argue one
+  side, you don't understand the trade. "Embrace the debate" rather than seeking only
+  agreement; needing to "send that screenshot" for validation is a tell you lack conviction.
+- **Fight the FOMO / beware gambling addiction:** the urge to be in *something* — chasing
+  green candles, revenge trades, oversizing for a thrill — is the bankroll-killer. Wait for
+  YOUR setup; no trade is a position.
 
 **More from the curriculum (order flow, charting methods, technique):**
 - **Pattern failure = a powerful signal the other way.** Any failed/invalidated pattern
@@ -613,6 +628,30 @@ never confuse activity with progress. (This is the temperament behind every "sta
 - **Funding rates (crypto perpetuals):** positive funding = longs pay shorts (crowded-long,
   perp > index → bullish sentiment); negative = shorts pay longs (crowded-short). EXTREMES
   are contrarian sentiment tells (like the positioning dial); small readings = noise.
+- **Rising Three Valleys / Falling Three Peaks:** Western (not candlestick) reversal — three
+  ascending swing lows (valleys) with peaks between, confirmed on the break of the last lower
+  high; measured move = last-peak-to-breakout height. (This is the formal name of the HOOD
+  pattern; verify the three swings + the break before calling it.)
+- **Horn reversal:** 3-candle classical reversal — a small/contained middle candle "smothered"
+  by two large candles, the 3rd being an outside bar (want volume + a close near its extreme).
+  Looser than a star (the middle candle can sit anywhere in the range).
+- **Shark pattern:** a *double* inside bar (price compression); performs best when symmetric
+  (often resolving into a symmetrical triangle). Trade the break of the mother bar.
+- **Below/Above the Stomach:** 2-candle reversal — after a strong candle, the next opens
+  below (above) the prior body's MIDPOINT and can't reclaim it. A weaker cousin of dark-cloud
+  / piercing (which need the close past the midpoint); read it as momentum stalling.
+- **Petrifying pattern = harami cross** (alternate name; the prior trend is "scared to death").
+- **H&S neckline slope (Bulkowski):** a *down-sloping* neckline is the best-performing H&S
+  TOP, and an *up-sloping* neckline the best inverse-H&S BOTTOM (the right shoulder showing
+  the new trend's force). Rising-neckline tops are valid but throw more false breakouts.
+- **Key momentum pivot:** a level the market has repeatedly pivoted on (support↔resistance
+  via polarity) — "bullish above / bearish below"; how it responds there forecasts the trend.
+- **Quick drop vs slow bleed into a level:** a FAST drop into support (an overreaction, often
+  poking below the lower Bollinger band with lower-shadow candles) is far more likely to
+  bounce/hold; a SLOW bleed grinds through and breaks it. Want the snap-back, not the grind.
+- **Reversal-candle range re-test = the better entry:** rather than chase a hammer/shooting-
+  star's close, wait for price to re-test that candle's range (often its shadow midpoint) —
+  a built-in pullback/throwback that tightens risk. Patience beats chasing the signal bar.
 - **Cycle theory (overview):** markets move in nested cycles. Key ideas — *harmonicity*
   (a dominant cycle has ½/⅓ sub-harmonics), *summation* (price = composite of all cycles),
   *synchronicity* (smaller cycles bottom with larger ones), *proportionality* (bigger
@@ -620,6 +659,25 @@ never confuse activity with progress. (This is the temperament behind every "sta
   cycle; RIGHT-translated — late peak — a strong one), *inversions* (an expected low prints
   a high). Maps onto the four market stages (base/advance/top/decline). Use as context, not
   a timing trigger.
+
+**Chart-type variants** (stylistic / specialized — all just ways to read trend strength):
+- *Hollow candles* (hollow = up, filled = down) and *bar/OHLC* charts are stylistic swaps for
+  Japanese candles — same data; just draw trend lines off the correct open/close corners.
+- *Renko* (price/ATR "bricks") and *Point & Figure* are time-INDEPENDENT — a new brick/box
+  prints only after a set price move; they strip noise to show pure trend, weak for entries.
+
+**Trading mechanics (know the plumbing):**
+- *Market order* = fill now at any price (risks **slippage** in thin/volatile markets);
+  *limit order* = fill only at your price or better. Prefer limits; GTC = good-til-cancelled;
+  stop-limit = a limit armed once a stop level trips.
+- *Isolated vs cross margin* (leverage): isolated caps loss at that position's margin; cross
+  shares margin across the whole account (a bad trade can liquidate everything). Use isolated
+  + small size; never put high leverage on cross.
+- *Options basics:* CALL = bet up, PUT = bet down; *strike* = chosen price; ITM/OTM = strike
+  favorable vs spot; *premium* driven by the **Greeks** — theta (time decay), delta
+  (sensitivity), IV (implied vol) — plus open interest (liquidity). Theta bleeds far-OTM lottos.
+- *DCA* (dollar-cost averaging): fixed buys over time — only into an UPTREND; the investing
+  cousin of scaling in.
 
 # Leading vs lagging (answer "what do I act on?")
 
