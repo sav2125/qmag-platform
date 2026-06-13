@@ -175,6 +175,11 @@ core edge over bar charts.
 - **Rising / falling three methods**: SMALL real bodies contained within a big candle's
   range (a long body inside disqualifies it), then a resumption candle. Ideal volume:
   strongest on the first and last (trend-direction) candles, light on the inside bars.
+- **Three-line strike**: three trend candles then one big opposite candle engulfing all
+  three. Textbook calls it a *continuation*, but Bulkowski's backtests show the bearish
+  three-line strike resolves as a bullish REVERSAL ~84% of the time — that giant counter-
+  trend candle (especially on heavy volume) is overwhelming opposite-side force. A prime
+  example of: trust the tested behavior over the textbook label.
 - **Upside-gap two crows, dumpling tops/frypan bottoms, tower tops/bottoms**: slower
   rounding/warning variants — supply/demand exhaustion at extremes. Towers signal LATE
   (you must wait for the confirming tall opposite-color candle) — the earlier harami or
@@ -204,6 +209,10 @@ play is VOIDED by a close back through the window that completed it.
   come from Western methods (measured moves, prior S/R, retracements, trend lines).
 - Convergence = "a cluster of technical signals converging at or near the same price."
   The more independent signals at one level, the more that level matters.
+- **Tested behavior beats the textbook label.** Some named patterns don't do what their
+  name implies once backtested (Bulkowski): the bearish three-line strike resolves bullish
+  ~84%; the hanging man leads to bullish continuation ~60%; dark-cloud cover tests weakly.
+  Weight the statistical reality, and read the candle BODIES/volume, over the label.
 - "Reversal pattern" is a misnomer — read it as **trend-CHANGE indicator**: it means the
   prior trend should stop, NOT that price must reverse. A top pattern that leads to
   sideways chop "worked." So a reversal signal is a reason to exit/protect, not an
@@ -281,6 +290,25 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
   DI− and ATR-14). >25 = trending (ride it / its pullbacks), <20–25 = no trend / sideways.
   Crucial filter: MA crosses, breakouts, and trend signals are meaningful in a high-ADX
   market and noise in a low-ADX one.
+- **MFI (Money Flow Index):** essentially a volume-weighted RSI — typical price (H+L+C)/3
+  × volume, 14-period, bounded 0–100, OB > 80 / OS < 20. Use like RSI (buy as it leaves
+  oversold, not while entering it). Often better than RSI because it incorporates volume.
+- **ROC (Rate of Change):** momentum oscillator centered on zero; price new high should =
+  ROC new high (else divergence). ±10 ≈ OB/OS; use a small filter (±3–4) on zero-crosses.
+- **ATR (Average True Range):** a NON-directional volatility gauge (14-period) — rises at
+  breakouts, tops/bottoms, and major turns; contracts in consolidation (the numeric
+  cousin of a Bollinger pinch). Used to size trailing stops and Point-&-Figure boxes.
+- **Open Interest (OI):** total open futures/options contracts. Rising OI + a trend =
+  strong, liquid, likely-to-continue move; high volume + low OI = short-term flipping, not
+  conviction. High OI ⇒ tight bid/ask (liquidity) — a market worth trading.
+- **Bounded vs unbounded oscillators:** RSI / Stochastic / MFI / ROC are *bounded* (fixed
+  0–100 limits) so they top/bottom EARLY → noisy, premature "regular" divergences; OBV and
+  MACD are *unbounded*. Hence: OBV for regular (reversal) divergence, RSI for hidden
+  (continuation). Know which kind you're reading.
+- **You often don't need the oscillator at all.** All trade ideas should come from PRICE
+  (level recaptures, breaks, structure) + VOLUME read directly: big green-candle volume =
+  accumulation (OBV rising); big red-candle volume in an advance = counter-trend/distribution
+  (a divergence) — you can see the RSI/OBV story in the bars themselves. Keep it simple.
 - **Retracements** (Fibonacci, rounded): **38%, 50%, 62%** (golden pocket ~0.618–0.65)
   are the pullback levels; a candle reversal AT a retracement level is the setup.
 
@@ -421,6 +449,44 @@ or it will find a new owner." Don't over-expose while waiting — boredom tradin
 bankroll destruction begins; size and patience are part of the edge. Invest in skill, and
 never confuse activity with progress. (This is the temperament behind every "stand aside.")
 
+**Risk & trade management (Cheds):**
+- **Asymmetry — enter AT a key level.** The way you GET a ≥3:1 trade is by entering as
+  close as possible to a key horizontal level (long the bottom of a range, short the top),
+  so the stop is tight and the upside is large. Mid-channel entries can't be managed.
+- **Trailing stop** locks in profit in a strong trend (a fixed % or $ behind price); for
+  trending markets only, and a "scam wick" can knock you out — accept that imperfection.
+- **Trend alignment:** long = uptrend + buy the dip; short = downtrend + sell the rip.
+  Fading a strong chart (shorting strength) is the classic blow-up — fade bounces in
+  DOWNtrends, not dips in uptrends.
+- **Strict entry criteria:** pre-commit to what must be true before risking capital (e.g.
+  "N daily closes above the level," a specific trigger) — guardrails that slow you down and
+  stop impulsive, plan-less, FOMO entries. "In a rush to trade → your money's in a rush to leave."
+- **Watchlist 10–20 names, curated.** Small enough to study daily and build muscle memory
+  (each name's levels vs 50/200-MA, its relative strength) so you can act decisively when
+  volatility hits. Trade only from YOUR watchlist, not someone else's call.
+- **Real opportunity hits you in the face** (like heat from an oven) — obvious, on a name
+  you know. If you're hunting hard for a reason, you're forcing a boredom trade; pass.
+- **Candle-completion rule:** don't interpret a higher-timeframe candle (weekly/3-day)
+  until it's near complete — body, wicks, and oscillators all settle only on the close; an
+  early read flips. Patience over bias.
+
+**Trading psychology (Trading Wisdom / Trading Journal / Trading Quotes):**
+- **Don't marry your bags (L8):** date a position, don't wed it — if it breaks your level,
+  move on. Defending a position against every critic = you're emotionally over-involved
+  (often from oversizing). Small losses screaming to be cut become big losses.
+- **You are never "stuck."** You always have three options — sell, hold, or add. "Stuck" is
+  an illusion that abdicates the decision to cut. Free the capital (and the emotional
+  capital) for the next setup.
+- **Walk away after a big loss.** Revenge-trading to "make it back" doubles losses — you're
+  on tilt with no confidence or composure. Step away, let emotion subside, return with a plan.
+- **Invincible/cocky after wins** is as dangerous as tilt after losses — the biggest losses
+  come right after the biggest wins, when discipline slips and size creeps up. It's the
+  small, consistent victories that compound, not home runs.
+- **Angry or frustrated?** "If your blood runs hot, your trades will run cold." Notice the
+  emotion (often imported from life), step back; don't let self-doubt snowball.
+- **Keep a trade journal:** thesis → stop/invalidation → mindfulness check → result →
+  lessons. The discipline of writing it surfaces tilt, overconfidence, and repeated mistakes.
+
 **More from the curriculum (order flow, charting methods, technique):**
 - **Pattern failure = a powerful signal the other way.** Any failed/invalidated pattern
   (a H&S whose right shoulder invalidates, a failed breakdown, a spring) is among the best
@@ -446,6 +512,42 @@ never confuse activity with progress. (This is the temperament behind every "sta
 - **Point & Figure (PnF):** time-independent charting — X columns (up), O columns (down),
   a box size (ATR or fixed $/%), and a 3-box reversal to switch columns. Filters noise to
   show pure trend/momentum; a CMT topic, rarely used live, but useful for clean S/R.
+- **Gap taxonomy** (a gap = a window in candle terms; acts as S/R and often fills):
+  *common / measuring / runaway* = small mid-trend gap in the trend's direction (continuation);
+  *breakaway / breakout* = gap that clears a consolidation's resistance (start of a move);
+  *exhaustion* = a large gap LATE in a mature trend (overextension; frequently fills and
+  rolls over); *breakdown* = breakaway's bearish mirror. Read WHERE in the trend the gap
+  sits to know which it is.
+- **Rounding bottom / rounded top:** a gradual momentum shift (the curved analog of H&S);
+  trigger only on the break of the peak (bottom) or trough/neckline (top), measured move =
+  pattern height. Don't over-fit the exact curve — the *idea* (trend slowing then turning)
+  is what matters; a double bottom/top can also be a rounding structure.
+- **Accelerating peak / drooping bottom:** the right side of a rounding base accelerating
+  UP (accelerating peak, bullish, pre-breakout) or a rounding top accelerating DOWN
+  (drooping bottom, bearish, pre-breakdown) — momentum building before the trigger.
+- **Triple top / triple bottom — strict criteria:** three peaks/troughs with BOTH *price
+  distance* (real swings between them) AND *time interval* (consolidation between attempts).
+  Three touches alone = a "triple test," NOT a triple top — it's only confirmed on the
+  neckline/trough break (or the opposite break = invalidation). Same logic for doubles.
+- **Dead cat bounce:** a rally inside a mature downtrend. Be skeptical — light-volume
+  bounces fade into a lower high and continue down (often via an EQ first); only heavy
+  volume at the low argues for a real turn. Don't buy the bounce without confirmation.
+- **Head & Shoulders complex / inverted H&S:** complex = multiple shoulders and/or heads —
+  play it identically to a standard H&S (volume declining across peaks, neckline break,
+  right-shoulder invalidation = the failed-pattern long/short). Inverted H&S is the bottom
+  mirror; a higher right shoulder = stronger demand.
+- **Upward-breaking descending triangle** (Bulkowski: one of the best-performing setups):
+  a descending triangle "should" break down, but when it breaks UP it morphs into a
+  rectangle and becomes a powerful momentum reversal — trigger on the break of the first
+  lower-high, not just the diagonal.
+- **Longer patterns > shorter patterns:** the more time/candles spent building a level or
+  range, the more significant it is and the bigger the move on its break — on every
+  timeframe (and a higher timeframe outranks a lower one).
+- **Log vs linear scale:** use logarithmic for high-volatility / long-term charts (crypto,
+  multi-year) — it materially changes measured-move targets (a log measured move can be
+  far above the linear one). Linear only for short-term, low-volatility reads.
+- **Line chart for divergence:** switch to a close-only line chart when drawing divergence —
+  oscillators compute on the close, so close-to-close avoids the classic wick-drawing error.
 
 # Leading vs lagging (answer "what do I act on?")
 
