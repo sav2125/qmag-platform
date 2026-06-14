@@ -59,6 +59,7 @@ const TOC = [
   { id: "ics",          label: "Signal: ICS (Institutional Composite)" },
   { id: "exhaustion",   label: "Signal: Bull Exhaustion Warning" },
   { id: "wys",          label: "Setup: Wyckoff Spring (WYS)" },
+  { id: "fibonacci",    label: "Analysis: Fibonacci Grid" },
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "philosophy",   label: "Design Philosophy" },
 ];
@@ -988,6 +989,65 @@ T2     = range_high + (range_high - range_floor)  # measured move`}
             </tbody>
           </table>
         </div>
+      </Section>
+
+      {/* Fibonacci Grid */}
+      <Section id="fibonacci" title="Analysis: Fibonacci Grid">
+        <p>
+          Fibonacci is <strong>not a score input</strong> — it doesn&apos;t move the P Score. It&apos;s a
+          confluence map shown on the analyze page: where a pullback is likely to find support and where a
+          trend might run to. The hard part of Fibonacci is the <strong>anchor</strong> — pick the wrong
+          swing and every level is wrong. We remove that judgment call by anchoring deterministically.
+        </p>
+
+        <CodeBlock>{`# 1. Anchor: dominant swing in the last 120 bars (≈ 6 months)
+hi = max(high[-120:]);  lo = min(low[-120:])
+range = hi - lo
+direction = "uptrend" if hi prints AFTER lo else "downtrend"
+#   → the extreme that printed LAST defines the active leg
+
+# 2. Retracement ladder (pullback support, measured from the high in an uptrend)
+level(r) = hi - range * r      for r in [0.236, 0.382, 0.50, 0.618, 0.786]
+#   0.50 is not a true Fib ratio but is a key psychological level (kept by convention)
+
+# 3. Golden pocket — the highest-probability reaction band
+golden = [hi - range*0.65, hi - range*0.618]   # 61.8%–65%
+
+# 4. Extension targets (project the leg beyond the swing)
+ext(e) = lo + range * e        for e in [1.272, 1.618, 2.0, 2.618]
+
+# 5. Where price sits
+retrace_depth = (hi - price) / range           # shallow = strong trend
+in_golden_pocket = golden.low <= price <= golden.high`}
+        </CodeBlock>
+
+        <h3 className="font-semibold text-gray-800 mt-3">Why these choices</h3>
+        <ul className="list-disc ml-5 space-y-1 text-sm">
+          <li>
+            <strong>Deterministic anchor (high &amp; low, ordered by time).</strong> Arbitrary/forced
+            anchoring is the #1 way Fibonacci misleads. Using the dominant swing in a fixed window makes the
+            levels reproducible and removes hindsight bias.
+          </li>
+          <li>
+            <strong>Golden pocket (61.8–65%).</strong> Retail, institutions and algos all watch this band,
+            so reactions there are more probable — but a tag alone is not a reversal.
+          </li>
+          <li>
+            <strong>Depth as a trend-strength read.</strong> A shallow retrace (holds 23.6–38.2%) signals a
+            strong trend; a deep one (78.6%) signals a weakening leg at risk of failing.
+          </li>
+          <li>
+            <strong>Extensions for targets.</strong> 1.272 / 1.618 are the primary trend targets; reconcile
+            with the setup&apos;s own measured-move / prior-S&amp;R targets and take the more conservative —
+            and let polarity / prior resistance in the path override the Fibonacci number.
+          </li>
+        </ul>
+
+        <p className="mt-3 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          <strong>Confluence, not a trigger.</strong> A Fibonacci level on its own is just a line. It earns a
+          trade only when it overlaps prior S/R, a moving average or a trendline <em>and</em> a reversal
+          candle prints at it. Treat it as one vote in the convergence, never a standalone entry.
+        </p>
       </Section>
 
       {/* Market Positioning Dial */}

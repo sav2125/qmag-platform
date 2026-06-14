@@ -606,6 +606,84 @@ function AnalyzeInner() {
             })()}
           </Card>
 
+          {/* ── Row 3b: Fibonacci ── */}
+          {data.fibonacci && (() => {
+            const f = data.fibonacci!;
+            const up = f.direction === "uptrend";
+            return (
+              <Card title="Fibonacci">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${up ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {up ? "Uptrend leg" : "Downtrend leg"}
+                  </span>
+                  <span className="font-mono">
+                    ${f.swing_low.toFixed(2)} <span className="text-gray-400">({f.swing_low_date})</span>
+                    {" → "}${f.swing_high.toFixed(2)} <span className="text-gray-400">({f.swing_high_date})</span>
+                  </span>
+                  <span className="text-gray-300">·</span>
+                  <span>retraced <strong className="text-gray-700">{f.retrace_depth_pct.toFixed(1)}%</strong> of the leg</span>
+                  {f.in_golden_pocket && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">in golden pocket</span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Retracement ladder */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-gray-500 mb-1.5">Retracement ladder (pullback support)</p>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded bg-gray-50 text-gray-500">
+                        <span>swing high · 0%</span><span>${f.swing_high.toFixed(2)}</span>
+                      </div>
+                      {f.retracements.map((r) => {
+                        const isGolden  = r.pct === 61.8;
+                        const isNearest = Math.abs(r.price - f.nearest_level.price) < 0.001;
+                        return (
+                          <div key={r.pct} className={`flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded border ${isGolden ? "bg-amber-50 border-amber-200" : "border-transparent"} ${isNearest ? "ring-1 ring-indigo-300" : ""}`}>
+                            <span className={isGolden ? "text-amber-800 font-semibold" : "text-gray-600"}>
+                              {r.pct.toFixed(1)}%{isGolden ? " · golden pocket" : ""}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              {isNearest && <span className="text-[9px] text-indigo-600 font-sans font-semibold">price ${f.price.toFixed(2)}</span>}
+                              <span className={isGolden ? "text-amber-800 font-semibold" : "text-gray-800"}>${r.price.toFixed(2)}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div className="flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded bg-gray-50 text-gray-500">
+                        <span>swing low · 100%</span><span>${f.swing_low.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Extension targets */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-gray-500 mb-1.5">Extension targets (beyond the swing)</p>
+                    <div className="space-y-0.5">
+                      {f.extensions.map((e) => (
+                        <div key={e.pct} className="flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded">
+                          <span className="text-gray-600">{e.pct.toFixed(1)}%</span>
+                          <span className="text-green-700 font-semibold">${e.price.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 text-[11px] text-gray-600 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
+                      Golden pocket: <strong className="text-amber-800">${f.golden_pocket.low.toFixed(2)}–${f.golden_pocket.high.toFixed(2)}</strong>
+                      <span className="text-gray-400"> · nearest: {f.nearest_level.name} ${f.nearest_level.price.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+                  <strong>How:</strong> anchored to the dominant swing in the last {f.lookback_bars} bars (absolute high &amp; low, ordered by time).
+                  Retracements = high − range × ratio; extensions project the leg beyond the swing. The <strong>golden pocket</strong> (61.8–65%) is
+                  the highest-probability reaction band. A level is confluence, <strong>not a trigger</strong> — wait for a reversal candle or an
+                  S/R / moving-average overlap before acting.
+                </p>
+              </Card>
+            );
+          })()}
+
           {/* ── Row 4: Active setups ── */}
           <Card title={`Active Setups (${data.active_setups.length} firing)`}>
             {data.active_setups.length === 0 ? (

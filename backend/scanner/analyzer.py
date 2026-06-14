@@ -27,6 +27,7 @@ from .patterns import (
 )
 from .rs_rank import rs_score, rs_label
 from .prob_scorer import compute_prob_score, _trend_template
+from .fib import compute_fibonacci
 
 logger = logging.getLogger(__name__)
 
@@ -546,6 +547,12 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     monthly_tf = _tf_signals(df_monthly, "Monthly")
     mtf        = _mtf_alignment(daily_tf, weekly_tf, monthly_tf)
 
+    # ── Fibonacci grid (anchored to the dominant ~6-month swing) ──────────────
+    try:
+        fib = compute_fibonacci(df)
+    except Exception:
+        fib = None
+
     # ── Serialise setups ──────────────────────────────────────────────────────
     def _sd(s) -> dict:
         return {
@@ -595,6 +602,8 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "trend_template":     trend_template,
         # Multi-timeframe alignment
         "timeframe_alignment": mtf,
+        # Fibonacci grid (retracement ladder + extension targets + golden pocket)
+        "fibonacci": fib,
         # P Score
         "prob_score":         ps_result["prob_score"],
         "prob_grade":         ps_result["prob_grade"],

@@ -58,7 +58,8 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **Contrarian regime dial** — each source votes at extremes (fear = +1, crowded = −1); dial −3…+3 shown on the Dashboard as a sizing/aggression gate. Cached 12h. `GET /market/positioning`
 
 ### Frontend
-- **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, early warnings, and **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls)
+- **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, early warnings, **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls), and a **Fibonacci grid** (retracement ladder + golden pocket + extension targets, anchored to the dominant ~6-month swing)
+- **Fibonacci grid** — Auto-anchored to the dominant swing in the last ~120 bars (absolute high & low, ordered by time → no arbitrary anchoring). Reports the retracement ladder (23.6/38.2/50/61.8/78.6 %), the **golden pocket** (61.8–65 %), extension targets (127.2/161.8/200/261.8 %), and where current price sits (retrace depth, nearest level). It is a **confluence map, not a score input** — see the `/scoring` page for the reasoning
 - **Dashboard** — Market Positioning panel (regime dial), scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
 - **Setup pages** — Deep-dive educational pages for EP, TB, VCP, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page
@@ -281,7 +282,7 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | `GET` | `/health` | Health check + current date |
 | `GET` | `/scan` | Run scanner, returns setup list. Add `?cached=true` for instant snapshot-based results |
 | `POST` | `/scan/refresh` | Force-rebuild today's snapshot for a given universe (`{"universe": "sp500"}`) |
-| `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 7 setups, RSI/MACD/ADX, checklist, warnings, trend-template criteria, multi-timeframe alignment |
+| `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 7 setups, RSI/MACD/ADX, checklist, warnings, trend-template criteria, multi-timeframe alignment, Fibonacci grid (`fibonacci` field) |
 | `GET` | `/market/positioning` | Market positioning panel: CFTC COT, SPY put/call, NAAIM + contrarian regime dial. Cached 12h; `?refresh=true` to force |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
 | `GET` | `/watchlist` | Get saved watchlist symbols |
@@ -321,6 +322,7 @@ qmag-platform/
 │   │   ├── fetcher.py           Alpaca OHLCV fetcher, universe lists, rate limiting
 │   │   ├── patterns.py          EP, TB, VCP, WYS, PP, PULL, FBD detectors + enrichment helpers
 │   │   ├── rs_rank.py           IBD-style RS score vs SPY
+│   │   ├── fib.py               Fibonacci grid (retracements + extensions + golden pocket), swing-anchored
 │   │   ├── positioning.py       Market positioning: CFTC COT, SPY put/call, NAAIM + regime dial
 │   │   └── engine.py            Scan orchestration, filters, enrichment, quality grading
 │   └── notifier/

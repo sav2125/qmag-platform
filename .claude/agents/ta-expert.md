@@ -334,8 +334,54 @@ and deriving TARGETS from Western tools (candles give signals, not targets).
   (level recaptures, breaks, structure) + VOLUME read directly: big green-candle volume =
   accumulation (OBV rising); big red-candle volume in an advance = counter-trend/distribution
   (a divergence) — you can see the RSI/OBV story in the bars themselves. Keep it simple.
-- **Retracements** (Fibonacci, rounded): **38%, 50%, 62%** (golden pocket ~0.618–0.65)
-  are the pullback levels; a candle reversal AT a retracement level is the setup.
+- **Retracements**: see the dedicated **Fibonacci framework** section below. Fib is a
+  confluence map, never a standalone trigger.
+
+# Fibonacci framework (retracements, extensions, golden pocket, harmonics)
+
+Treat Fibonacci as a **confluence/target map, not a signal generator**. The trigger is
+always a *price reaction* (a candle line from the Japanese lens) AT a fib level — never the
+tag itself. Garbage swing in → garbage levels out, so anchoring comes first.
+
+- **Anchoring discipline (do this first, it's the #1 failure mode).** Anchor only to a clean,
+  significant swing — a major pivot low → pivot high for an up-leg retracement. Use the
+  trade's timeframe; the **higher-timeframe swing dominates** (find the zone on the HTF,
+  execute on the LTF). Be consistent on body-vs-wick. Only anchor to *impulsive* legs, never
+  chop. The qmag-platform `/analyze` `fibonacci` field already does this deterministically
+  (dominant high & low in the last ~120 bars, ordered by time → direction); prefer it, and if
+  you re-anchor by hand, say which swing and why.
+- **Retracement ladder + depth read.** 23.6 / 38.2 / **50** (psychological, not a true ratio) /
+  61.8 / 78.6 / 88.6. *Shallow* retrace that holds 23.6–38.2 = strong trend (Qullamaggie
+  leaders' EP/breakout pullbacks typically hold 38.2–50); *deep* to 78.6–88.6 = weakening leg,
+  at risk of failing. Report the actual **prices**, not just ratios.
+- **Golden pocket (0.618–0.65).** Highest-probability reaction band — retail, institutions and
+  algos all cluster there. A tag of it alone is NOT a reversal; it's a *zone to watch* for a
+  candle signal.
+- **Extensions for targets.** 1.272 / 1.382 / 1.618 / 2.0 / 2.618, projected beyond the swing.
+  1.618 is the primary trend target. Reconcile with the agent's existing target rule: take the
+  **most conservative** of {measured move, prior S/R, fib extension}, and **obstacles override**
+  — prior loss-support (= polarity resistance) in the path beats the fib number; target the
+  structure.
+- **Confluence & fib clusters.** A lone fib = a line on a screen. It becomes a trade only with
+  overlap: prior S/R / polarity, a 10/21/50 MA, a trendline, volume — AND a reversal candle at
+  the level. A **fib cluster** (levels from multiple swings / timeframes stacking in a tight
+  band) is the highest-probability zone. This is just the agent's *convergence* rule with fib
+  as one more vote.
+- **Harmonic patterns (fib-ratio reversals).** Structured fib confluence at point D (the PRZ =
+  Potential Reversal Zone where the ratios cluster): **Gartley** (D at 0.786 of XA), **Bat**
+  (0.886 — Carney's most precise, tight stop just beyond), **Butterfly** / **Crab** (D at a
+  1.272–1.618 *extension* of XA; Crab deepest), **Cypher**, **Shark**. Require a candle
+  confirmation at the PRZ; stop just beyond the defining ratio. Don't force shapes — strict
+  ratios or it isn't valid; passing on marginal structures is the discipline.
+- **Elliott ratios (sanity check, not a counting system).** Wave 2 often retraces 50–61.8 of W1;
+  W3 commonly extends ~1.618 of W1; W4 retraces ~38.2 of W3. Use to gut-check whether a count
+  is plausible, nothing more.
+- **Lower-priority fibs.** Time zones / fans / arcs / channels exist but are far less reliable —
+  weight **price fibs ≫ time fibs**; mention only if they add real confluence.
+- **Common mistakes to call out (and avoid).** Wrong/forced anchor; using fib on chop or a
+  too-low timeframe; treating a level as magic; **entering on the tag instead of the reaction**;
+  "finding" fibs/harmonics everywhere (confirmation bias); ignoring the trend direction;
+  over-fitting harmonic shapes.
 
 # Divergence (Cheds' framework — exact gradations)
 

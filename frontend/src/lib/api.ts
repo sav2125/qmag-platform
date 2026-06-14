@@ -225,6 +225,29 @@ export interface MTFAlignment {
   monthly:   TimeframeSignal;
 }
 
+export interface FibLevel {
+  ratio: number;    // e.g. 0.382, 1.618
+  pct:   number;    // e.g. 38.2, 161.8
+  price: number;
+}
+
+export interface FibGrid {
+  direction:         "uptrend" | "downtrend";
+  lookback_bars:     number;
+  swing_low:         number;
+  swing_high:        number;
+  swing_low_date:    string;
+  swing_high_date:   string;
+  range:             number;
+  retracements:      FibLevel[];   // 23.6 / 38.2 / 50 / 61.8 / 78.6 (pullback levels)
+  extensions:        FibLevel[];   // 127.2 / 161.8 / 200 / 261.8 (targets)
+  golden_pocket:     { low: number; high: number };   // 61.8–65% band
+  in_golden_pocket:  boolean;
+  retrace_depth_pct: number;       // how far price has retraced the active leg
+  nearest_level:     { name: string; price: number };
+  price:             number;
+}
+
 export interface SymbolAnalysis {
   symbol:         string;
   price:          number;
@@ -267,4 +290,5 @@ export interface SymbolAnalysis {
   warnings:            Warning[];
   trend_template:      TrendTemplate;
   timeframe_alignment: MTFAlignment;
+  fibonacci:           FibGrid | null;
 }
