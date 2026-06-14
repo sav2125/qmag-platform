@@ -21,6 +21,8 @@ A full-stack trading scanner that identifies Kristjan Qullamaggie's trading setu
 
 Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score · Setup · Risk% · Weinstein Stage · A/D Net · Weekly direction**
 
+> **EP targets** are a measured move projected from the **entry**, not the historical EP-day close: `T1 = entry + 1× (ep_close − prior_close)`, `T2 = entry + 2× (ep_close − prior_close)`. Anchoring to the old pivot close used to yield targets below entry (negative R:R) after a stock had already run up; every detector now rejects setups where `entry ≤ stop` or `target ≤ entry` so R:R is always meaningful.
+
 ---
 
 ## Features

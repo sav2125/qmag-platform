@@ -85,9 +85,30 @@ Price
         <div className="bg-green-50 border border-green-200 rounded-xl p-5">
           <h3 className="font-bold text-green-700 mb-2">🎯 Targets</h3>
           <p className="text-sm text-gray-700">
-            <strong>T1:</strong> 1× the base depth added to the breakout point.<br />
-            <strong>T2:</strong> 2–3× risk (R:R). Let the winner run as long as price
-            holds above the rising 10-day MA. Sell into strength on climactic volume.
+            <strong>Measured move from the entry.</strong> The scanner projects the
+            magnitude of the EP-day thrust forward from the entry price:<br />
+            <strong>T1 = entry + 1× EP-day move</strong><br />
+            <strong>T2 = entry + 2× EP-day move</strong><br />
+            Let the winner run as long as price holds above the rising 10-day MA. Sell
+            into strength on climactic volume.
+          </p>
+        </div>
+      </section>
+
+      {/* Algorithm note */}
+      <section className="mb-8">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+          <h3 className="font-bold text-blue-700 mb-2">⚙️ How the scanner computes targets (and why)</h3>
+          <p className="text-sm text-gray-700">
+            The EP-day move magnitude is <code>ep_close − prior_close</code> (the size of
+            the catalyst thrust). Targets are anchored to the <strong>entry</strong>, not to
+            the historical EP-day close. Anchoring to the old pivot close was a bug: once a
+            stock had already advanced past the pivot, the projected targets landed{" "}
+            <em>below</em> the current entry and the reported risk/reward went negative.
+            Projecting the thrust off the entry keeps T1/T2 above the entry and the R:R
+            meaningful. The detector also rejects any setup where <code>entry ≤ stop</code>{" "}
+            or <code>target ≤ entry</code>, so a degenerate EP can never produce a
+            nonsensical R:R.
           </p>
         </div>
       </section>

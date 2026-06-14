@@ -122,10 +122,22 @@ def detect_ep(df: pd.DataFrame) -> Setup | None:
                    + (0.12 if in_breakout else 0))
 
         ep_mag = ep_close - prior_close
-        t1 = round(ep_close + ep_mag, 2)
-        t2 = round(ep_close + ep_mag * 2, 2)
+        if ep_mag <= 0:
+            continue  # degenerate: no upside thrust to project a target from
+
         entry = max(curr_close, consol_high * 1.001) if in_breakout else curr_close
         stop = max(ep_low * 0.99, curr_close * 0.93)
+        if entry <= stop:
+            continue  # invalid risk: no room between entry and stop
+
+        # Measured move projected from the ENTRY, not the historical EP-day close.
+        # Anchoring to ep_close produced targets below entry (negative R:R) once the
+        # stock had already advanced past the pivot. Projecting the EP thrust magnitude
+        # (1x = T1, 2x = T2) off the entry keeps targets above entry and R:R meaningful.
+        t1 = round(entry + ep_mag, 2)
+        t2 = round(entry + ep_mag * 2, 2)
+        if t2 <= entry:
+            continue  # targets must sit above entry
 
         return Setup(
             symbol="", setup_type="EP", state=state,
@@ -212,6 +224,11 @@ def detect_tb(df: pd.DataFrame, max_base_bars: int = 500) -> Setup | None:
         t1 = seg_high + (seg_high - seg_low)
         entry = curr_close
         stop = seg_low * 0.99
+        if entry <= stop or target2 <= entry:
+            # Defensive: a gap-up breakout could push entry past the measured-move
+            # target. Skip rather than emit a setup with a negative/zero R:R.
+            base_bars += _step(base_bars)
+            continue
 
         tight = max(0.0, 1.0 - range_pct / max_range)
         touch_s = min(1.0, (touches - 2) / 4.0)
