@@ -383,6 +383,48 @@ tag itself. Garbage swing in → garbage levels out, so anchoring comes first.
   "finding" fibs/harmonics everywhere (confirmation bias); ignoring the trend direction;
   over-fitting harmonic shapes.
 
+# Options as a leading layer (forward-looking — read it before lagging confirmation)
+
+Options price the market's EXPECTATIONS, so they genuinely *lead* where price/MA/volume
+lag. It's a CONTEXT/CONFLUENCE layer — not a P Score input, not a standalone trigger;
+confirm direction with price + the firing setup. Short-horizon (days to ~1 month; fades
+by month two). Available via the `/analyze` `options` field — cite the actual numbers.
+
+**Four research-backed mechanisms** (weight call-side over put-side — puts are often hedges):
+- **Asymmetric information (O/S ratio)** — when shorting is costly, informed bears route to
+  options first, so HIGH options-volume-÷-stock-volume is *bearish* cross-sectionally
+  (~1.47% next-month alpha shorting high-O/S); strongest in hard-to-borrow / high-fee names.
+- **Embedded leverage / moneyness (AveMoney)** — informed bulls buy OTM calls; activity
+  shifting to *further-OTM calls* (rising $-vol-weighted K/S) is *bullish* next-day/month,
+  strongest in HIGH-IV names and when OI is GROWING (informed risk-taking, not hedging).
+- **Hedging demand (EHD ∝ Γ·S/Δ, OI-weighted)** — dealer delta/gamma hedging mechanically
+  pushes the underlying; high EHD → higher 1–5 day returns then a REVERSAL (transitory
+  price pressure, not information). Very short-term.
+- **Crowd wisdom (trader-segmented P/C)** — customer "opening-buy" call-to-put flow leads
+  price; raw aggregate P/C is *contrarian at extremes* and blends market-wide fear, so
+  prefer single-name, opening-buy, ≥50-contract-filtered when you can get it.
+
+**When options data works best** (use as a filter): (1) near catalysts/earnings — moneyness
+& O/S anticipate the sign+magnitude of news; (2) hard-to-short names — O/S strongest;
+(3) high-IV cohorts — call-side moneyness edge biggest; (4) high hedging intensity — EHD
+spikes drift 1–5 days then reverse.
+
+**What the platform gives you now** (`options` field) and how to read each:
+- **ATM IV + IV Rank (IV÷HV)** — rich (>1.2) = pricing more than realised (pre-catalyst/fear
+  premium); cheap (<0.8) = complacent. High absolute IV ≠ expensive if realised is higher.
+- **Expected move** (ATM straddle, ±% by expiry) — size targets/stops around catalysts,
+  especially EP (the catalyst setup). The single most actionable options number for a swing trader.
+- **Skew** (OTM put IV − call IV) — `+` = downside hedging/fear; `−` = call demand (the
+  embedded-leverage bullish tell).
+- **P/C volume & OI** — sentiment (contrarian at extremes); OI = resting positioning.
+- **Unusual activity** (vol÷OI ≥ 0.5) — fresh positioning; read alongside which side is heavy.
+- **Max pain** — OI-weighted pin price gravity into expiry; short-horizon, weak for multi-week swings.
+- **`lean` + `tell`** — the synthesised read; treat as one vote in convergence, not the verdict.
+
+**Not yet available (say so, don't fake it):** the ACI (delta-adjusted-OI accumulation
+*change*) and a live EHD need daily OI/Greeks persistence — forthcoming. IV *percentile* vs
+its 52-week range needs IV history.
+
 # Divergence (Cheds' framework — exact gradations)
 
 - **Regular = reversal** divergence; **hidden = continuation** divergence. Cheds uses
