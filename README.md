@@ -61,6 +61,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, early warnings, **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls), and a **Fibonacci grid** (retracement ladder + golden pocket + extension targets, anchored to the dominant ~6-month swing)
 - **Fibonacci grid** — Auto-anchored to the dominant swing in the last ~120 bars (absolute high & low, ordered by time → no arbitrary anchoring). Reports the retracement ladder (23.6/38.2/50/61.8/78.6 %), the **golden pocket** (61.8–65 %), extension targets (127.2/161.8/200/261.8 %), and where current price sits (retrace depth, nearest level). It is a **confluence map, not a score input** — see the `/scoring` page for the reasoning
 - **Options (leading)** — Per-symbol forward-looking layer from the near-dated chain (≤45d): **ATM implied volatility**, **IV Rank** (IBKR-style IV ÷ 30-day realised vol → options rich/cheap), the options-implied **expected move** (± % / ± $ by expiry, for sizing catalyst targets/stops), **skew** (OTM put IV − call IV → hedging vs demand), put/call **volume** & **open-interest** ratios, and an **unusual-activity** flag (volume ÷ OI). Distilled into a sentiment lean + plain-English read. Options price *expectations*, so they genuinely lead — but it's a **context/confluence layer, not a P Score input**. Data via yfinance chains (IV/OI/volume, no keys)
+- **Backtester** — No-lookahead, event-driven validation of the setup detectors (`scanner/backtester.py`, CLI). Full metric battery + bull/bear & per-year splits + an overfitting gate that requires edge in *every* sub-period. See the [Backtesting](#backtesting) section
 - **Dashboard** — Market Positioning panel (regime dial), scan controls, advanced filter panel, stats bar (Total / Grade A / EPs), full results table
 - **Setup pages** — Deep-dive educational pages for EP, TB, VCP, PP, PULL, and FBD with ASCII charts, criteria, comparison tables, and entry/stop rules
 - **Scanner signals guide** — Plain-English explanation of Weinstein Stage, A/D Net, Quality Score, and Overextension Penalty on the Setups hub page
@@ -255,6 +256,28 @@ To reconfigure the schedule, run `/schedule` in Claude Code and update the exist
 
 ---
 
+## Backtesting
+
+`scanner/backtester.py` is an **event-driven, no-lookahead** backtester that validates whether the setup detectors actually have forward edge. At every bar a detector only ever sees data up to that bar (`df.iloc[:i+1]`); fills are at the signal-bar close.
+
+```bash
+cd backend
+python -m scanner.backtester --symbols NVDA,AMD,META,AAPL,MSFT,TSLA --start 2022-01-01 --end 2025-04-30 --hold 20
+python -m scanner.backtester --symbols NVTS,GLXY,LAC --json   # full JSON incl. per-trade records
+```
+
+**Methodology** (adapted from an IBKR-style backtest writeup):
+- **Deliberate window** — default 2022-01-01 → 2025-04-30: two bear markets + a low-vol and a high-vol bull run, so results aren't regime-cherry-picked (and it excludes the post-COVID "helicopter money" distortion).
+- **Two exit policies per signal** — a fixed N-day calendar hold **and** the detector's own stop/target — to see whether active management helps.
+- **Metric battery** — win rate (by trade & by month), reward:risk, expectancy, $1k-per-trade total, Sharpe & Sortino (per-trade), max drawdown, win/loss streaks, **"win 3 of 4" probability**, alpha vs SPY.
+- **Overfitting guard** — every metric is reported for the whole window **and** split by regime (bull/bear) and by calendar year; a setup only **passes** the gate if it clears the bar (≥10% annualised, ≥55% monthly win rate, drawdown under cap) in *every* sub-period, with ≥20 trades.
+
+**First run (12 liquid names, 344 trades, 2022→2025):** TP/SL beat fixed-hold on win rate for most setups (e.g. FBD 58%→71%, PP 62%→74%), but **no setup passed the all-sub-period gate** — they earn strongly in the 2023–24 bull and bleed in the 2022 bear. That regime-dependence is exactly what the gate is designed to surface; an aggregate-only view would have looked like "edge."
+
+> ⚠️ The **annualised / cumulative** figures assume sequential single-position reinvestment, so they massively overstate returns when trades overlap across symbols (e.g. 2023's "+72,000%" is an artifact). Trust **win rate, reward:risk, expectancy, Sharpe, and max drawdown**; TP/SL is the realistic exit lens. A Phase-2 **portfolio equity curve** (shared capital, position sizing) is needed for a trustworthy annualised/Sharpe number, plus an `/backtest` endpoint + page and validation of the P Score / options / Fibonacci layers.
+
+---
+
 ## RS Score
 
 IBD-style Relative Strength score (0-100) versus SPY:
@@ -316,6 +339,7 @@ qmag-platform/
 ├── backend/
 │   ├── main.py                  FastAPI server (port 8000)
 │   ├── daily_digest.py          Standalone daily digest runner (CLI)
+│   ├── scanner/backtester.py    No-lookahead setup backtester (CLI) — metric battery + regime/year splits + robustness gate
 │   ├── requirements.txt
 │   ├── .env.example
 │   ├── .python-version          Pins Python 3.12 for Render
