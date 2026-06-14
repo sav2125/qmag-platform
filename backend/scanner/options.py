@@ -57,8 +57,14 @@ def _nearest_row(df, strike_target: float):
     return df.loc[idx]
 
 
-def compute_options(symbol: str, spot: float, max_days: int = 45) -> dict | None:
+def compute_options(symbol: str, spot: float, max_days: int = 45,
+                    hv30: float | None = None) -> dict | None:
     """Compute the leading-options snapshot for ``symbol`` at the given ``spot``.
+
+    ``hv30`` is the 30-day annualised realised (historical) volatility as a
+    fraction (e.g. 0.85 = 85%). When supplied, the snapshot adds IBKR's IV Rank
+    (30-day IV ÷ 30-day HV) — the volatility risk premium that tells you whether
+    options are rich or cheap relative to how the stock is actually moving.
 
     Returns a JSON-serialisable dict, or None if no usable chain is available.
     """
@@ -67,12 +73,12 @@ def compute_options(symbol: str, spot: float, max_days: int = 45) -> dict | None
     if cached and now - cached[0] < _TTL_SEC:
         return cached[1]
 
-    result = _compute(symbol, spot, max_days)
+    result = _compute(symbol, spot, max_days, hv30)
     _CACHE[symbol] = (now, result)
     return result
 
 
-def _compute(symbol: str, spot: float, max_days: int) -> dict | None:
+def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
     try:
         import yfinance as yf
     except Exception:
@@ -131,6 +137,17 @@ def _compute(symbol: str, spot: float, max_days: int) -> dict | None:
     ivs = [v for v in (iv_c, iv_p) if v and not math.isnan(v) and v > 0]
     atm_iv = round(sum(ivs) / len(ivs) * 100, 1) if ivs else None   # in %
 
+    # ── IV Rank (IBKR style): 30-day IV ÷ 30-day realised vol ──────────────────
+    # The volatility risk premium — are options rich or cheap vs how the stock
+    # actually moves? >1.2 = rich (market pricing more than realised; pre-catalyst
+    # / fear premium); <0.8 = cheap (complacent / quiet).
+    hv_pct = round(hv30 * 100, 1) if hv30 and hv30 > 0 else None
+    iv_hv = None
+    iv_state = None
+    if atm_iv is not None and hv30 and hv30 > 0:
+        iv_hv = round((atm_iv / 100) / hv30, 2)
+        iv_state = "rich" if iv_hv >= 1.2 else "cheap" if iv_hv <= 0.8 else "fair"
+
     # ── Expected move (ATM straddle) to the nearest expiry ─────────────────────
     straddle = (_mid(atm_c) if atm_c is not None else 0) + (_mid(atm_p) if atm_p is not None else 0)
     exp_move_pct = round(straddle / spot * 100, 1) if spot > 0 and straddle > 0 else None
@@ -169,6 +186,10 @@ def _compute(symbol: str, spot: float, max_days: int) -> dict | None:
         tell_bits.append(f"put-skewed IV (+{skew} pts → downside hedging)")
     if ua_flag:
         tell_bits.append(f"{ua_note} activity (vol/OI {vol_oi})")
+    if iv_state == "rich":
+        tell_bits.append(f"IV rich ({iv_hv}× realised — pricing a move)")
+    elif iv_state == "cheap":
+        tell_bits.append(f"IV cheap ({iv_hv}× realised — complacent)")
     if (call_heavy or call_demand) and not (put_heavy or fear):
         lean = "bullish"
     elif (put_heavy or fear) and not (call_heavy or call_demand):
@@ -182,6 +203,9 @@ def _compute(symbol: str, spot: float, max_days: int) -> dict | None:
         "dte":             dte,
         "expiries_used":   len(near),
         "atm_iv":          atm_iv,            # %  (None if unavailable)
+        "hv":              hv_pct,            # 30d realised vol, %
+        "iv_hv":           iv_hv,             # IBKR IV Rank = IV ÷ HV
+        "iv_state":        iv_state,          # rich | fair | cheap
         "expected_move_pct": exp_move_pct,    # ± % of spot by nearest expiry
         "expected_move_abs": exp_move_abs,    # ± $ (ATM straddle)
         "skew":            skew,              # OTM put IV − OTM call IV, IV points

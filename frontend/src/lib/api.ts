@@ -254,6 +254,9 @@ export interface OptionsSnapshot {
   dte:               number;
   expiries_used:     number;
   atm_iv:            number | null;   // % implied volatility (ATM)
+  hv:                number | null;   // 30d realised (historical) vol, %
+  iv_hv:             number | null;   // IBKR IV Rank = IV ÷ HV
+  iv_state:          "rich" | "fair" | "cheap" | null;
   expected_move_pct: number | null;   // ± % of spot by nearest expiry
   expected_move_abs: number | null;   // ± $ (ATM straddle)
   skew:              number | null;   // OTM put IV − OTM call IV (IV points)

@@ -556,7 +556,10 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
 
     # ── Options snapshot (forward-looking / leading context layer) ────────────
     try:
-        options = compute_options(symbol, price)
+        # 30-day annualised realised vol → powers IBKR-style IV Rank (IV ÷ HV)
+        _rets = np.log(close / close.shift(1)).dropna()
+        _hv30 = float(_rets.iloc[-30:].std() * np.sqrt(252)) if len(_rets) >= 30 else None
+        options = compute_options(symbol, price, hv30=_hv30)
     except Exception:
         options = None
 

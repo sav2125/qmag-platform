@@ -714,7 +714,11 @@ function AnalyzeInner() {
                         o.expected_move_pct != null ? `±${o.expected_move_pct}%` : "—",
                         o.expected_move_abs != null ? `±$${o.expected_move_abs} by expiry` : undefined,
                         "text-indigo-700")}
-                  {stat("ATM IV", o.atm_iv != null ? `${o.atm_iv}%` : "—", "implied volatility")}
+                  {stat("ATM IV", o.atm_iv != null ? `${o.atm_iv}%` : "—", o.hv != null ? `vs ${o.hv}% realised` : "implied volatility")}
+                  {stat("IV Rank (IV/HV)",
+                        o.iv_hv != null ? `${o.iv_hv}×` : "—",
+                        o.iv_state ? (o.iv_state === "rich" ? "options rich" : o.iv_state === "cheap" ? "options cheap" : "fair value") : undefined,
+                        o.iv_state == null ? undefined : o.iv_state === "rich" ? "text-red-600" : o.iv_state === "cheap" ? "text-green-700" : "text-gray-800")}
                   {stat("Skew (P−C IV)",
                         o.skew != null ? `${o.skew > 0 ? "+" : ""}${o.skew} pts` : "—",
                         o.skew == null ? undefined : o.skew < 0 ? "call demand" : o.skew > 3 ? "downside fear" : "balanced",

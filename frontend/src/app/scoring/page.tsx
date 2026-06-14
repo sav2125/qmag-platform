@@ -1063,6 +1063,8 @@ in_golden_pocket = golden.low <= price <= golden.high`}
 
         <CodeBlock>{`# Near-dated chain (nearest expiry for IV/skew; ≤3 expiries summed for ratios)
 ATM IV            = avg(impliedVol of nearest-strike call & put)        # how big a move is priced
+IV Rank (IBKR)    = 30-day ATM IV / 30-day realised (historical) vol     # rich >1.2, cheap <0.8
+                    # the volatility risk premium — needs NO IV history (HV from price + live IV)
 expected_move     = ATM call mid + ATM put mid     (± $ and ± % of spot) # the straddle range by expiry
 skew              = IV(OTM put −10%) − IV(OTM call +10%)   in IV points
                     # positive = downside hedging (fear); negative = call demand (upside)
@@ -1091,8 +1093,9 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
 
         <p className="mt-2 text-xs text-gray-500">
           <strong>Data:</strong> yfinance option chains (free, includes IV/OI/volume). 15-min cache.
-          <strong> Deferred (Phase 2):</strong> IV rank/percentile (needs stored IV history), gamma exposure / max pain,
-          and optionally feeding an options vote into the P Score once the layer is validated.
+          <strong> IV Rank</strong> uses IBKR&apos;s IV÷HV definition (no IV history required).
+          <strong> Deferred (Phase 2):</strong> IV <em>percentile</em> vs the 52-week IV range (needs stored IV history),
+          max pain / gamma exposure, and optionally feeding an options vote into the P Score once the layer is validated.
         </p>
       </Section>
 
