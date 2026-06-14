@@ -248,6 +248,27 @@ export interface FibGrid {
   price:             number;
 }
 
+export interface OptionsSnapshot {
+  source:            string;
+  nearest_expiry:    string;
+  dte:               number;
+  expiries_used:     number;
+  atm_iv:            number | null;   // % implied volatility (ATM)
+  expected_move_pct: number | null;   // ± % of spot by nearest expiry
+  expected_move_abs: number | null;   // ± $ (ATM straddle)
+  skew:              number | null;   // OTM put IV − OTM call IV (IV points)
+  put_call_vol:      number | null;
+  put_call_oi:       number | null;
+  call_volume:       number;
+  put_volume:        number;
+  call_oi:           number;
+  put_oi:            number;
+  vol_oi_ratio:      number | null;
+  unusual_activity:  boolean;
+  lean:              "bullish" | "neutral" | "bearish";
+  tell:              string;
+}
+
 export interface SymbolAnalysis {
   symbol:         string;
   price:          number;
@@ -291,4 +312,5 @@ export interface SymbolAnalysis {
   trend_template:      TrendTemplate;
   timeframe_alignment: MTFAlignment;
   fibonacci:           FibGrid | null;
+  options:             OptionsSnapshot | null;
 }

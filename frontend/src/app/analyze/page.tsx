@@ -684,6 +684,62 @@ function AnalyzeInner() {
             );
           })()}
 
+          {/* ── Row 3c: Options (leading context) ── */}
+          {data.options && (() => {
+            const o = data.options!;
+            const leanCfg = {
+              bullish: { c: "bg-green-100 text-green-700", t: "Bullish positioning" },
+              bearish: { c: "bg-red-100 text-red-700",     t: "Bearish positioning" },
+              neutral: { c: "bg-gray-100 text-gray-600",   t: "Neutral positioning" },
+            }[o.lean];
+            const stat = (label: string, value: string, sub?: string, tone?: string) => (
+              <div key={label} className="bg-gray-50 rounded-lg px-3 py-2">
+                <div className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</div>
+                <div className={`text-sm font-mono font-semibold ${tone ?? "text-gray-800"}`}>{value}</div>
+                {sub && <div className="text-[10px] text-gray-400">{sub}</div>}
+              </div>
+            );
+            return (
+              <Card title="Options (leading)">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${leanCfg.c}`}>{leanCfg.t}</span>
+                  <span>nearest expiry <strong className="font-mono">{o.nearest_expiry}</strong> · {o.dte}d</span>
+                  {o.unusual_activity && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">unusual activity</span>}
+                  <span className="text-gray-300">·</span>
+                  <span className="text-gray-400">{o.expiries_used} expiries · {o.source}</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {stat("Expected move",
+                        o.expected_move_pct != null ? `±${o.expected_move_pct}%` : "—",
+                        o.expected_move_abs != null ? `±$${o.expected_move_abs} by expiry` : undefined,
+                        "text-indigo-700")}
+                  {stat("ATM IV", o.atm_iv != null ? `${o.atm_iv}%` : "—", "implied volatility")}
+                  {stat("Skew (P−C IV)",
+                        o.skew != null ? `${o.skew > 0 ? "+" : ""}${o.skew} pts` : "—",
+                        o.skew == null ? undefined : o.skew < 0 ? "call demand" : o.skew > 3 ? "downside fear" : "balanced",
+                        o.skew == null ? undefined : o.skew < 0 ? "text-green-700" : o.skew > 3 ? "text-red-600" : "text-gray-800")}
+                  {stat("P/C volume", o.put_call_vol != null ? o.put_call_vol.toFixed(2) : "—",
+                        `${o.call_volume.toLocaleString()}C / ${o.put_volume.toLocaleString()}P`)}
+                  {stat("P/C open int.", o.put_call_oi != null ? o.put_call_oi.toFixed(2) : "—",
+                        `${o.call_oi.toLocaleString()}C / ${o.put_oi.toLocaleString()}P`)}
+                  {stat("Volume / OI", o.vol_oi_ratio != null ? o.vol_oi_ratio.toFixed(2) : "—",
+                        o.unusual_activity ? "fresh positioning" : "normal",
+                        o.unusual_activity ? "text-amber-700" : undefined)}
+                </div>
+
+                <p className="text-[11px] text-gray-600 mt-3 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
+                  <strong>Read:</strong> {o.tell}.
+                </p>
+                <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
+                  <strong>Why it&apos;s leading:</strong> options price future <em>expectations</em>, not past action. The <strong>expected move</strong>
+                  sizes catalyst targets/stops; <strong>skew</strong> shows hedging (puts) vs demand (calls); <strong>P/C</strong> is sentiment
+                  (contrarian at extremes); <strong>vol÷OI</strong> flags fresh positioning. Context &amp; confluence — <strong>not a P Score input</strong>.
+                </p>
+              </Card>
+            );
+          })()}
+
           {/* ── Row 4: Active setups ── */}
           <Card title={`Active Setups (${data.active_setups.length} firing)`}>
             {data.active_setups.length === 0 ? (

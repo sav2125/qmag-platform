@@ -28,6 +28,7 @@ from .patterns import (
 from .rs_rank import rs_score, rs_label
 from .prob_scorer import compute_prob_score, _trend_template
 from .fib import compute_fibonacci
+from .options import compute_options
 
 logger = logging.getLogger(__name__)
 
@@ -553,6 +554,12 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     except Exception:
         fib = None
 
+    # ── Options snapshot (forward-looking / leading context layer) ────────────
+    try:
+        options = compute_options(symbol, price)
+    except Exception:
+        options = None
+
     # ── Serialise setups ──────────────────────────────────────────────────────
     def _sd(s) -> dict:
         return {
@@ -604,6 +611,8 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "timeframe_alignment": mtf,
         # Fibonacci grid (retracement ladder + extension targets + golden pocket)
         "fibonacci": fib,
+        # Options snapshot (leading context: IV, expected move, skew, P/C, UOA)
+        "options": options,
         # P Score
         "prob_score":         ps_result["prob_score"],
         "prob_grade":         ps_result["prob_grade"],

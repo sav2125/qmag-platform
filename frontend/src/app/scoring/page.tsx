@@ -60,6 +60,7 @@ const TOC = [
   { id: "exhaustion",   label: "Signal: Bull Exhaustion Warning" },
   { id: "wys",          label: "Setup: Wyckoff Spring (WYS)" },
   { id: "fibonacci",    label: "Analysis: Fibonacci Grid" },
+  { id: "options",      label: "Analysis: Options (Leading)" },
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "philosophy",   label: "Design Philosophy" },
 ];
@@ -1047,6 +1048,51 @@ in_golden_pocket = golden.low <= price <= golden.high`}
           <strong>Confluence, not a trigger.</strong> A Fibonacci level on its own is just a line. It earns a
           trade only when it overlaps prior S/R, a moving average or a trendline <em>and</em> a reversal
           candle prints at it. Treat it as one vote in the convergence, never a standalone entry.
+        </p>
+      </Section>
+
+      {/* Options (leading) */}
+      <Section id="options" title="Analysis: Options (Leading)">
+        <p>
+          Options are one of the few genuinely <strong>leading</strong> datasets: their prices encode the
+          market&apos;s <em>expectations</em> about future volatility and direction, whereas price / volume /
+          moving averages only describe what already happened. The analyze page distils a near-dated chain
+          (≤ 45 days) into a handful of forward-looking tells. Like Fibonacci, it&apos;s a <strong>context /
+          confluence layer — not a P Score input</strong>.
+        </p>
+
+        <CodeBlock>{`# Near-dated chain (nearest expiry for IV/skew; ≤3 expiries summed for ratios)
+ATM IV            = avg(impliedVol of nearest-strike call & put)        # how big a move is priced
+expected_move     = ATM call mid + ATM put mid     (± $ and ± % of spot) # the straddle range by expiry
+skew              = IV(OTM put −10%) − IV(OTM call +10%)   in IV points
+                    # positive = downside hedging (fear); negative = call demand (upside)
+put_call_vol      = put volume  / call volume       # sentiment (contrarian at extremes)
+put_call_oi       = put OI      / call OI            # resting positioning
+vol_oi_ratio      = total volume / total OI          # ≥0.5 = fresh positioning ("unusual activity")
+
+# Sentiment lean (context, contrarian-aware)
+bullish  if call-heavy flow (P/C vol < 0.7) or call-skewed IV (skew < −1)
+bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
+        </CodeBlock>
+
+        <h3 className="font-semibold text-gray-800 mt-3">The four kinds of &quot;leading&quot; (and how we weight them)</h3>
+        <ul className="list-disc ml-5 space-y-1 text-sm">
+          <li><strong>Expectation-pricing</strong> (IV, expected move) — the strongest, cleanest use. The expected move pairs directly with <strong>EP / catalyst setups</strong>: it sizes realistic targets and stops around the event.</li>
+          <li><strong>Sentiment</strong> (put/call ratio, skew) — leading <em>at extremes</em>, and contrarian: extreme fear is bullish, extreme complacency bearish.</li>
+          <li><strong>Smart-money positioning</strong> (unusual activity, OI build) — sometimes informed, but noisy (could be hedges/spreads), so treated as a flag, not a signal.</li>
+          <li><strong>Dealer flow</strong> (gamma / max pain) — leading intraday, less for swing trades; deferred (see below).</li>
+        </ul>
+
+        <p className="mt-3 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          <strong>Leading ≠ crystal ball.</strong> Options tell you what the market <em>expects</em> and how it&apos;s
+          positioned — context and confluence, not a directional guarantee. Use the expected move for sizing and the
+          skew / P-C as a sentiment overlay; confirm direction with price and the firing setup.
+        </p>
+
+        <p className="mt-2 text-xs text-gray-500">
+          <strong>Data:</strong> yfinance option chains (free, includes IV/OI/volume). 15-min cache.
+          <strong> Deferred (Phase 2):</strong> IV rank/percentile (needs stored IV history), gamma exposure / max pain,
+          and optionally feeding an options vote into the P Score once the layer is validated.
         </p>
       </Section>
 
