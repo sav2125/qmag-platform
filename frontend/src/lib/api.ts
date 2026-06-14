@@ -268,6 +268,8 @@ export interface OptionsSnapshot {
   put_oi:            number;
   vol_oi_ratio:      number | null;
   unusual_activity:  boolean;
+  max_pain:          number | null;   // OI-weighted pin price
+  max_pain_dist_pct: number | null;   // % from spot
   lean:              "bullish" | "neutral" | "bearish";
   tell:              string;
 }

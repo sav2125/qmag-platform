@@ -1071,6 +1071,8 @@ skew              = IV(OTM put −10%) − IV(OTM call +10%)   in IV points
 put_call_vol      = put volume  / call volume       # sentiment (contrarian at extremes)
 put_call_oi       = put OI      / call OI            # resting positioning
 vol_oi_ratio      = total volume / total OI          # ≥0.5 = fresh positioning ("unusual activity")
+max_pain          = strike minimising Σ ITM payoff (calls OI·max(0,S−K) + puts OI·max(0,K−S))
+                    # OI-weighted "pin" price that gravity pulls toward into expiry
 
 # Sentiment lean (context, contrarian-aware)
 bullish  if call-heavy flow (P/C vol < 0.7) or call-skewed IV (skew < −1)
@@ -1082,7 +1084,7 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
           <li><strong>Expectation-pricing</strong> (IV, expected move) — the strongest, cleanest use. The expected move pairs directly with <strong>EP / catalyst setups</strong>: it sizes realistic targets and stops around the event.</li>
           <li><strong>Sentiment</strong> (put/call ratio, skew) — leading <em>at extremes</em>, and contrarian: extreme fear is bullish, extreme complacency bearish.</li>
           <li><strong>Smart-money positioning</strong> (unusual activity, OI build) — sometimes informed, but noisy (could be hedges/spreads), so treated as a flag, not a signal.</li>
-          <li><strong>Dealer flow</strong> (gamma / max pain) — leading intraday, less for swing trades; deferred (see below).</li>
+          <li><strong>Dealer flow</strong> (max pain now shipped; gamma exposure deferred) — the max-pain pin is OI gravity into expiry; leading more for short horizons than multi-week swings.</li>
         </ul>
 
         <p className="mt-3 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
@@ -1095,7 +1097,8 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
           <strong>Data:</strong> yfinance option chains (free, includes IV/OI/volume). 15-min cache.
           <strong> IV Rank</strong> uses IBKR&apos;s IV÷HV definition (no IV history required).
           <strong> Deferred (Phase 2):</strong> IV <em>percentile</em> vs the 52-week IV range (needs stored IV history),
-          max pain / gamma exposure, and optionally feeding an options vote into the P Score once the layer is validated.
+          the <strong>ACI</strong> (delta-adjusted-OI accumulation <em>change</em>) + EHD hedging-demand (need daily OI/Greeks persistence),
+          gamma exposure, and optionally feeding an options vote into the P Score once the layer is validated.
         </p>
       </Section>
 

@@ -730,6 +730,10 @@ function AnalyzeInner() {
                   {stat("Volume / OI", o.vol_oi_ratio != null ? o.vol_oi_ratio.toFixed(2) : "—",
                         o.unusual_activity ? "fresh positioning" : "normal",
                         o.unusual_activity ? "text-amber-700" : undefined)}
+                  {stat("Max pain",
+                        o.max_pain != null ? `$${o.max_pain.toFixed(2)}` : "—",
+                        o.max_pain_dist_pct != null ? `${o.max_pain_dist_pct > 0 ? "+" : ""}${o.max_pain_dist_pct}% from price` : "pin price",
+                        o.max_pain_dist_pct == null ? undefined : Math.abs(o.max_pain_dist_pct) <= 3 ? "text-amber-700" : "text-gray-800")}
                 </div>
 
                 <p className="text-[11px] text-gray-600 mt-3 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">

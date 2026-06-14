@@ -57,6 +57,27 @@ def _nearest_row(df, strike_target: float):
     return df.loc[idx]
 
 
+def _max_pain(call_oi: dict[float, float], put_oi: dict[float, float]) -> float | None:
+    """Max-pain strike: the settlement price that minimises the total in-the-money
+    payoff owed to option holders at expiry — the level price tends to gravitate
+    toward into expiration (option writers' break-even / 'pin')."""
+    strikes = sorted(set(call_oi) | set(put_oi))
+    if len(strikes) < 3:
+        return None
+    best_k, best_pain = None, float("inf")
+    for s in strikes:
+        pain = 0.0
+        for k, oi in call_oi.items():
+            if s > k:
+                pain += oi * (s - k)      # ITM calls pay out
+        for k, oi in put_oi.items():
+            if s < k:
+                pain += oi * (k - s)      # ITM puts pay out
+        if pain < best_pain:
+            best_pain, best_k = pain, s
+    return best_k
+
+
 def compute_options(symbol: str, spot: float, max_days: int = 45,
                     hv30: float | None = None) -> dict | None:
     """Compute the leading-options snapshot for ``symbol`` at the given ``spot``.
@@ -110,6 +131,8 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
     # ── Aggregate volume / open interest across the near expiries ──────────────
     call_vol = put_vol = call_oi = put_oi = 0.0
     nearest_calls = nearest_puts = None
+    call_oi_strikes: dict[float, float] = {}   # strike → OI (for max pain)
+    put_oi_strikes: dict[float, float] = {}
     for e in near:
         try:
             oc = tk.option_chain(e)
@@ -120,6 +143,10 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
         put_vol  += float(p["volume"].fillna(0).sum())
         call_oi  += float(c["openInterest"].fillna(0).sum())
         put_oi   += float(p["openInterest"].fillna(0).sum())
+        for k, oi in zip(c["strike"], c["openInterest"].fillna(0)):
+            call_oi_strikes[float(k)] = call_oi_strikes.get(float(k), 0.0) + float(oi)
+        for k, oi in zip(p["strike"], p["openInterest"].fillna(0)):
+            put_oi_strikes[float(k)] = put_oi_strikes.get(float(k), 0.0) + float(oi)
         if e == nearest:
             nearest_calls, nearest_puts = c, p
 
@@ -195,6 +222,13 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
     elif (put_heavy or fear) and not (call_heavy or call_demand):
         lean = "bearish"
 
+    # ── Max pain (OI-weighted pin price for the near-dated chain) ──────────────
+    max_pain = _max_pain(call_oi_strikes, put_oi_strikes)
+    max_pain_dist = round((max_pain - spot) / spot * 100, 1) if max_pain and spot > 0 else None
+    if max_pain is not None and max_pain_dist is not None:
+        pull = "above" if max_pain_dist > 0 else "below"
+        tell_bits.append(f"max pain ${max_pain:g} ({abs(max_pain_dist)}% {pull})")
+
     tell = "; ".join(tell_bits) if tell_bits else "balanced positioning, nothing unusual"
 
     return {
@@ -217,6 +251,8 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
         "put_oi":          int(put_oi),
         "vol_oi_ratio":    vol_oi,
         "unusual_activity": ua_flag,
+        "max_pain":        round(max_pain, 2) if max_pain else None,
+        "max_pain_dist_pct": max_pain_dist,   # % from spot (pin gravity into expiry)
         "lean":            lean,              # bullish | neutral | bearish (context)
         "tell":            tell,
     }
