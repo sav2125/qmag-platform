@@ -734,7 +734,26 @@ function AnalyzeInner() {
                         o.max_pain != null ? `$${o.max_pain.toFixed(2)}` : "—",
                         o.max_pain_dist_pct != null ? `${o.max_pain_dist_pct > 0 ? "+" : ""}${o.max_pain_dist_pct}% from price` : "pin price",
                         o.max_pain_dist_pct == null ? undefined : Math.abs(o.max_pain_dist_pct) <= 3 ? "text-amber-700" : "text-gray-800")}
+                  {stat("ACI (delta-adj OI)",
+                        o.aci_score != null ? `${o.aci_score > 0 ? "+" : ""}${o.aci_score}` : "—",
+                        o.aci_score == null ? undefined : `${o.aci_label} · ${o.bull_daoi.toLocaleString()}↑ / ${o.bear_daoi.toLocaleString()}↓`,
+                        o.aci_label === "bullish" ? "text-green-700" : o.aci_label === "bearish" ? "text-red-600" : "text-gray-800")}
                 </div>
+
+                {(o.oi_support.length > 0 || o.oi_resistance.length > 0) && (
+                  <div className="mt-2 text-[11px] text-gray-600 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
+                    <span className="font-semibold text-gray-500">OI levels:</span>{" "}
+                    {o.oi_resistance.length > 0 && (
+                      <span>resistance (call walls) <span className="font-mono text-red-600">
+                        {o.oi_resistance.map((l) => `$${l.strike}`).join(", ")}</span></span>
+                    )}
+                    {o.oi_resistance.length > 0 && o.oi_support.length > 0 && <span className="text-gray-300"> · </span>}
+                    {o.oi_support.length > 0 && (
+                      <span>support (put walls) <span className="font-mono text-green-700">
+                        {o.oi_support.map((l) => `$${l.strike}`).join(", ")}</span></span>
+                    )}
+                  </div>
+                )}
 
                 <p className="text-[11px] text-gray-600 mt-3 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
                   <strong>Read:</strong> {o.tell}.

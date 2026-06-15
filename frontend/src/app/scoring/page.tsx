@@ -1073,6 +1073,9 @@ put_call_oi       = put OI      / call OI            # resting positioning
 vol_oi_ratio      = total volume / total OI          # ≥0.5 = fresh positioning ("unusual activity")
 max_pain          = strike minimising Σ ITM payoff (calls OI·max(0,S−K) + puts OI·max(0,K−S))
                     # OI-weighted "pin" price that gravity pulls toward into expiry
+ACI level         = (Σ call OI·Δ − Σ put OI·|Δ|) / total   # delta-adjusted-OI sentiment, −1..+1
+                    # Δ = Black-Scholes delta (so a far-OTM lottery strike counts less than ATM)
+oi_support/resist = biggest put-OI strikes below price / call-OI strikes above   # "sentiment map"
 
 # Sentiment lean (context, contrarian-aware)
 bullish  if call-heavy flow (P/C vol < 0.7) or call-skewed IV (skew < −1)
@@ -1096,9 +1099,10 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
         <p className="mt-2 text-xs text-gray-500">
           <strong>Data:</strong> yfinance option chains (free, includes IV/OI/volume). 15-min cache.
           <strong> IV Rank</strong> uses IBKR&apos;s IV÷HV definition (no IV history required).
-          <strong> Deferred (Phase 2):</strong> IV <em>percentile</em> vs the 52-week IV range (needs stored IV history),
-          the <strong>ACI</strong> (delta-adjusted-OI accumulation <em>change</em>) + EHD hedging-demand (need daily OI/Greeks persistence),
-          gamma exposure, and optionally feeding an options vote into the P Score once the layer is validated.
+          The <strong>ACI level</strong> (delta-adjusted-OI sentiment) + OI-derived support/resistance ship now from each snapshot — no history needed.
+          <strong> Deferred (Phase 2):</strong> the ACI <em>change</em> (ΔDAOI over 1/5/30 days) and a live EHD hedging-demand both need
+          daily OI/Greeks <em>persistence</em> (the chain API only ever returns "now"); IV <em>percentile</em> vs the 52-week range needs IV history;
+          gamma exposure; and optionally feeding an options vote into the P Score once validated.
         </p>
       </Section>
 

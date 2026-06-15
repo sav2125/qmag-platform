@@ -270,8 +270,19 @@ export interface OptionsSnapshot {
   unusual_activity:  boolean;
   max_pain:          number | null;   // OI-weighted pin price
   max_pain_dist_pct: number | null;   // % from spot
+  aci_score:         number | null;   // delta-adjusted-OI sentiment −1..+1 (level)
+  aci_label:         "bullish" | "neutral" | "bearish";
+  bull_daoi:         number;          // call delta-adjusted OI
+  bear_daoi:         number;          // put delta-adjusted OI
+  oi_resistance:     OILevel[];       // call walls above price
+  oi_support:        OILevel[];       // put walls below price
   lean:              "bullish" | "neutral" | "bearish";
   tell:              string;
+}
+
+export interface OILevel {
+  strike: number;
+  oi:     number;
 }
 
 export interface SymbolAnalysis {

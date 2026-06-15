@@ -38,6 +38,10 @@ _MAX_EXPIRIES = 3
 _CACHE: dict[str, tuple[float, dict | None]] = {}
 _TTL_SEC = 900  # 15 min
 
+# Delta-adjusted OI (ACI level) — Black-Scholes delta inputs.
+_RISK_FREE = 0.04      # annualised risk-free rate
+_ACI_THRESH = 0.15     # |sentiment| above this = directional, else neutral
+
 
 def _mid(row) -> float:
     """Mid price from bid/ask, falling back to last traded price."""
@@ -76,6 +80,19 @@ def _max_pain(call_oi: dict[float, float], put_oi: dict[float, float]) -> float 
         if pain < best_pain:
             best_pain, best_k = pain, s
     return best_k
+
+
+def _norm_cdf(x: float) -> float:
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def _bs_delta(opt_type: str, S: float, K: float, T: float, sigma: float,
+              r: float = _RISK_FREE) -> float | None:
+    """Black-Scholes delta. Calls ∈ (0,1); puts ∈ (-1,0). None if inputs invalid."""
+    if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
+        return None
+    d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    return _norm_cdf(d1) if opt_type == "call" else _norm_cdf(d1) - 1.0
 
 
 def compute_options(symbol: str, spot: float, max_days: int = 45,
@@ -130,8 +147,9 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
 
     # ── Aggregate volume / open interest across the near expiries ──────────────
     call_vol = put_vol = call_oi = put_oi = 0.0
+    bull_daoi = bear_daoi = 0.0                 # delta-adjusted OI (ACI level)
     nearest_calls = nearest_puts = None
-    call_oi_strikes: dict[float, float] = {}   # strike → OI (for max pain)
+    call_oi_strikes: dict[float, float] = {}   # strike → OI (for max pain + OI walls)
     put_oi_strikes: dict[float, float] = {}
     for e in near:
         try:
@@ -143,10 +161,17 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
         put_vol  += float(p["volume"].fillna(0).sum())
         call_oi  += float(c["openInterest"].fillna(0).sum())
         put_oi   += float(p["openInterest"].fillna(0).sum())
-        for k, oi in zip(c["strike"], c["openInterest"].fillna(0)):
+        T_e = max(_dte(e), 1) / 365.0
+        for k, oi, iv in zip(c["strike"], c["openInterest"].fillna(0), c["impliedVolatility"].fillna(0)):
             call_oi_strikes[float(k)] = call_oi_strikes.get(float(k), 0.0) + float(oi)
-        for k, oi in zip(p["strike"], p["openInterest"].fillna(0)):
+            d = _bs_delta("call", spot, float(k), T_e, float(iv))
+            if d:
+                bull_daoi += float(oi) * d        # call delta-adjusted OI = bullish exposure
+        for k, oi, iv in zip(p["strike"], p["openInterest"].fillna(0), p["impliedVolatility"].fillna(0)):
             put_oi_strikes[float(k)] = put_oi_strikes.get(float(k), 0.0) + float(oi)
+            d = _bs_delta("put", spot, float(k), T_e, float(iv))
+            if d:
+                bear_daoi += float(oi) * abs(d)   # put delta-adjusted OI = bearish exposure
         if e == nearest:
             nearest_calls, nearest_puts = c, p
 
@@ -222,6 +247,22 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
     elif (put_heavy or fear) and not (call_heavy or call_demand):
         lean = "bearish"
 
+    # ── ACI level: delta-adjusted-OI accumulation sentiment (snapshot, no history) ──
+    tot_daoi = bull_daoi + bear_daoi
+    aci_score = round((bull_daoi - bear_daoi) / tot_daoi, 2) if tot_daoi > 0 else None
+    aci_label = "neutral"
+    if aci_score is not None:
+        aci_label = ("bullish" if aci_score > _ACI_THRESH
+                     else "bearish" if aci_score < -_ACI_THRESH else "neutral")
+    if aci_score is not None and aci_label != "neutral":
+        tell_bits.append(f"delta-adj OI {aci_label} ({aci_score:+})")
+
+    # ── OI-derived support / resistance (the "sentiment map" levels) ───────────
+    res = sorted(((k, v) for k, v in call_oi_strikes.items() if k > spot), key=lambda kv: -kv[1])[:2]
+    sup = sorted(((k, v) for k, v in put_oi_strikes.items() if k < spot), key=lambda kv: -kv[1])[:2]
+    oi_resistance = [{"strike": round(k, 2), "oi": int(v)} for k, v in res]
+    oi_support    = [{"strike": round(k, 2), "oi": int(v)} for k, v in sup]
+
     # ── Max pain (OI-weighted pin price for the near-dated chain) ──────────────
     max_pain = _max_pain(call_oi_strikes, put_oi_strikes)
     max_pain_dist = round((max_pain - spot) / spot * 100, 1) if max_pain and spot > 0 else None
@@ -253,6 +294,12 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
         "unusual_activity": ua_flag,
         "max_pain":        round(max_pain, 2) if max_pain else None,
         "max_pain_dist_pct": max_pain_dist,   # % from spot (pin gravity into expiry)
+        "aci_score":       aci_score,         # delta-adj OI sentiment −1..+1 (LEVEL, no history)
+        "aci_label":       aci_label,         # bullish | neutral | bearish
+        "bull_daoi":       int(bull_daoi),    # call delta-adjusted OI
+        "bear_daoi":       int(bear_daoi),    # put delta-adjusted OI
+        "oi_resistance":   oi_resistance,     # call walls above price [{strike, oi}]
+        "oi_support":      oi_support,        # put walls below price
         "lean":            lean,              # bullish | neutral | bearish (context)
         "tell":            tell,
     }
