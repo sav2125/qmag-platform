@@ -12,12 +12,14 @@ handful of leading tells:
   - put/call ratios (volume + open interest)  — sentiment (contrarian at extremes)
   - unusual activity (volume ÷ open interest) — fresh positioning, and which side
 
-Data source: yfinance option chains (free, no keys, includes IV/OI/volume). The
-OHLCV fetcher uses Alpaca on cloud IPs because yfinance *bars* get blocked there;
-options endpoints differ, but if yfinance options prove unreliable on Render the
-chain fetch can be swapped for Alpaca's /v1beta1/options/snapshots (computing IV
-via Black-Scholes from mids, since the free feed omits greeks). The metrics layer
-below is source-agnostic.
+Data source (dual, automatic fallback):
+  - PRIMARY: yfinance option chains (free, includes IV / OI / volume) → the full
+    card incl. OI-based metrics (P/C OI, max pain, ACI, OI walls). Used locally.
+  - FALLBACK: Alpaca options snapshots (`/v1beta1/options/snapshots`) — used when
+    yfinance is blocked (cloud IPs like Render). Alpaca's FREE "indicative" feed
+    returns quotes + volume but NO open interest / IV / greeks, so we invert IV
+    from bid/ask mids via Black-Scholes and the OI-based metrics come back null.
+The output shape is identical for both; the `source` field says which was used.
 
 Like the Fibonacci grid, this is a CONFLUENCE / CONTEXT layer — NOT a P Score input.
 """
@@ -25,6 +27,8 @@ from __future__ import annotations
 
 import logging
 import math
+import os
+import re
 import time
 from datetime import date
 
@@ -95,6 +99,52 @@ def _bs_delta(opt_type: str, S: float, K: float, T: float, sigma: float,
     return _norm_cdf(d1) if opt_type == "call" else _norm_cdf(d1) - 1.0
 
 
+def _bs_price(opt_type: str, S: float, K: float, T: float, sigma: float,
+              r: float = _RISK_FREE) -> float:
+    """Black-Scholes option price — used to invert IV from a market mid."""
+    if sigma <= 0 or T <= 0:
+        return max(0.0, (S - K) if opt_type == "call" else (K - S))
+    d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    d2 = d1 - sigma * math.sqrt(T)
+    if opt_type == "call":
+        return S * _norm_cdf(d1) - K * math.exp(-r * T) * _norm_cdf(d2)
+    return K * math.exp(-r * T) * _norm_cdf(-d2) - S * _norm_cdf(-d1)
+
+
+def _implied_vol(opt_type: str, price: float, S: float, K: float, T: float,
+                 r: float = _RISK_FREE) -> float | None:
+    """Invert IV from an option mid via bisection. Returns σ as a fraction, or None
+    if the price is outside the invertible range (stale / crossed quote)."""
+    if price <= 0 or S <= 0 or K <= 0 or T <= 0:
+        return None
+    lo, hi = 1e-4, 5.0
+    if not (_bs_price(opt_type, S, K, T, lo, r) <= price <= _bs_price(opt_type, S, K, T, hi, r)):
+        return None
+    for _ in range(60):
+        mid = 0.5 * (lo + hi)
+        pm = _bs_price(opt_type, S, K, T, mid, r)
+        if abs(pm - price) < 1e-4:
+            return mid
+        if pm < price:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
+
+
+def _parse_occ(sym: str):
+    """OCC option symbol (e.g. NVTS260618C00012000) → (expiry_date, 'call'|'put', strike)."""
+    m = re.match(r"^[A-Z]+(\d{6})([CP])(\d{8})$", sym)
+    if not m:
+        return None
+    ymd, cp, strike = m.groups()
+    try:
+        exp = date(2000 + int(ymd[:2]), int(ymd[2:4]), int(ymd[4:6]))
+    except ValueError:
+        return None
+    return exp, ("call" if cp == "C" else "put"), int(strike) / 1000.0
+
+
 def compute_options(symbol: str, spot: float, max_days: int = 45,
                     hv30: float | None = None) -> dict | None:
     """Compute the leading-options snapshot for ``symbol`` at the given ``spot``.
@@ -117,6 +167,14 @@ def compute_options(symbol: str, spot: float, max_days: int = 45,
 
 
 def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
+    """Source dispatch: yfinance first (full chain incl. OI/IV); if it's blocked
+    (cloud IPs like Render), fall back to Alpaca quotes (IV via Black-Scholes
+    inversion) — which omits OI, so the OI-based metrics come back null there."""
+    res = _compute_yf(symbol, spot, max_days, hv30)
+    return res if res is not None else _compute_alpaca(symbol, spot, max_days, hv30)
+
+
+def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
     try:
         import yfinance as yf
     except Exception:
@@ -301,5 +359,158 @@ def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None)
         "oi_resistance":   oi_resistance,     # call walls above price [{strike, oi}]
         "oi_support":      oi_support,        # put walls below price
         "lean":            lean,              # bullish | neutral | bearish (context)
+        "tell":            tell,
+    }
+
+
+# ── Alpaca fallback (cloud IPs where yfinance is blocked) ──────────────────────
+# Free "indicative" feed = quotes + volume, but NO open interest / IV / greeks.
+# We invert IV from bid/ask mids (Black-Scholes) and return the OI-based metrics
+# (P/C OI, max pain, ACI, OI walls) as null. Same output shape as the yfinance path.
+
+_ALPACA_OPT_URL = "https://data.alpaca.markets/v1beta1/options/snapshots/{}"
+
+
+def _compute_alpaca(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
+    key, sec = os.getenv("ALPACA_API_KEY", ""), os.getenv("ALPACA_API_SECRET", "")
+    if not key or not sec or spot <= 0:
+        return None
+    try:
+        import httpx
+    except Exception:
+        return None
+    from datetime import timedelta
+    today = date.today()
+    exp_lte = (today + timedelta(days=max_days)).isoformat()
+    headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": sec}
+    url = _ALPACA_OPT_URL.format(symbol.upper())
+
+    rows: list[dict] = []   # {type, strike, exp, dte, mid, vol}
+    try:
+        with httpx.Client(headers=headers) as client:
+            token, pages = None, 0
+            while pages < 12:
+                params = {"feed": "indicative", "limit": "1000", "expiration_date_lte": exp_lte}
+                if token:
+                    params["page_token"] = token
+                r = client.get(url, params=params, timeout=30)
+                if r.status_code != 200:
+                    break
+                d = r.json()
+                for csym, snap in (d.get("snapshots") or {}).items():
+                    parsed = _parse_occ(csym)
+                    if not parsed:
+                        continue
+                    exp, otype, strike = parsed
+                    dte = (exp - today).days
+                    if dte < 0 or dte > max_days:
+                        continue
+                    q = snap.get("latestQuote") or {}
+                    bid, ask = float(q.get("bp", 0) or 0), float(q.get("ap", 0) or 0)
+                    mid = (bid + ask) / 2 if (bid > 0 and ask > 0) else 0.0
+                    vol = float((snap.get("dailyBar") or {}).get("v", 0) or 0)
+                    rows.append({"type": otype, "strike": strike, "exp": exp, "dte": dte, "mid": mid, "vol": vol})
+                token = d.get("next_page_token")
+                pages += 1
+                if not token:
+                    break
+    except Exception as e:
+        logger.debug("options(alpaca): fetch failed for %s: %s", symbol, e)
+        return None
+    if not rows:
+        return None
+
+    exps = sorted({r["exp"] for r in rows})
+    nearest = exps[0]
+    dte = max((nearest - today).days, 0)
+    T = max(dte, 1) / 365.0
+    calls = [r for r in rows if r["type"] == "call"]
+    puts = [r for r in rows if r["type"] == "put"]
+    call_vol = sum(r["vol"] for r in calls)
+    put_vol = sum(r["vol"] for r in puts)
+    pc_vol = round(put_vol / call_vol, 2) if call_vol > 0 else None
+
+    near_calls = [r for r in calls if r["exp"] == nearest and r["mid"] > 0]
+    near_puts = [r for r in puts if r["exp"] == nearest and r["mid"] > 0]
+
+    def _iv_near(cands: list[dict], target: float, otype: str):
+        cands = [r for r in cands if r["mid"] > 0]
+        if not cands:
+            return None
+        row = min(cands, key=lambda r: abs(r["strike"] - target))
+        return _implied_vol(otype, row["mid"], spot, row["strike"], T)
+
+    atm_c_iv = _iv_near(near_calls, spot, "call")
+    atm_p_iv = _iv_near(near_puts, spot, "put")
+    ivs = [v for v in (atm_c_iv, atm_p_iv) if v]
+    atm_iv = round(sum(ivs) / len(ivs) * 100, 1) if ivs else None
+
+    hv_pct = round(hv30 * 100, 1) if hv30 and hv30 > 0 else None
+    iv_hv = round((atm_iv / 100) / hv30, 2) if (atm_iv and hv30 and hv30 > 0) else None
+    iv_state = ("rich" if iv_hv >= 1.2 else "cheap" if iv_hv <= 0.8 else "fair") if iv_hv else None
+
+    atm_c = min(near_calls, key=lambda r: abs(r["strike"] - spot)) if near_calls else None
+    atm_p = min(near_puts, key=lambda r: abs(r["strike"] - spot)) if near_puts else None
+    straddle = (atm_c["mid"] if atm_c else 0) + (atm_p["mid"] if atm_p else 0)
+    exp_move_pct = round(straddle / spot * 100, 1) if straddle > 0 else None
+    exp_move_abs = round(straddle, 2) if straddle > 0 else None
+
+    otm_put_iv = _iv_near(near_puts, spot * (1 - _OTM_PCT), "put")
+    otm_call_iv = _iv_near(near_calls, spot * (1 + _OTM_PCT), "call")
+    skew = round((otm_put_iv - otm_call_iv) * 100, 1) if (otm_put_iv and otm_call_iv) else None
+
+    lean, tell_bits = "neutral", []
+    call_heavy = pc_vol is not None and pc_vol < 0.7
+    put_heavy = pc_vol is not None and pc_vol > 1.2
+    call_demand = skew is not None and skew < -1
+    fear = skew is not None and skew > 3
+    if call_heavy:
+        tell_bits.append(f"call-heavy flow (P/C vol {pc_vol})")
+    if put_heavy:
+        tell_bits.append(f"put-heavy flow (P/C vol {pc_vol})")
+    if call_demand:
+        tell_bits.append(f"call-skewed IV ({skew} pts → upside demand)")
+    if fear:
+        tell_bits.append(f"put-skewed IV (+{skew} pts → downside hedging)")
+    if iv_state == "rich":
+        tell_bits.append(f"IV rich ({iv_hv}× realised)")
+    elif iv_state == "cheap":
+        tell_bits.append(f"IV cheap ({iv_hv}× realised)")
+    if (call_heavy or call_demand) and not (put_heavy or fear):
+        lean = "bullish"
+    elif (put_heavy or fear) and not (call_heavy or call_demand):
+        lean = "bearish"
+    tell_bits.append("OI metrics N/A (free feed)")
+    tell = "; ".join(tell_bits) if tell_bits else "balanced positioning, nothing unusual"
+
+    return {
+        "source":          "alpaca",
+        "nearest_expiry":  nearest.isoformat(),
+        "dte":             dte,
+        "expiries_used":   len(exps),
+        "atm_iv":          atm_iv,
+        "hv":              hv_pct,
+        "iv_hv":           iv_hv,
+        "iv_state":        iv_state,
+        "expected_move_pct": exp_move_pct,
+        "expected_move_abs": exp_move_abs,
+        "skew":            skew,
+        "put_call_vol":    pc_vol,
+        "put_call_oi":     None,          # OI not in Alpaca free feed
+        "call_volume":     int(call_vol),
+        "put_volume":      int(put_vol),
+        "call_oi":         0,
+        "put_oi":          0,
+        "vol_oi_ratio":    None,
+        "unusual_activity": False,
+        "max_pain":        None,          # needs OI
+        "max_pain_dist_pct": None,
+        "aci_score":       None,          # needs OI
+        "aci_label":       "neutral",
+        "bull_daoi":       0,
+        "bear_daoi":       0,
+        "oi_resistance":   [],            # needs OI
+        "oi_support":      [],
+        "lean":            lean,
         "tell":            tell,
     }
