@@ -692,9 +692,11 @@ function AnalyzeInner() {
               bearish: { c: "bg-red-100 text-red-700",     t: "Bearish positioning" },
               neutral: { c: "bg-gray-100 text-gray-600",   t: "Neutral positioning" },
             }[o.lean];
-            const stat = (label: string, value: string, sub?: string, tone?: string) => (
-              <div key={label} className="bg-gray-50 rounded-lg px-3 py-2">
-                <div className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</div>
+            const stat = (label: string, value: string, sub?: string, tone?: string, help?: string) => (
+              <div key={label} title={help} className={`bg-gray-50 rounded-lg px-3 py-2 ${help ? "cursor-help" : ""}`}>
+                <div className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                  {label}{help && <span className="text-gray-400 normal-case" aria-hidden="true">ⓘ</span>}
+                </div>
                 <div className={`text-sm font-mono font-semibold ${tone ?? "text-gray-800"}`}>{value}</div>
                 {sub && <div className="text-[10px] text-gray-400">{sub}</div>}
               </div>
@@ -702,7 +704,7 @@ function AnalyzeInner() {
             return (
               <Card title="Options (leading)">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-3">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${leanCfg.c}`}>{leanCfg.t}</span>
+                  <span title="Overall options positioning lean, synthesized from skew + put/call flow (and ACI where available). Context & confluence — NOT a standalone trigger; contrarian at extremes. Confirm direction with price + the firing setup." className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-help ${leanCfg.c}`}>{leanCfg.t}</span>
                   <span title="Skips current-week weeklies (<7 DTE); anchored to the ~30-day monthly horizon for swing-relevant IV & expected move">expiry <strong className="font-mono">{o.nearest_expiry}</strong> · {o.dte}d (swing horizon)</span>
                   {o.unusual_activity && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">unusual activity</span>}
                   <span className="text-gray-300">·</span>
@@ -713,35 +715,45 @@ function AnalyzeInner() {
                   {stat("Expected move",
                         o.expected_move_pct != null ? `±${o.expected_move_pct}%` : "—",
                         o.expected_move_abs != null ? `±$${o.expected_move_abs} by expiry` : undefined,
-                        "text-indigo-700")}
-                  {stat("ATM IV", o.atm_iv != null ? `${o.atm_iv}%` : "—", o.hv != null ? `vs ${o.hv}% realised` : "implied volatility")}
+                        "text-indigo-700",
+                        "The ± range the options market prices in by the anchor expiry (the at-the-money straddle). A target or stop outside this band is unlikely to be reached by then — use it to size a swing trade realistically.")}
+                  {stat("ATM IV", o.atm_iv != null ? `${o.atm_iv}%` : "—", o.hv != null ? `vs ${o.hv}% realised` : "implied volatility", undefined,
+                        "Implied volatility: how big a move the market expects, annualised. A high number alone doesn't mean 'expensive' — judge rich vs cheap with IV Rank (next), which compares it to how the stock actually moves.")}
                   {stat("IV Rank (IV/HV)",
                         o.iv_hv != null ? `${o.iv_hv}×` : "—",
                         o.iv_state ? (o.iv_state === "rich" ? "options rich" : o.iv_state === "cheap" ? "options cheap" : "fair value") : undefined,
-                        o.iv_state == null ? undefined : o.iv_state === "rich" ? "text-red-600" : o.iv_state === "cheap" ? "text-green-700" : "text-gray-800")}
+                        o.iv_state == null ? undefined : o.iv_state === "rich" ? "text-red-600" : o.iv_state === "cheap" ? "text-green-700" : "text-gray-800",
+                        "Implied ÷ 30-day realised volatility (IBKR's IV-Rank definition). >1.2 = options rich (market pricing more than the stock actually moves — a fear / pre-catalyst premium); <0.8 = cheap / complacent; ~1 = fair value.")}
                   {stat("Skew (P−C IV)",
                         o.skew != null ? `${o.skew > 0 ? "+" : ""}${o.skew} pts` : "—",
                         o.skew == null ? undefined : o.skew < 0 ? "call demand" : o.skew > 3 ? "downside fear" : "balanced",
-                        o.skew == null ? undefined : o.skew < 0 ? "text-green-700" : o.skew > 3 ? "text-red-600" : "text-gray-800")}
+                        o.skew == null ? undefined : o.skew < 0 ? "text-green-700" : o.skew > 3 ? "text-red-600" : "text-gray-800",
+                        "Out-of-the-money put IV minus call IV. Positive = traders paying up for downside protection (fear); negative = paying up for upside calls (bullish demand). The cleaner directional tell when the chain is liquid.")}
                   {stat("P/C volume", o.put_call_vol != null ? o.put_call_vol.toFixed(2) : "—",
-                        `${o.call_volume.toLocaleString()}C / ${o.put_volume.toLocaleString()}P`)}
+                        `${o.call_volume.toLocaleString()}C / ${o.put_volume.toLocaleString()}P`, undefined,
+                        "Put volume ÷ call volume (today's flow). <0.7 = call-heavy (bullish lean); >1.2 = put-heavy. Sentiment gauge — contrarian at extremes.")}
                   {stat("P/C open int.", o.put_call_oi != null ? o.put_call_oi.toFixed(2) : "—",
-                        `${o.call_oi.toLocaleString()}C / ${o.put_oi.toLocaleString()}P`)}
+                        `${o.call_oi.toLocaleString()}C / ${o.put_oi.toLocaleString()}P`, undefined,
+                        "Put ÷ call open interest — the resting positioning that's already on the book. Slower-moving and less noisy than the volume ratio. (Unavailable on the Alpaca live feed.)")}
                   {stat("Volume / OI", o.vol_oi_ratio != null ? o.vol_oi_ratio.toFixed(2) : "—",
                         o.unusual_activity ? "fresh positioning" : "normal",
-                        o.unusual_activity ? "text-amber-700" : undefined)}
+                        o.unusual_activity ? "text-amber-700" : undefined,
+                        "Today's total option volume ÷ open interest. ≥0.5 flags fresh positioning ('unusual activity') being put on today, rather than old resting bets. (Needs OI — unavailable on the Alpaca live feed.)")}
                   {stat("Max pain",
                         o.max_pain != null ? `$${o.max_pain.toFixed(2)}` : "—",
                         o.max_pain_dist_pct != null ? `${o.max_pain_dist_pct > 0 ? "+" : ""}${o.max_pain_dist_pct}% from price` : "pin price",
-                        o.max_pain_dist_pct == null ? undefined : Math.abs(o.max_pain_dist_pct) <= 3 ? "text-amber-700" : "text-gray-800")}
+                        o.max_pain_dist_pct == null ? undefined : Math.abs(o.max_pain_dist_pct) <= 3 ? "text-amber-700" : "text-gray-800",
+                        "The strike where option holders lose the most / writers pay the least — price tends to gravitate (pin) toward it into expiry. A short-horizon magnet; weak for multi-week swings. (Needs OI — unavailable on the Alpaca live feed.)")}
                   {stat("ACI (delta-adj OI)",
                         o.aci_score != null ? `${o.aci_score > 0 ? "+" : ""}${o.aci_score}` : "—",
                         o.aci_score == null ? undefined : `${o.aci_label} · ${o.bull_daoi.toLocaleString()}↑ / ${o.bear_daoi.toLocaleString()}↓`,
-                        o.aci_label === "bullish" ? "text-green-700" : o.aci_label === "bearish" ? "text-red-600" : "text-gray-800")}
+                        o.aci_label === "bullish" ? "text-green-700" : o.aci_label === "bearish" ? "text-red-600" : "text-gray-800",
+                        "Accumulation lean: call-side minus put-side open interest, each weighted by Black-Scholes delta (so a far-OTM lottery strike counts far less than an at-the-money one). +1 = fully bullish positioning, −1 = bearish. (Needs OI — unavailable on the Alpaca live feed.)")}
                 </div>
 
                 {(o.oi_support.length > 0 || o.oi_resistance.length > 0) && (
-                  <div className="mt-2 text-[11px] text-gray-600 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
+                  <div className="mt-2 text-[11px] text-gray-600 bg-gray-50 rounded px-2 py-1.5 leading-relaxed cursor-help"
+                       title="Strikes carrying the largest open interest: call walls above price tend to act as resistance, put walls below as support (where positioning — and dealer hedging — clusters).">
                     <span className="font-semibold text-gray-500">OI levels:</span>{" "}
                     {o.oi_resistance.length > 0 && (
                       <span>resistance (call walls) <span className="font-mono text-red-600">
