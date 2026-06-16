@@ -135,6 +135,11 @@ export default function ScoringPage() {
           single 0–100 confidence score. It answers: <em>what fraction of the evidence supports this trade,
           and how reliable is that evidence?</em>
         </p>
+        <p className="text-sm bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-gray-700">
+          The analyze page now shows a <strong>&quot;Why this score&quot;</strong> per-driver breakdown in plain English —
+          the grade&apos;s meaning, conviction (signal agreement), the biggest signals pushing the score up vs holding it
+          back, the regime effect, any penalty, and a bottom line — generated server-side from the same components below.
+        </p>
 
         <CodeBlock>{`# Core contribution formula for each signal:
 contribution = strength × eff_weight × accuracy

@@ -472,6 +472,19 @@ function AnalyzeInner() {
                         {data.prob_penalty_notes.map((n, i) => <div key={i}>⚠ {n}</div>)}
                       </div>
                     )}
+                    {data.prob_interpretation_points && data.prob_interpretation_points.length > 0 && (
+                      <div className="mt-2 bg-indigo-50/60 border border-indigo-100 rounded-lg px-3 py-2.5">
+                        <div className="font-semibold text-indigo-700 text-[12px] mb-1.5">Why this score</div>
+                        <ul className="space-y-1.5">
+                          {data.prob_interpretation_points.map((p) => (
+                            <li key={p.label} className="text-[11.5px] text-gray-700 leading-relaxed flex gap-2">
+                              <span className="text-indigo-400 select-none mt-px">•</span>
+                              <span><span className="font-semibold text-gray-800">{p.label}:</span> {p.detail}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 );
               })()}

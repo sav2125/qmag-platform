@@ -625,4 +625,5 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "prob_regime":        ps_result.get("prob_regime", "transition"),
         "prob_penalty":       ps_result.get("prob_penalty", 0.0),
         "prob_penalty_notes": ps_result.get("prob_penalty_notes", []),
+        "prob_interpretation_points": ps_result.get("prob_interpretation_points", []),
     }

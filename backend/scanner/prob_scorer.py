@@ -750,6 +750,8 @@ def compute_prob_score(
     elif composite >= P_GRADE_THRESHOLDS["C"]: grade = "C"
     else:                                       grade = "D"
 
+    pts = _pscore_points(round(composite, 1), grade, direction_out, all_components,
+                         round(agreement_ratio, 3), regime, round(penalty, 1), penalty_notes)
     return {
         "prob_score":         round(composite, 1),
         "prob_grade":         grade,
@@ -759,4 +761,76 @@ def compute_prob_score(
         "prob_regime":        regime,
         "prob_penalty":       round(penalty, 1),
         "prob_penalty_notes": penalty_notes,
+        "prob_interpretation_points": pts,
     }
+
+
+# ── Plain-English P Score interpretation (per-driver bullets for the UI) ────────
+
+_SRC_LABEL = {
+    "EP": "Episodic Pivot setup", "VCP": "VCP setup", "TB": "Tight Base setup",
+    "WYS": "Wyckoff Spring setup", "PP": "Pocket Pivot setup", "PULL": "EMA-pullback setup",
+    "FBD": "Failed-Breakdown setup", "Stage": "Weinstein Stage",
+    "TrendTmpl": "Minervini Trend Template", "EMA": "EMA stack", "Supertrend": "Supertrend",
+    "OBV": "OBV (volume trend)", "CMF": "Chaikin Money Flow", "MACD": "MACD momentum",
+    "RSI": "RSI", "Stochastic": "Stochastic", "BB": "Bollinger %B", "KC": "Keltner channel",
+    "ICS": "Institutional Composite (ICS)", "ADNet": "Accumulation / Distribution",
+    "WeeklyTF": "Weekly-timeframe adjustment",
+}
+
+
+def _src_label(s: str) -> str:
+    return _SRC_LABEL.get(s, s)
+
+
+def _pscore_points(score, grade, direction, components, agreement, regime, penalty, penalty_notes):
+    """Per-driver plain-English breakdown of the P Score as labelled bullets, so a
+    user can see WHY a stock got its grade — mirrors the options interpretation."""
+    pts: list[dict] = []
+    meaning = {"A": "a textbook, full-size-candidate setup", "B": "a solid, tradeable setup",
+               "C": "marginal — starter size only", "D": "little to no edge — best avoided"}.get(grade, "")
+    pts.append({"label": "Grade & score", "detail":
+        f"P Score {score}/100 → Grade {grade} ({meaning}); net direction {direction}. "
+        "Grade bands: A ≥ 75, B ≥ 60, C ≥ 45, D < 45."})
+
+    ag = round(agreement * 100)
+    conv = "strong consensus" if agreement >= 0.7 else "a mixed picture" if agreement >= 0.5 else "conflicted signals"
+    pts.append({"label": "Conviction (agreement)", "detail":
+        f"{ag}% of the weighted signals agree on the {direction} side — {conv}. The score is a probability-weighted "
+        "vote across setups, trend, momentum and volume signals; higher agreement means a cleaner, higher-odds read."})
+
+    bulls = sorted([c for c in components if c.get("direction") == "bullish" and c.get("contribution", 0) > 0],
+                   key=lambda c: -c["contribution"])[:3]
+    if bulls:
+        pts.append({"label": "Driving the score up", "detail": "Biggest positive votes: " + "; ".join(
+            _src_label(c["source"]) + (f" — {c['detail']}" if c.get("detail") else "") for c in bulls) + "."})
+
+    bears = sorted([c for c in components if c.get("direction") == "bearish"],
+                   key=lambda c: -abs(c.get("contribution", 0)))[:3]
+    if bears:
+        pts.append({"label": "Holding it back", "detail": "Weighing against: " + "; ".join(
+            _src_label(c["source"]) + (f" — {c['detail']}" if c.get("detail") else "") for c in bears) + "."})
+    elif bulls:
+        pts.append({"label": "Holding it back", "detail": "No notable bearish signals — the read is one-sided."})
+
+    reg = {"trend": "boosts trend-following signals and fades mean-reversion ones",
+           "range": "boosts mean-reversion signals and fades trend-following ones",
+           "transition": "applies roughly neutral weighting"}.get(regime, "adjusts signal weights")
+    pts.append({"label": "Regime", "detail":
+        f"The market regime here is '{regime}', which {reg} (a Stage-2 uptrend reads as 'trend')."})
+
+    if penalty and penalty > 0:
+        notes = "; ".join(penalty_notes) if penalty_notes else "overextension"
+        pts.append({"label": "Penalty", "detail":
+            f"−{penalty} pts were docked for: {notes}. This guards against chasing extended or topping moves."})
+
+    bl = "Treat the score as the odds, not a guarantee — pair it with the firing setup's entry/stop and live price action."
+    if grade in ("B", "C") and bears:
+        gap = "a few points" if grade == "B" else "a fair bit"
+        bl = f"It's {gap} short of an A — {_src_label(bears[0]['source'])} is the main drag. " + bl
+    elif grade == "A":
+        bl = "An A-grade alignment — the strongest-conviction bucket; size accordingly but still honour the stop. " + bl
+    elif grade == "D":
+        bl = "A D means no real edge right now — stand aside until the setup and trend align. " + bl
+    pts.append({"label": "Bottom line", "detail": bl})
+    return pts

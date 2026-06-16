@@ -308,6 +308,7 @@ export interface SymbolAnalysis {
   prob_penalty:       number;   // overextension penalty applied
   prob_penalty_notes: string[];
   prob_components:    ProbComponent[];
+  prob_interpretation_points?: { label: string; detail: string }[];   // per-driver plain-English read
 
   rsi:            number;
   adx:            number;
