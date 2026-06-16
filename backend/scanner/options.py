@@ -236,11 +236,17 @@ def compute_options(symbol: str, spot: float, max_days: int = 60,
 
 def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None,
              min_dte: int = 7, target_dte: int = 30) -> dict | None:
-    """Source dispatch: yfinance first (full chain incl. OI/IV); if it's blocked
-    (cloud IPs like Render), fall back to Alpaca quotes (IV via Black-Scholes
-    inversion) — which omits OI, so the OI-based metrics come back null there."""
-    res = _compute_yf(symbol, spot, max_days, hv30, min_dte, target_dte)
-    return res if res is not None else _compute_alpaca(symbol, spot, max_days, hv30, min_dte, target_dte)
+    """Source dispatch (first that succeeds wins):
+      1. CBOE delayed-quotes CDN — full chain incl. OI / IV / greeks, free, no key,
+         and datacenter-friendly (works on cloud IPs like Render).
+      2. yfinance — full chain, but blocked on cloud IPs.
+      3. Alpaca quotes — no OI; IV inverted via Black-Scholes (OI metrics null).
+    """
+    for fn in (_compute_cboe, _compute_yf, _compute_alpaca):
+        res = fn(symbol, spot, max_days, hv30, min_dte, target_dte)
+        if res is not None:
+            return res
+    return None
 
 
 def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = None,
@@ -589,6 +595,173 @@ def _compute_alpaca(symbol: str, spot: float, max_days: int, hv30: float | None 
         "bear_daoi":       0,
         "oi_resistance":   [],            # needs OI
         "oi_support":      [],
+        "lean":            lean,
+        "tell":            tell,
+    }
+
+
+# ── CBOE delayed-quotes CDN (FULL chain incl. OI / IV / greeks, free, no key) ───
+# Datacenter-friendly (works on cloud IPs where yfinance is blocked), ~15-min
+# delayed. This is the preferred source: it gives everything (OI + IV + greeks),
+# so no Black-Scholes inversion is needed and all OI metrics populate.
+
+_CBOE_URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/{}.json"
+_CBOE_UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/124 Safari/537.36",
+            "Accept": "application/json"}
+
+
+def _compute_cboe(symbol: str, spot: float, max_days: int, hv30: float | None = None,
+                  min_dte: int = 7, target_dte: int = 30) -> dict | None:
+    if spot <= 0:
+        return None
+    try:
+        import httpx
+        with httpx.Client(headers=_CBOE_UA) as client:
+            r = client.get(_CBOE_URL.format(symbol.upper()), timeout=20)
+        if r.status_code != 200:
+            return None
+        data = (r.json().get("data") or {}).get("options") or []
+    except Exception as e:
+        logger.debug("options(cboe): fetch failed for %s: %s", symbol, e)
+        return None
+    if not data:
+        return None
+
+    today = date.today()
+    contracts = []
+    for o in data:
+        p = _parse_occ(o.get("option", ""))
+        if not p:
+            continue
+        exp, otype, strike = p
+        dte = (exp - today).days
+        if dte < 0 or dte > max_days:
+            continue
+        bid, ask = float(o.get("bid", 0) or 0), float(o.get("ask", 0) or 0)
+        mid = (bid + ask) / 2 if (bid > 0 and ask > 0) else 0.0
+        contracts.append({
+            "type": otype, "strike": strike, "exp": exp, "dte": dte, "mid": mid,
+            "iv": float(o.get("iv", 0) or 0), "oi": float(o.get("open_interest", 0) or 0),
+            "vol": float(o.get("volume", 0) or 0), "delta": float(o.get("delta", 0) or 0),
+        })
+    if not contracts:
+        return None
+
+    # Swing-tuned expiry selection: skip <min_dte; anchor near target_dte (~30d).
+    usable = [c for c in contracts if c["dte"] >= min_dte] or contracts
+    exps = sorted({c["exp"] for c in usable})
+    anchor = min(exps, key=lambda e: abs((e - today).days - target_dte))
+    near_exps = set(sorted(exps, key=lambda e: abs((e - today).days - (anchor - today).days))[:_MAX_EXPIRIES])
+    agg = [c for c in usable if c["exp"] in near_exps]
+    dte = max((anchor - today).days, 0)
+
+    calls = [c for c in agg if c["type"] == "call"]
+    puts = [c for c in agg if c["type"] == "put"]
+    call_vol = sum(c["vol"] for c in calls); put_vol = sum(c["vol"] for c in puts)
+    call_oi = sum(c["oi"] for c in calls); put_oi = sum(c["oi"] for c in puts)
+    pc_vol = round(put_vol / call_vol, 2) if call_vol > 0 else None
+    pc_oi = round(put_oi / call_oi, 2) if call_oi > 0 else None
+
+    call_oi_strikes: dict[float, float] = {}
+    put_oi_strikes: dict[float, float] = {}
+    bull_daoi = bear_daoi = 0.0
+    for c in calls:
+        call_oi_strikes[c["strike"]] = call_oi_strikes.get(c["strike"], 0.0) + c["oi"]
+        bull_daoi += c["oi"] * abs(c["delta"])    # CBOE provides delta directly
+    for p in puts:
+        put_oi_strikes[p["strike"]] = put_oi_strikes.get(p["strike"], 0.0) + p["oi"]
+        bear_daoi += p["oi"] * abs(p["delta"])
+
+    anc_calls = [c for c in calls if c["exp"] == anchor]
+    anc_puts = [c for c in puts if c["exp"] == anchor]
+
+    def _near(rows, tgt, iv_only=False):
+        rows = [r for r in rows if (r["iv"] > 0 if iv_only else True)]
+        return min(rows, key=lambda r: abs(r["strike"] - tgt)) if rows else None
+
+    atm_c, atm_p = _near(anc_calls, spot), _near(anc_puts, spot)
+    ivs = [x["iv"] for x in (atm_c, atm_p) if x and x["iv"] > 0]
+    atm_iv = round(sum(ivs) / len(ivs) * 100, 1) if ivs else None
+
+    hv_pct = round(hv30 * 100, 1) if hv30 and hv30 > 0 else None
+    iv_hv = round((atm_iv / 100) / hv30, 2) if (atm_iv and hv30 and hv30 > 0) else None
+    iv_state = ("rich" if iv_hv >= 1.2 else "cheap" if iv_hv <= 0.8 else "fair") if iv_hv else None
+
+    straddle = (atm_c["mid"] if atm_c else 0) + (atm_p["mid"] if atm_p else 0)
+    exp_move_pct = round(straddle / spot * 100, 1) if straddle > 0 else None
+    exp_move_abs = round(straddle, 2) if straddle > 0 else None
+
+    otm_p = _near(anc_puts, spot * (1 - _OTM_PCT), iv_only=True)
+    otm_c = _near(anc_calls, spot * (1 + _OTM_PCT), iv_only=True)
+    skew = round((otm_p["iv"] - otm_c["iv"]) * 100, 1) if (otm_p and otm_c) else None
+
+    tot_vol, tot_oi = call_vol + put_vol, call_oi + put_oi
+    vol_oi = round(tot_vol / tot_oi, 2) if tot_oi > 0 else None
+    ua_flag = vol_oi is not None and vol_oi >= 0.5
+    ua_note = ("heavy" if (vol_oi or 0) >= 1.0 else "elevated") if ua_flag else "normal"
+
+    tot_daoi = bull_daoi + bear_daoi
+    aci_score = round((bull_daoi - bear_daoi) / tot_daoi, 2) if tot_daoi > 0 else None
+    aci_label = ("bullish" if (aci_score or 0) > _ACI_THRESH else "bearish"
+                 if (aci_score or 0) < -_ACI_THRESH else "neutral") if aci_score is not None else "neutral"
+
+    res = sorted(((k, v) for k, v in call_oi_strikes.items() if k > spot), key=lambda kv: -kv[1])[:2]
+    sup = sorted(((k, v) for k, v in put_oi_strikes.items() if k < spot), key=lambda kv: -kv[1])[:2]
+    oi_resistance = [{"strike": round(k, 2), "oi": int(v)} for k, v in res]
+    oi_support = [{"strike": round(k, 2), "oi": int(v)} for k, v in sup]
+
+    max_pain = _max_pain(call_oi_strikes, put_oi_strikes)
+    max_pain_dist = round((max_pain - spot) / spot * 100, 1) if max_pain and spot > 0 else None
+
+    lean, tell_bits = "neutral", []
+    call_heavy = pc_vol is not None and pc_vol < 0.7
+    put_heavy = pc_vol is not None and pc_vol > 1.2
+    call_demand = skew is not None and skew < -1
+    fear = skew is not None and skew > 3
+    if call_heavy: tell_bits.append(f"call-heavy flow (P/C vol {pc_vol})")
+    if put_heavy: tell_bits.append(f"put-heavy flow (P/C vol {pc_vol})")
+    if call_demand: tell_bits.append(f"call-skewed IV ({skew} pts → upside demand)")
+    if fear: tell_bits.append(f"put-skewed IV (+{skew} pts → downside hedging)")
+    if ua_flag: tell_bits.append(f"{ua_note} activity (vol/OI {vol_oi})")
+    if iv_state == "rich": tell_bits.append(f"IV rich ({iv_hv}× realised — pricing a move)")
+    elif iv_state == "cheap": tell_bits.append(f"IV cheap ({iv_hv}× realised — complacent)")
+    if (call_heavy or call_demand) and not (put_heavy or fear): lean = "bullish"
+    elif (put_heavy or fear) and not (call_heavy or call_demand): lean = "bearish"
+    if aci_score is not None and aci_label != "neutral":
+        tell_bits.append(f"delta-adj OI {aci_label} ({aci_score:+})")
+    if max_pain is not None and max_pain_dist is not None:
+        tell_bits.append(f"max pain ${max_pain:g} ({abs(max_pain_dist)}% {'above' if max_pain_dist > 0 else 'below'})")
+    tell = "; ".join(tell_bits) if tell_bits else "balanced positioning, nothing unusual"
+
+    return {
+        "source":          "cboe",
+        "nearest_expiry":  anchor.isoformat(),
+        "dte":             dte,
+        "expiries_used":   len(near_exps),
+        "atm_iv":          atm_iv,
+        "hv":              hv_pct,
+        "iv_hv":           iv_hv,
+        "iv_state":        iv_state,
+        "expected_move_pct": exp_move_pct,
+        "expected_move_abs": exp_move_abs,
+        "skew":            skew,
+        "put_call_vol":    pc_vol,
+        "put_call_oi":     pc_oi,
+        "call_volume":     int(call_vol),
+        "put_volume":      int(put_vol),
+        "call_oi":         int(call_oi),
+        "put_oi":          int(put_oi),
+        "vol_oi_ratio":    vol_oi,
+        "unusual_activity": ua_flag,
+        "max_pain":        round(max_pain, 2) if max_pain else None,
+        "max_pain_dist_pct": max_pain_dist,
+        "aci_score":       aci_score,
+        "aci_label":       aci_label,
+        "bull_daoi":       int(bull_daoi),
+        "bear_daoi":       int(bear_daoi),
+        "oi_resistance":   oi_resistance,
+        "oi_support":      oi_support,
         "lean":            lean,
         "tell":            tell,
     }

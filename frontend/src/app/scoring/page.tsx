@@ -1098,10 +1098,10 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
         </p>
 
         <p className="mt-2 text-xs text-gray-500">
-          <strong>Data (dual-source):</strong> yfinance chains primary (full card incl. OI metrics); on cloud IPs where
-          yfinance is blocked (Render) it falls back to <strong>Alpaca</strong> snapshots and inverts IV via Black-Scholes
-          from quotes — Alpaca&apos;s free feed has no open interest, so max pain / ACI / OI walls are unavailable on the
-          fallback while IV / IV Rank / expected move / skew / P-C volume still populate (the <code>source</code> field shows which). 15-min cache.
+          <strong>Data (auto-fallback chain):</strong> (1) <strong>CBOE delayed-quotes CDN</strong> — free, no key, full chain
+          incl. OI + IV + greeks, works on cloud IPs (the preferred source); (2) <strong>yfinance</strong> — full, but blocked
+          on cloud IPs; (3) <strong>Alpaca</strong> snapshots — quotes only (IV via Black-Scholes inversion, OI metrics
+          unavailable). First that succeeds wins; the <code>source</code> field shows which. 15-min cache.
           <strong> IV Rank</strong> uses IBKR&apos;s IV÷HV definition (no IV history required).
           The <strong>ACI level</strong> (delta-adjusted-OI sentiment) + OI-derived support/resistance ship now from each snapshot — no history needed.
           <strong> Deferred (Phase 2):</strong> the ACI <em>change</em> (ΔDAOI over 1/5/30 days) and a live EHD hedging-demand both need
