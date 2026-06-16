@@ -767,9 +767,10 @@ function AnalyzeInner() {
                   </div>
                 )}
 
-                <p className="text-[11px] text-gray-600 mt-3 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
-                  <strong>Read:</strong> {o.tell}.
-                </p>
+                <div className="mt-3 bg-indigo-50/60 border border-indigo-100 rounded-lg px-3 py-2.5 text-[12.5px] text-gray-700 leading-relaxed">
+                  <span className="font-semibold text-indigo-700">What this is saying — </span>
+                  {o.interpretation ?? o.tell}
+                </div>
                 <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
                   <strong>Why it&apos;s leading:</strong> options price future <em>expectations</em>, not past action. The <strong>expected move</strong>
                   sizes catalyst targets/stops; <strong>skew</strong> shows hedging (puts) vs demand (calls); <strong>P/C</strong> is sentiment

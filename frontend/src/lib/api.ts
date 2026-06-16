@@ -278,6 +278,7 @@ export interface OptionsSnapshot {
   oi_support:        OILevel[];       // put walls below price
   lean:              "bullish" | "neutral" | "bearish";
   tell:              string;
+  interpretation:    string;   // per-stock plain-English read of the options data
 }
 
 export interface OILevel {

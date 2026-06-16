@@ -145,6 +145,65 @@ def _parse_occ(sym: str):
     return exp, ("call" if cp == "C" else "put"), int(strike) / 1000.0
 
 
+def _interpret(o: dict, spot: float) -> str:
+    """Plain-English interpretation of the snapshot — reads the metrics together the
+    way an analyst would, gracefully skipping any the data source omits."""
+    s: list[str] = []
+    lean, dte, exp = o.get("lean", "neutral"), o.get("dte"), o.get("nearest_expiry")
+    horizon = f"over the next ~{dte} days" if dte else "near-term"
+    s.append({"bullish": f"Options are leaning bullish {horizon}.",
+              "bearish": f"Options are leaning bearish {horizon}.",
+              }.get(lean, f"Options positioning is roughly balanced {horizon}."))
+
+    iv, hv, iv_state = o.get("atm_iv"), o.get("hv"), o.get("iv_state")
+    if iv is not None and iv_state == "rich" and hv:
+        s.append(f"Implied volatility is {iv}% — rich versus the {hv}% the stock has actually realised, i.e. a fear or pre-catalyst premium.")
+    elif iv is not None and iv_state == "cheap" and hv:
+        s.append(f"Implied volatility is {iv}% — actually cheap versus the {hv}% realised, so options are underpricing how much the stock moves.")
+    elif iv is not None and hv:
+        s.append(f"Implied volatility is {iv}%, roughly in line with the {hv}% realised (fairly priced).")
+    elif iv is not None:
+        s.append(f"Implied volatility is {iv}%.")
+
+    emp, ema = o.get("expected_move_pct"), o.get("expected_move_abs")
+    if emp is not None and spot > 0:
+        lo, hi = round(spot * (1 - emp / 100), 2), round(spot * (1 + emp / 100), 2)
+        s.append(f"The market is pricing a ±{emp}% move (±${ema}) by {exp}, so the realistic swing band is about ${lo}–${hi} — a target beyond that is a stretch in this window.")
+
+    sk, pcv = o.get("skew"), o.get("put_call_vol")
+    dbits = []
+    if sk is not None:
+        dbits.append(f"skew is negative ({sk}), so traders are paying up for upside calls (bullish demand)" if sk < -1
+                     else f"skew is elevated (+{sk}), showing demand for downside protection (hedging/fear)" if sk > 3
+                     else "skew is roughly flat")
+    if pcv is not None:
+        dbits.append(f"flow is call-heavy (P/C vol {pcv})" if pcv < 0.7
+                     else f"flow is put-heavy (P/C vol {pcv})" if pcv > 1.2
+                     else f"put/call flow is balanced ({pcv})")
+    if dbits:
+        s.append("On direction, " + "; ".join(dbits) + ".")
+
+    aci, mp = o.get("aci_score"), o.get("max_pain")
+    oi_res, oi_sup = o.get("oi_resistance") or [], o.get("oi_support") or []
+    oibits = []
+    if aci is not None:
+        oibits.append(f"net delta-adjusted open interest is {o.get('aci_label')} ({aci:+})")
+    if mp is not None:
+        dd = o.get("max_pain_dist_pct") or 0
+        oibits.append(f"max pain sits at ${mp} ({abs(dd)}% {'above' if dd > 0 else 'below'}, a weak pin this far out)")
+    if oi_res:
+        oibits.append("OI resistance near " + ", ".join(f"${l['strike']}" for l in oi_res))
+    if oi_sup:
+        oibits.append("OI support near " + ", ".join(f"${l['strike']}" for l in oi_sup))
+    if oibits:
+        s.append("Positioning: " + "; ".join(oibits) + ".")
+    else:
+        s.append("Open-interest metrics (max pain, ACI, OI walls) aren't available from the live data feed.")
+
+    s.append("Read this as leading context, not a trigger — confirm direction with price and the firing setup; the signal fades within ~a month.")
+    return " ".join(s)
+
+
 def compute_options(symbol: str, spot: float, max_days: int = 60,
                     hv30: float | None = None, min_dte: int = 7,
                     target_dte: int = 30) -> dict | None:
@@ -169,6 +228,8 @@ def compute_options(symbol: str, spot: float, max_days: int = 60,
         return cached[1]
 
     result = _compute(symbol, spot, max_days, hv30, min_dte, target_dte)
+    if result is not None:
+        result["interpretation"] = _interpret(result, spot)
     _CACHE[symbol] = (now, result)
     return result
 
