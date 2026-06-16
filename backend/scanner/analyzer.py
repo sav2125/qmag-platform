@@ -82,14 +82,44 @@ def _adx(df: pd.DataFrame, period: int = 14) -> float:
 
 # ── MA stack analysis ─────────────────────────────────────────────────────────
 
+def _slope_state(series: pd.Series, short: int = 5, band: float = 0.0015) -> str:
+    """Classify an MA's recent direction: rising / turning_up / flat / falling.
+
+    A binary "today vs 11 bars ago" check is too laggy for momentum names — after a
+    V-bottom an MA can read "falling" for two more weeks while it's already curling
+    up. We instead use a ~1-week normalized slope with a small dead-band, and flag a
+    fresh upward curl (last two bars stair-stepping higher) as "turning_up" so a
+    just-turned MA isn't mislabelled as falling.
+    """
+    n = len(series)
+    if n < short + 3:
+        return "flat"
+    last = float(series.iloc[-1])
+    base = float(series.iloc[-1 - short])
+    if base == 0:
+        return "flat"
+    slope = last / base - 1.0
+    curling_up = last > float(series.iloc[-2]) > float(series.iloc[-3])
+    if slope > band:
+        return "rising"
+    if slope < -band:
+        return "turning_up" if curling_up else "falling"
+    return "turning_up" if curling_up else "flat"
+
+
+_STATE_WORD = {"rising": "rising", "turning_up": "turning up", "flat": "flat", "falling": "falling"}
+
+
 def _ma_stack(close: pd.Series, ema21: pd.Series, ema50: pd.Series, sma150: pd.Series) -> dict:
     curr = float(close.iloc[-1])
     e21  = float(ema21.iloc[-1])
     e50  = float(ema50.iloc[-1])
     s150 = float(sma150.iloc[-1]) if not pd.isna(sma150.iloc[-1]) else None
 
-    e21_rising = float(ema21.iloc[-1]) > float(ema21.iloc[-11]) if len(ema21) > 11 else False
-    e50_rising = float(ema50.iloc[-1]) > float(ema50.iloc[-11]) if len(ema50) > 11 else False
+    e21_state = _slope_state(ema21)
+    e50_state = _slope_state(ema50)
+    e21_rising = e21_state == "rising"
+    e50_rising = e50_state == "rising"
 
     above_e21  = curr > e21
     above_e50  = curr > e50
@@ -103,8 +133,13 @@ def _ma_stack(close: pd.Series, ema21: pd.Series, ema50: pd.Series, sma150: pd.S
             stack  = "partial_bull"
             detail = "Price > EMA21 > EMA50, both rising (below 30-week MA)"
     elif above_e21 and e21_gt_e50:
-        stack  = "partial_bull"
-        detail = "Price > EMA21 > EMA50 (MAs not all rising)"
+        stack = "partial_bull"
+        if e21_state == "turning_up" or e50_state == "turning_up":
+            detail = (f"Price > EMA21 > EMA50 — MAs turning up after a pullback "
+                      f"(EMA21 {_STATE_WORD[e21_state]}, EMA50 {_STATE_WORD[e50_state]})")
+        else:
+            detail = (f"Price > EMA21 > EMA50, but not yet trending "
+                      f"(EMA21 {_STATE_WORD[e21_state]}, EMA50 {_STATE_WORD[e50_state]})")
     elif not above_e21 and not above_e50:
         stack  = "bear"
         detail = "Price below EMA21 and EMA50 — bearish structure"
@@ -119,6 +154,8 @@ def _ma_stack(close: pd.Series, ema21: pd.Series, ema50: pd.Series, sma150: pd.S
         "price_vs_ema50_pct": round((curr - e50) / e50 * 100, 1) if e50 > 0 else 0.0,
         "ema21_rising":      e21_rising,
         "ema50_rising":      e50_rising,
+        "ema21_state":       e21_state,
+        "ema50_state":       e50_state,
         "ema21":             round(e21, 2),
         "ema50":             round(e50, 2),
         "sma150":            round(s150, 2) if s150 else None,

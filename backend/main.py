@@ -126,6 +126,25 @@ def market_breadth():
         raise HTTPException(500, str(e))
 
 
+@app.get("/market/sectors")
+def market_sectors():
+    """Sector RS rotation — the 11 SPDR sectors ranked by relative strength vs SPY
+    (3-month RS level + whether RS is improving), classified into RRG-style
+    quadrants (Leading / Weakening / Improving / Lagging). Shows where leadership
+    is concentrated. Cached 6h."""
+    from scanner.sectors import get_sector_rotation
+    try:
+        data = get_sector_rotation()
+        if data is None:
+            raise HTTPException(503, "Sector data unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Sectors error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/analyze/{symbol}")
 def analyze(symbol: str):
     """Full single-symbol analysis: all 7 setups, RSI/MACD/ADX, MA stack,

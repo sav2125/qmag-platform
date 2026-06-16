@@ -63,6 +63,7 @@ const TOC = [
   { id: "options",      label: "Analysis: Options (Leading)" },
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "breadth",      label: "Market Breadth" },
+  { id: "sectors",      label: "Sector RS Rotation" },
   { id: "philosophy",   label: "Design Philosophy" },
 ];
 
@@ -245,6 +246,22 @@ contribution = strength × eff_weight × accuracy
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <h3 className="font-semibold text-gray-800 text-sm mb-1">
+            EMA Stack — how we judge an MA is &quot;rising&quot;
+          </h3>
+          <p className="text-xs text-gray-600">
+            A binary &quot;today vs 11 bars ago&quot; slope test is too laggy for momentum names: after a
+            sharp V-bottom an EMA can still read <em>falling</em> for two more weeks while it has already
+            curled back up — exactly when an Episodic Pivot or pocket pivot fires. We instead classify each
+            MA into <strong>rising / turning up / flat / falling</strong> using a ~1-week normalized slope
+            with a small dead-band, and flag a fresh upward curl (the last two bars stair-stepping higher)
+            as <em>turning up</em>. A clean <code>full_bull</code> stack still requires both EMAs genuinely
+            <em> rising</em> (not merely turning), so a just-bounced extended stock is correctly shown as
+            <code> partial_bull — MAs turning up after a pullback</code> rather than a false &quot;falling.&quot;
+          </p>
         </div>
 
         <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -1138,6 +1155,43 @@ divergence   = SPY near 52-wk high  AND  %>200-DMA < 50           # narrow, frag
           The most important read is the <strong>divergence flag</strong>: when the index is near highs but breadth is
           thin, the advance is being carried by a handful of names — historically a precursor to tops. The panel turns
           that into plain-English guidance (be aggressive / be selective / reduce size / stand aside).
+        </p>
+      </Section>
+
+      {/* Sector RS Rotation */}
+      <Section id="sectors" title="🔄 Sector RS Rotation">
+        <p>
+          Money rotates between sectors <em>before</em> broad moves — leadership concentrates in a few groups
+          on the way up, then broadens or rotates as a move matures. This panel answers a momentum trader&apos;s
+          first question: <strong>where should I be hunting?</strong> It&apos;s a market-context tool (like a
+          Relative Rotation Graph), not a per-stock score.
+        </p>
+        <CodeBlock>{`# 11 SPDR sectors vs SPY, cached 6h. Built on the relative-strength ratio:
+rel          = sector_close / SPY_close              # the RS line (RRG "RS-Ratio")
+
+rs_strength  = rel[-1] / rel[-63] - 1                # 3-mo relative performance  → RS LEVEL
+rs_recent    = rel[-1]  / rel[-21]  - 1              # last month's relative perf
+rs_prior     = rel[-21] / rel[-42]  - 1              # prior month's relative perf
+rs_momentum  = rs_recent - rs_prior                  # is RS accelerating?  → RS MOMENTUM
+
+# Four RRG-style quadrants from (level, momentum):
+leading    = strength ≥ 0  AND  momentum ≥ 0     # outperforming AND accelerating  → hunt here
+weakening  = strength ≥ 0  AND  momentum < 0     # still ahead but cooling         → be selective
+improving  = strength < 0  AND  momentum ≥ 0     # behind but catching up          → early rotation
+lagging    = strength < 0  AND  momentum < 0     # behind and still fading         → avoid`}
+        </CodeBlock>
+        <h3 className="font-semibold text-gray-800 mt-3">Why momentum = acceleration, not just 1-month RS</h3>
+        <p>
+          A naïve momentum measure (1-month RS vs 3-month RS) is biased by the horizon mismatch — a steadily
+          dominant leader looks like it&apos;s &quot;weakening&quot; simply because three months accumulate more
+          outperformance than one. Measuring <strong>acceleration</strong> (this month&apos;s relative return
+          minus last month&apos;s) over the same window is the textbook RRG read and correctly separates a leader
+          that&apos;s still pulling away from one that&apos;s rolling over.
+        </p>
+        <p className="mt-2 text-sm bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-indigo-900">
+          Trade <em>with</em> the rotation: favour breakouts in <strong>Leading</strong> and emerging
+          <strong> Improving</strong> groups, treat <strong>Lagging</strong> breakouts with suspicion, and watch
+          <strong> Weakening</strong> leaders for signs the move is rotating away from them.
         </p>
       </Section>
 

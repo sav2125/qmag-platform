@@ -5,6 +5,7 @@ import { api, type Setup, type ScanParams } from "@/lib/api";
 import { SetupTable } from "@/components/SetupTable";
 import MarketPositioningPanel from "@/components/MarketPositioning";
 import MarketBreadthPanel from "@/components/MarketBreadth";
+import SectorRotationPanel from "@/components/SectorRotation";
 
 const UNIVERSES = [
   { value: "all",        label: "All US Equities (~7 000 stocks)" },
@@ -132,6 +133,9 @@ export default function Dashboard() {
 
       {/* Market breadth — leading momentum-environment gauge */}
       <MarketBreadthPanel />
+
+      {/* Sector rotation — where leadership is concentrated */}
+      <SectorRotationPanel />
 
       {/* Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">

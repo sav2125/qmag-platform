@@ -101,7 +101,24 @@ export const api = {
 
   positioning: () => req<MarketPositioning>("/market/positioning"),
   breadth: () => req<MarketBreadth>("/market/breadth"),
+  sectors: () => req<SectorRotation>("/market/sectors"),
 };
+
+// ── Sector RS rotation ────────────────────────────────────────────────────────
+
+export interface SectorRow {
+  symbol:      string;
+  name:        string;
+  rs_strength: number;   // 3-mo relative perf vs SPY (%)
+  rs_momentum: number;   // RS acceleration (recent month − prior month, %)
+  quadrant:    "leading" | "weakening" | "improving" | "lagging";
+}
+
+export interface SectorRotation {
+  as_of:   string;
+  sectors: SectorRow[];
+  interpretation_points: { label: string; detail: string }[];
+}
 
 // ── Market breadth ────────────────────────────────────────────────────────────
 
@@ -209,6 +226,8 @@ export interface MAStack {
   price_vs_ema50_pct:  number;
   ema21_rising:        boolean;
   ema50_rising:        boolean;
+  ema21_state:         "rising" | "turning_up" | "flat" | "falling";
+  ema50_state:         "rising" | "turning_up" | "flat" | "falling";
   ema21:               number;
   ema50:               number;
   sma150:              number | null;

@@ -7,3 +7,7 @@ __pycache__/
 data/
 *.db
 .DS_Store
+
+# logs
+*.log
+digest.log

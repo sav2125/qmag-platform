@@ -537,20 +537,25 @@ function AnalyzeInner() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs mt-2">
                   {[
-                    { label: "EMA21", val: data.ma_stack.ema21, rising: data.ma_stack.ema21_rising },
-                    { label: "EMA50", val: data.ma_stack.ema50, rising: data.ma_stack.ema50_rising },
-                    { label: "SMA150", val: data.ma_stack.sma150, rising: null },
-                  ].map(({ label, val, rising }) => (
-                    <div key={label} className="bg-gray-50 rounded p-2">
-                      <div className="text-gray-400">{label}</div>
-                      <div className="font-mono font-semibold">{val ? `$${val.toFixed(2)}` : "—"}</div>
-                      {rising !== null && (
-                        <div className={`text-[10px] ${rising ? "text-green-600" : "text-red-400"}`}>
-                          {rising ? "↑ rising" : "↓ flat/falling"}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    { label: "EMA21", val: data.ma_stack.ema21, state: data.ma_stack.ema21_state },
+                    { label: "EMA50", val: data.ma_stack.ema50, state: data.ma_stack.ema50_state },
+                    { label: "SMA150", val: data.ma_stack.sma150, state: null },
+                  ].map(({ label, val, state }) => {
+                    const cfg: Record<string, { txt: string; cls: string }> = {
+                      rising:     { txt: "↑ rising",     cls: "text-green-600" },
+                      turning_up: { txt: "↗ turning up", cls: "text-emerald-500" },
+                      flat:       { txt: "→ flat",       cls: "text-gray-400" },
+                      falling:    { txt: "↓ falling",    cls: "text-red-400" },
+                    };
+                    const s = state ? cfg[state] : null;
+                    return (
+                      <div key={label} className="bg-gray-50 rounded p-2">
+                        <div className="text-gray-400">{label}</div>
+                        <div className="font-mono font-semibold">{val ? `$${val.toFixed(2)}` : "—"}</div>
+                        {s && <div className={`text-[10px] ${s.cls}`}>{s.txt}</div>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </Card>
