@@ -29,6 +29,8 @@ function StatePill({ state }: { state: string }) {
     crowded_long:   { label: "Crowded long — caution",       cls: "bg-amber-100 text-amber-700" },
     fully_invested: { label: "Fully invested — caution",     cls: "bg-amber-100 text-amber-700" },
     complacent:     { label: "Complacent — caution",         cls: "bg-amber-100 text-amber-700" },
+    tightening:     { label: "Tightening — risk-on",         cls: "bg-green-100 text-green-700" },
+    widening:       { label: "Widening — risk-off",          cls: "bg-amber-100 text-amber-700" },
   };
   const c = cfg[state] ?? cfg.neutral;
   return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${c.cls}`}>{c.label}</span>;
@@ -156,6 +158,24 @@ export default function MarketPositioningPanel() {
               </div>
               <div className="font-mono text-[11px] text-gray-400">
                 z {data.naaim.z > 0 ? "+" : ""}{data.naaim.z.toFixed(2)}{data.naaim.date ? ` · ${data.naaim.date}` : ""}
+              </div>
+            </div>
+          )}
+        </SourceCard>
+
+        <SourceCard
+          title="HY Credit Spread"
+          tip="ICE BofA US High-Yield OAS (FRED). Credit LEADS equities — widening spreads precede risk-off, tight/stable spreads are supportive. Unlike the other (contrarian) sources this is directional: widening = caution (−1), tightening from below average = risk-on (+1). Updates daily."
+          state={data.credit?.state}
+          unavailable={!data.credit}
+        >
+          {data.credit && (
+            <div className="text-xs text-gray-600 space-y-0.5">
+              <div className="font-mono text-base font-bold text-gray-800">
+                {data.credit.oas.toFixed(2)}%
+              </div>
+              <div className="font-mono text-[11px] text-gray-400">
+                1mo {data.credit.change_1m > 0 ? "+" : ""}{data.credit.change_1m} · z {data.credit.z > 0 ? "+" : ""}{data.credit.z}
               </div>
             </div>
           )}

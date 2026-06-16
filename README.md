@@ -55,7 +55,8 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **CFTC COT** — leveraged-funds (hedge fund / CTA proxy) net position in E-mini S&P 500 + Nasdaq futures, z-scored vs ~3 years (free Socrata API, weekly)
 - **SPY put/call ratio** — computed from Alpaca options data across near-dated expirations (daily); fear ≥2.0 / complacency ≤1.1
 - **NAAIM Exposure Index** — active-manager equity exposure scraped from naaim.org (weekly); washed-out <30 / fully-invested >90
-- **Contrarian regime dial** — each source votes at extremes (fear = +1, crowded = −1); dial −3…+3 shown on the Dashboard as a sizing/aggression gate. Cached 12h. `GET /market/positioning`
+- **HY credit spread** — ICE BofA US High-Yield OAS from FRED (free, no key, daily). Credit *leads* equities: widening spreads precede risk-off. A **directional** vote (not contrarian) — widening = −1 caution, tightening from below average = +1 risk-on
+- **Contrarian regime dial** — each source votes at extremes (fear = +1, crowded = −1; credit directional); dial shown on the Dashboard as a sizing/aggression gate. Cached 12h. `GET /market/positioning`
 - **Market breadth** — leading "momentum environment" gauge over a ~100-name large-cap sample: % above 50/200-DMA, new highs−lows, advance/decline, a 0–100 breadth score + state (strong → risk-off), and a **divergence flag** (SPY near highs but breadth thin = narrowing advance). Plain-English read on the Dashboard. Cached 6h. `GET /market/breadth`
 
 ### Frontend

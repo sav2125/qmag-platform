@@ -152,6 +152,14 @@ export interface MarketPositioning {
     state: "washed_out" | "neutral" | "fully_invested";
     vote: number;
   } | null;
+  credit: {
+    oas: number;          // ICE BofA US HY OAS, %
+    change_1m: number;    // change vs ~1 month ago, pts
+    z: number;            // z-score vs ~3y
+    date: string;
+    state: "widening" | "tightening" | "neutral";
+    vote: number;
+  } | null;
   sources_available: number;
   dial: { score: number; label: string; detail: string };
 }

@@ -242,8 +242,56 @@ _DIAL_LABELS = {
 }
 
 
+# ── 4) High-yield credit spread (FRED, no key) ────────────────────────────────
+# ICE BofA US High Yield OAS. Credit LEADS equities: widening spreads precede
+# risk-off. This is a DIRECTIONAL vote (not contrarian) — tight/easing = risk-on
+# (+1), widening/stressed = risk-off (−1).
+_FRED_HY_OAS = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=BAMLH0A0HYM2"
+
+
+def fetch_credit_spread() -> dict | None:
+    try:
+        with httpx.Client() as client:
+            r = client.get(_FRED_HY_OAS, timeout=20)
+        r.raise_for_status()
+        rows: list[tuple[str, float]] = []
+        for line in r.text.strip().splitlines()[1:]:
+            parts = line.split(",")
+            if len(parts) < 2:
+                continue
+            d, v = parts[0], parts[-1].strip()
+            if v in (".", ""):
+                continue
+            try:
+                rows.append((d, float(v)))
+            except ValueError:
+                continue
+        if len(rows) < 30:
+            return None
+    except Exception as e:
+        logger.info("credit spread fetch failed: %s", e)
+        return None
+
+    cur = rows[-1][1]
+    mo_ago = rows[max(0, len(rows) - 22)][1]
+    change_1m = round(cur - mo_ago, 2)
+    window = [v for _, v in rows[-756:]]
+    mean = sum(window) / len(window)
+    std = (sum((x - mean) ** 2 for x in window) / len(window)) ** 0.5 or 1.0
+    z = round((cur - mean) / std, 2)
+
+    if change_1m >= 0.4 or z >= 1.5:          # widening fast or stressed → risk-off
+        state, vote = "widening", -1
+    elif change_1m <= -0.25 and z <= 0.0:     # tightening and below average → risk-on
+        state, vote = "tightening", 1
+    else:
+        state, vote = "neutral", 0
+    return {"oas": round(cur, 2), "change_1m": change_1m, "z": z,
+            "date": rows[-1][0], "state": state, "vote": vote}
+
+
 def _build() -> dict:
-    cot = pc = naaim = None
+    cot = pc = naaim = credit = None
     try:
         cot = fetch_cot()
     except Exception as e:
@@ -256,15 +304,20 @@ def _build() -> dict:
         naaim = fetch_naaim()
     except Exception as e:
         logger.warning("NAAIM fetch failed: %s", e)
+    try:
+        credit = fetch_credit_spread()
+    except Exception as e:
+        logger.warning("credit spread fetch failed: %s", e)
 
-    votes = [c["vote"] for c in (cot, pc, naaim) if c]
+    votes = [c["vote"] for c in (cot, pc, naaim, credit) if c]
     score = sum(votes)
-    label, detail = _DIAL_LABELS.get(score, _DIAL_LABELS[0])
+    label, detail = _DIAL_LABELS.get(max(-3, min(3, score)), _DIAL_LABELS[0])
     return {
         "as_of": date.today().isoformat(),
         "cot": cot,
         "put_call": pc,
         "naaim": naaim,
+        "credit": credit,
         "sources_available": len(votes),
         "dial": {"score": score, "label": label, "detail": detail},
     }
