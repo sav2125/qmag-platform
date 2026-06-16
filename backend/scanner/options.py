@@ -145,14 +145,21 @@ def _parse_occ(sym: str):
     return exp, ("call" if cp == "C" else "put"), int(strike) / 1000.0
 
 
-def compute_options(symbol: str, spot: float, max_days: int = 45,
-                    hv30: float | None = None) -> dict | None:
+def compute_options(symbol: str, spot: float, max_days: int = 60,
+                    hv30: float | None = None, min_dte: int = 7,
+                    target_dte: int = 30) -> dict | None:
     """Compute the leading-options snapshot for ``symbol`` at the given ``spot``.
 
     ``hv30`` is the 30-day annualised realised (historical) volatility as a
     fraction (e.g. 0.85 = 85%). When supplied, the snapshot adds IBKR's IV Rank
     (30-day IV ÷ 30-day HV) — the volatility risk premium that tells you whether
     options are rich or cheap relative to how the stock is actually moving.
+
+    Expiry selection is swing-tuned: contracts expiring within ``min_dte`` days
+    (default 7 — the noisy, theta-dominated current-week weeklies) are skipped,
+    and the read is anchored to the expiry closest to ``target_dte`` (default 30,
+    the standard monthly / IV horizon) so the expected move & IV are useful for a
+    multi-day swing rather than a 3-day scalp.
 
     Returns a JSON-serialisable dict, or None if no usable chain is available.
     """
@@ -161,20 +168,22 @@ def compute_options(symbol: str, spot: float, max_days: int = 45,
     if cached and now - cached[0] < _TTL_SEC:
         return cached[1]
 
-    result = _compute(symbol, spot, max_days, hv30)
+    result = _compute(symbol, spot, max_days, hv30, min_dte, target_dte)
     _CACHE[symbol] = (now, result)
     return result
 
 
-def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
+def _compute(symbol: str, spot: float, max_days: int, hv30: float | None = None,
+             min_dte: int = 7, target_dte: int = 30) -> dict | None:
     """Source dispatch: yfinance first (full chain incl. OI/IV); if it's blocked
     (cloud IPs like Render), fall back to Alpaca quotes (IV via Black-Scholes
     inversion) — which omits OI, so the OI-based metrics come back null there."""
-    res = _compute_yf(symbol, spot, max_days, hv30)
-    return res if res is not None else _compute_alpaca(symbol, spot, max_days, hv30)
+    res = _compute_yf(symbol, spot, max_days, hv30, min_dte, target_dte)
+    return res if res is not None else _compute_alpaca(symbol, spot, max_days, hv30, min_dte, target_dte)
 
 
-def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
+def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = None,
+                min_dte: int = 7, target_dte: int = 30) -> dict | None:
     try:
         import yfinance as yf
     except Exception:
@@ -198,9 +207,13 @@ def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = No
         except Exception:
             return 9999
 
-    near = [e for e in exps if 0 <= _dte(e) <= max_days] or exps[:1]
-    near = near[:_MAX_EXPIRIES]
-    nearest = near[0]
+    # Swing-tuned expiry selection: skip the noisy current-week weeklies (< min_dte)
+    # and anchor to the expiry closest to target_dte (~30d, the monthly/IV horizon).
+    usable = sorted([e for e in exps if min_dte <= _dte(e) <= max_days], key=_dte)
+    if not usable:
+        usable = sorted(exps, key=_dte)[:1]          # fallback: soonest available
+    nearest = min(usable, key=lambda e: abs(_dte(e) - target_dte))   # the anchor expiry
+    near = sorted(sorted(usable, key=lambda e: abs(_dte(e) - _dte(nearest)))[:_MAX_EXPIRIES], key=_dte)
     dte = max(_dte(nearest), 0)
 
     # ── Aggregate volume / open interest across the near expiries ──────────────
@@ -371,7 +384,8 @@ def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = No
 _ALPACA_OPT_URL = "https://data.alpaca.markets/v1beta1/options/snapshots/{}"
 
 
-def _compute_alpaca(symbol: str, spot: float, max_days: int, hv30: float | None = None) -> dict | None:
+def _compute_alpaca(symbol: str, spot: float, max_days: int, hv30: float | None = None,
+                    min_dte: int = 7, target_dte: int = 30) -> dict | None:
     key, sec = os.getenv("ALPACA_API_KEY", ""), os.getenv("ALPACA_API_SECRET", "")
     if not key or not sec or spot <= 0:
         return None
@@ -420,8 +434,11 @@ def _compute_alpaca(symbol: str, spot: float, max_days: int, hv30: float | None 
     if not rows:
         return None
 
+    # Skip the noisy current-week weeklies (< min_dte); anchor to the expiry
+    # closest to target_dte (~30d) for IV / expected move / skew.
+    rows = [r for r in rows if r["dte"] >= min_dte] or rows
     exps = sorted({r["exp"] for r in rows})
-    nearest = exps[0]
+    nearest = min(exps, key=lambda e: abs((e - today).days - target_dte))
     dte = max((nearest - today).days, 0)
     T = max(dte, 1) / 365.0
     calls = [r for r in rows if r["type"] == "call"]

@@ -1061,7 +1061,8 @@ in_golden_pocket = golden.low <= price <= golden.high`}
           confluence layer — not a P Score input</strong>.
         </p>
 
-        <CodeBlock>{`# Near-dated chain (nearest expiry for IV/skew; ≤3 expiries summed for ratios)
+        <CodeBlock>{`# Expiry: skip <7 DTE weeklies (theta-noisy), anchor to ~30 DTE (monthly/IV horizon)
+# → swing-relevant expected move & IV, not a 3-day scalp. Chain ≤60 DTE.
 ATM IV            = avg(impliedVol of nearest-strike call & put)        # how big a move is priced
 IV Rank (IBKR)    = 30-day ATM IV / 30-day realised (historical) vol     # rich >1.2, cheap <0.8
                     # the volatility risk premium — needs NO IV history (HV from price + live IV)

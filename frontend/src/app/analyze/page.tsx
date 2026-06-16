@@ -703,7 +703,7 @@ function AnalyzeInner() {
               <Card title="Options (leading)">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-3">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${leanCfg.c}`}>{leanCfg.t}</span>
-                  <span>nearest expiry <strong className="font-mono">{o.nearest_expiry}</strong> · {o.dte}d</span>
+                  <span title="Skips current-week weeklies (<7 DTE); anchored to the ~30-day monthly horizon for swing-relevant IV & expected move">expiry <strong className="font-mono">{o.nearest_expiry}</strong> · {o.dte}d (swing horizon)</span>
                   {o.unusual_activity && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">unusual activity</span>}
                   <span className="text-gray-300">·</span>
                   <span className="text-gray-400">{o.expiries_used} expiries · {o.source}</span>
