@@ -145,63 +145,93 @@ def _parse_occ(sym: str):
     return exp, ("call" if cp == "C" else "put"), int(strike) / 1000.0
 
 
-def _interpret(o: dict, spot: float) -> str:
-    """Plain-English interpretation of the snapshot — reads the metrics together the
-    way an analyst would, gracefully skipping any the data source omits."""
-    s: list[str] = []
+def _interpret_points(o: dict, spot: float) -> list[dict]:
+    """Per-metric plain-English interpretation as labelled bullets — each reads the
+    metric's value AND explains what it means for this stock. Skips metrics the data
+    source omits (e.g. OI on the Alpaca fallback)."""
+    pts: list[dict] = []
     lean, dte, exp = o.get("lean", "neutral"), o.get("dte"), o.get("nearest_expiry")
-    horizon = f"over the next ~{dte} days" if dte else "near-term"
-    s.append({"bullish": f"Options are leaning bullish {horizon}.",
-              "bearish": f"Options are leaning bearish {horizon}.",
-              }.get(lean, f"Options positioning is roughly balanced {horizon}."))
 
-    iv, hv, iv_state = o.get("atm_iv"), o.get("hv"), o.get("iv_state")
-    if iv is not None and iv_state == "rich" and hv:
-        s.append(f"Implied volatility is {iv}% — rich versus the {hv}% the stock has actually realised, i.e. a fear or pre-catalyst premium.")
-    elif iv is not None and iv_state == "cheap" and hv:
-        s.append(f"Implied volatility is {iv}% — actually cheap versus the {hv}% realised, so options are underpricing how much the stock moves.")
-    elif iv is not None and hv:
-        s.append(f"Implied volatility is {iv}%, roughly in line with the {hv}% realised (fairly priced).")
-    elif iv is not None:
-        s.append(f"Implied volatility is {iv}%.")
+    pts.append({"label": "Outlook", "detail":
+        f"Options are leaning {lean} over the next ~{dte} days. This is leading context — how traders are "
+        "positioned and what they're paying for — not a standalone buy/sell trigger."})
+
+    iv, hv, ivr, ivs = o.get("atm_iv"), o.get("hv"), o.get("iv_hv"), o.get("iv_state")
+    if iv is not None:
+        d = f"Implied volatility is {iv}% — the size of move the market expects (annualised)."
+        if ivs == "cheap" and hv:
+            d += (f" That's below the {hv}% the stock has actually realised (IV Rank {ivr}×), so options look cheap — "
+                  "the market may be underpricing the next move; cheap premium favours buying options / breakouts over selling.")
+        elif ivs == "rich" and hv:
+            d += (f" That's above the {hv}% realised (IV Rank {ivr}×), so options are expensive — a fear or pre-catalyst "
+                  "premium is priced in, and an IV crush is a risk if the event passes quietly.")
+        elif hv:
+            d += f" Roughly in line with the {hv}% realised (IV Rank {ivr}×) — fairly priced."
+        pts.append({"label": "Implied volatility & IV Rank", "detail": d})
 
     emp, ema = o.get("expected_move_pct"), o.get("expected_move_abs")
     if emp is not None and spot > 0:
         lo, hi = round(spot * (1 - emp / 100), 2), round(spot * (1 + emp / 100), 2)
-        s.append(f"The market is pricing a ±{emp}% move (±${ema}) by {exp}, so the realistic swing band is about ${lo}–${hi} — a target beyond that is a stretch in this window.")
+        pts.append({"label": "Expected move", "detail":
+            f"The market is pricing a ±{emp}% move (±${ema}) by {exp} — the at-the-money straddle, i.e. the range traders "
+            f"are actually paying for. That puts the realistic swing band around ${lo}–${hi}; keep targets and stops inside "
+            "it, because a target beyond that band is a statistical stretch for this expiry."})
 
-    sk, pcv = o.get("skew"), o.get("put_call_vol")
-    dbits = []
+    sk = o.get("skew")
     if sk is not None:
-        dbits.append(f"skew is negative ({sk}), so traders are paying up for upside calls (bullish demand)" if sk < -1
-                     else f"skew is elevated (+{sk}), showing demand for downside protection (hedging/fear)" if sk > 3
-                     else "skew is roughly flat")
-    if pcv is not None:
-        dbits.append(f"flow is call-heavy (P/C vol {pcv})" if pcv < 0.7
-                     else f"flow is put-heavy (P/C vol {pcv})" if pcv > 1.2
-                     else f"put/call flow is balanced ({pcv})")
-    if dbits:
-        s.append("On direction, " + "; ".join(dbits) + ".")
+        d = "Skew compares out-of-the-money put IV with call IV — fear (puts bid up) vs upside demand (calls bid up)."
+        d += (f" Here it's negative ({sk}): traders are paying up for upside calls — a bullish tell." if sk < -1
+              else f" Here it's elevated (+{sk}): demand for downside protection — a cautious/bearish tell." if sk > 3
+              else f" Here it's roughly flat ({sk}): no strong directional bias at the wings.")
+        pts.append({"label": "Skew", "detail": d})
 
-    aci, mp = o.get("aci_score"), o.get("max_pain")
-    oi_res, oi_sup = o.get("oi_resistance") or [], o.get("oi_support") or []
-    oibits = []
+    pcv = o.get("put_call_vol")
+    if pcv is not None:
+        d = f"Put÷call volume today is {pcv}."
+        d += (" Call-heavy flow (more calls than puts) — a bullish lean; it's a sentiment gauge, contrarian at extremes." if pcv < 0.7
+              else " Put-heavy flow — a defensive/bearish lean (contrarian at extremes)." if pcv > 1.2
+              else " Roughly balanced flow.")
+        pts.append({"label": "Put/call volume", "detail": d})
+
+    pco = o.get("put_call_oi")
+    if pco is not None:
+        pts.append({"label": "Put/call open interest", "detail":
+            f"Resting open interest is {pco} puts per call — positions already on the book, slower-moving and less noisy than daily volume."})
+
+    aci = o.get("aci_score")
     if aci is not None:
-        oibits.append(f"net delta-adjusted open interest is {o.get('aci_label')} ({aci:+})")
+        bd, sd = o.get("bull_daoi", 0), o.get("bear_daoi", 0)
+        pts.append({"label": "Accumulation (delta-adjusted OI)", "detail":
+            f"Net positioning is {o.get('aci_label')} ({aci:+}) — call open interest minus put, weighted by each option's "
+            f"delta so far-OTM lottery strikes count less ({bd:,} bullish vs {sd:,} bearish). +1 = fully net-long, "
+            "−1 = net-short; often the cleanest single positioning tell."})
+
+    mp = o.get("max_pain")
     if mp is not None:
         dd = o.get("max_pain_dist_pct") or 0
-        oibits.append(f"max pain sits at ${mp} ({abs(dd)}% {'above' if dd > 0 else 'below'}, a weak pin this far out)")
-    if oi_res:
-        oibits.append("OI resistance near " + ", ".join(f"${l['strike']}" for l in oi_res))
-    if oi_sup:
-        oibits.append("OI support near " + ", ".join(f"${l['strike']}" for l in oi_sup))
-    if oibits:
-        s.append("Positioning: " + "; ".join(oibits) + ".")
-    else:
-        s.append("Open-interest metrics (max pain, ACI, OI walls) aren't available from the live data feed.")
+        d = (f"Max pain — the strike where option holders lose most and writers pay least, a mild 'pin' into expiry — "
+             f"sits at ${mp} ({abs(dd)}% {'above' if dd > 0 else 'below'} price).")
+        if abs(dd) <= 3 or (dte or 0) > 14:
+            d += " It's near the money and weeks out, so it exerts little directional pull now (the pin only bites in the last days before expiry)."
+        pts.append({"label": "Max pain", "detail": d})
 
-    s.append("Read this as leading context, not a trigger — confirm direction with price and the firing setup; the signal fades within ~a month.")
-    return " ".join(s)
+    res, sup = o.get("oi_resistance") or [], o.get("oi_support") or []
+    if res or sup:
+        bits = []
+        if res:
+            bits.append("heavy call OI overhead at " + ", ".join(f"${l['strike']}" for l in res) + " is potential resistance where rallies may stall")
+        if sup:
+            bits.append("heavy put OI below at " + ", ".join(f"${l['strike']}" for l in sup) + " is potential support where dips may be defended")
+        pts.append({"label": "Open-interest walls", "detail":
+            "The biggest open-interest clusters act like barriers: " + "; ".join(bits) + "."})
+    elif aci is None:
+        pts.append({"label": "Open-interest metrics", "detail":
+            "P/C OI, max pain, ACI and OI walls aren't available from the current fallback data source (they need open interest)."})
+
+    pts.append({"label": "Bottom line", "detail":
+        f"Net, options lean {lean} — but this is confluence, not a signal. Confirm direction with price and the firing "
+        "setup before acting, and remember the read fades within ~a month."})
+    return pts
 
 
 def compute_options(symbol: str, spot: float, max_days: int = 60,
@@ -229,7 +259,9 @@ def compute_options(symbol: str, spot: float, max_days: int = 60,
 
     result = _compute(symbol, spot, max_days, hv30, min_dte, target_dte)
     if result is not None:
-        result["interpretation"] = _interpret(result, spot)
+        pts = _interpret_points(result, spot)
+        result["interpretation_points"] = pts                       # [{label, detail}] for the UI
+        result["interpretation"] = " ".join(p["detail"] for p in pts)  # flat paragraph (agent / fallback)
     _CACHE[symbol] = (now, result)
     return result
 

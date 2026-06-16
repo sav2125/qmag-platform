@@ -767,9 +767,20 @@ function AnalyzeInner() {
                   </div>
                 )}
 
-                <div className="mt-3 bg-indigo-50/60 border border-indigo-100 rounded-lg px-3 py-2.5 text-[12.5px] text-gray-700 leading-relaxed">
-                  <span className="font-semibold text-indigo-700">What this is saying — </span>
-                  {o.interpretation ?? o.tell}
+                <div className="mt-3 bg-indigo-50/60 border border-indigo-100 rounded-lg px-3 py-2.5">
+                  <div className="font-semibold text-indigo-700 text-[12.5px] mb-1.5">What this is saying</div>
+                  {o.interpretation_points && o.interpretation_points.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {o.interpretation_points.map((p) => (
+                        <li key={p.label} className="text-[12.5px] text-gray-700 leading-relaxed flex gap-2">
+                          <span className="text-indigo-400 select-none mt-px">•</span>
+                          <span><span className="font-semibold text-gray-800">{p.label}:</span> {p.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[12.5px] text-gray-700 leading-relaxed">{o.interpretation ?? o.tell}</p>
+                  )}
                 </div>
                 <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
                   <strong>Why it&apos;s leading:</strong> options price future <em>expectations</em>, not past action. The <strong>expected move</strong>
