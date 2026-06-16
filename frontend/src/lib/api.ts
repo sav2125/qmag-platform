@@ -280,6 +280,25 @@ export interface OptionsSnapshot {
   tell:              string;
   interpretation:    string;   // per-stock plain-English read (flat paragraph)
   interpretation_points: { label: string; detail: string }[];   // per-metric bullets
+  gex:               GammaExposure | null;       // dealer gamma (CBOE path only)
+  term_structure:    IVTermStructure | null;     // front vs ~45d ATM IV
+}
+
+export interface GammaExposure {
+  gex_musd:  number;                       // $ per 1% move, in $M (signed)
+  regime:    "positive" | "negative";      // positive = pinning; negative = amplifying
+  flip:      number | null;                // zero-gamma flip price
+  call_wall: number | null;                // strongest call-gamma strike above spot
+  put_wall:  number | null;                // strongest put-gamma strike below spot
+}
+
+export interface IVTermStructure {
+  front_dte: number;
+  front_iv:  number;   // %
+  back_dte:  number;
+  back_iv:   number;   // %
+  ratio:     number;   // front_iv / back_iv
+  state:     "backwardation" | "contango" | "flat";
 }
 
 export interface OILevel {

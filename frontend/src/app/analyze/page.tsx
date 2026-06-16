@@ -762,6 +762,16 @@ function AnalyzeInner() {
                         o.aci_score == null ? undefined : `${o.aci_label} · ${o.bull_daoi.toLocaleString()}↑ / ${o.bear_daoi.toLocaleString()}↓`,
                         o.aci_label === "bullish" ? "text-green-700" : o.aci_label === "bearish" ? "text-red-600" : "text-gray-800",
                         "Accumulation lean: call-side minus put-side open interest, each weighted by Black-Scholes delta (so a far-OTM lottery strike counts far less than an at-the-money one). +1 = fully bullish positioning, −1 = bearish. (Needs OI — unavailable on the Alpaca fallback, which is only used if CBOE & yfinance are unreachable.)")}
+                  {o.gex && stat("Dealer gamma (GEX)",
+                        `${o.gex.gex_musd > 0 ? "+" : ""}${o.gex.gex_musd}M`,
+                        o.gex.flip != null ? `${o.gex.regime} · flip $${o.gex.flip}` : o.gex.regime,
+                        o.gex.regime === "negative" ? "text-amber-700" : "text-gray-800",
+                        "Net dealer gamma, $ per 1% move. POSITIVE = dealers dampen moves (price pins, vol suppressed → fade extremes); NEGATIVE = dealers amplify moves (trend/volatility expansion → breakouts run). The 'flip' is the price where it crosses zero — above it stabilising, below it an accelerant. Assumes the standard dealers-long-calls/short-puts convention.")}
+                  {o.term_structure && stat("IV term structure",
+                        o.term_structure.state,
+                        `${o.term_structure.front_iv}% (${o.term_structure.front_dte}d) → ${o.term_structure.back_iv}% (${o.term_structure.back_dte}d)`,
+                        o.term_structure.state === "backwardation" ? "text-amber-700" : "text-gray-800",
+                        "Front-expiry ATM IV vs ~45-day ATM IV. BACKWARDATION (front > back) = the market is pricing an imminent event/catalyst — a near-term move is expected. CONTANGO (front < back) = normal/calm, no near-term event premium.")}
                 </div>
 
                 {(o.oi_support.length > 0 || o.oi_resistance.length > 0) && (

@@ -1082,6 +1082,9 @@ max_pain          = strike minimising Σ ITM payoff (calls OI·max(0,S−K) + pu
 ACI level         = (Σ call OI·Δ − Σ put OI·|Δ|) / total   # delta-adjusted-OI sentiment, −1..+1
                     # Δ = Black-Scholes delta (so a far-OTM lottery strike counts less than ATM)
 oi_support/resist = biggest put-OI strikes below price / call-OI strikes above   # "sentiment map"
+GEX               = Σ (call γ·OI − put γ·OI) × 100 × spot² × 0.01   # net dealer $-gamma per 1% move
+                    # +ve = dealers dampen moves (pin); −ve = amplify. flip = price where GEX crosses 0.
+term structure    = front-expiry ATM IV vs ~45-day ATM IV   # backwardation (front>back) = imminent event
 
 # Sentiment lean (context, contrarian-aware)
 bullish  if call-heavy flow (P/C vol < 0.7) or call-skewed IV (skew < −1)
@@ -1093,7 +1096,7 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
           <li><strong>Expectation-pricing</strong> (IV, expected move) — the strongest, cleanest use. The expected move pairs directly with <strong>EP / catalyst setups</strong>: it sizes realistic targets and stops around the event.</li>
           <li><strong>Sentiment</strong> (put/call ratio, skew) — leading <em>at extremes</em>, and contrarian: extreme fear is bullish, extreme complacency bearish.</li>
           <li><strong>Smart-money positioning</strong> (unusual activity, OI build) — sometimes informed, but noisy (could be hedges/spreads), so treated as a flag, not a signal.</li>
-          <li><strong>Dealer flow</strong> (max pain now shipped; gamma exposure deferred) — the max-pain pin is OI gravity into expiry; leading more for short horizons than multi-week swings.</li>
+          <li><strong>Dealer flow</strong> (max pain + GEX shipped) — max pain is OI gravity into expiry; <strong>gamma exposure</strong> shows whether dealers are pinning (positive) or amplifying (negative) moves, with a zero-gamma flip level. Leading more for short horizons than multi-week swings.</li>
         </ul>
 
         <p className="mt-3 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
@@ -1111,7 +1114,7 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
           The <strong>ACI level</strong> (delta-adjusted-OI sentiment) + OI-derived support/resistance ship now from each snapshot — no history needed.
           <strong> Deferred (Phase 2):</strong> the ACI <em>change</em> (ΔDAOI over 1/5/30 days) and a live EHD hedging-demand both need
           daily OI/Greeks <em>persistence</em> (the chain API only ever returns "now"); IV <em>percentile</em> vs the 52-week range needs IV history;
-          gamma exposure; and optionally feeding an options vote into the P Score once validated.
+          and optionally feeding an options vote into the P Score once validated.
         </p>
       </Section>
 

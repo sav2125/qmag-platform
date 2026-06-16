@@ -145,6 +145,92 @@ def _parse_occ(sym: str):
     return exp, ("call" if cp == "C" else "put"), int(strike) / 1000.0
 
 
+def _bs_gamma(S: float, K: float, T: float, sigma: float, r: float = _RISK_FREE) -> float:
+    """Black-Scholes gamma (same for calls and puts)."""
+    if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
+        return 0.0
+    d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    pdf = math.exp(-0.5 * d1 * d1) / math.sqrt(2 * math.pi)
+    return pdf / (S * sigma * math.sqrt(T))
+
+
+def _gex(contracts: list[dict], spot: float, max_dte: int = 45) -> dict | None:
+    """Dealer Gamma Exposure. contracts: [{type, strike, oi, iv, dte}].
+
+    Convention: dealers are long call gamma and short put gamma (the standard
+    retail GEX assumption). Positive net GEX → dealers dampen moves (price pins,
+    vol suppressed); negative → they amplify moves (trend/volatility). The
+    zero-gamma 'flip' is the price where net dealer gamma crosses zero — a leading
+    regime line (above = pinned, below = accelerant)."""
+    rows = [c for c in contracts if 0 <= c["dte"] <= max_dte and c["oi"] > 0 and c["iv"] > 0]
+    if not rows:
+        return None
+
+    def net_at(S: float) -> float:
+        tot = 0.0
+        for c in rows:
+            g = _bs_gamma(S, c["strike"], max(c["dte"], 1) / 365.0, c["iv"])
+            tot += (g if c["type"] == "call" else -g) * c["oi"]
+        return tot
+
+    raw = net_at(spot)
+    gex_musd = round(raw * 100 * spot * spot * 0.01 / 1e6, 1)   # $ per 1% move, in $M
+    regime = "positive" if gex_musd > 0 else "negative"
+
+    # Zero-gamma flip: scan ±40% around spot for the sign change.
+    flip, lo, hi, steps = None, spot * 0.6, spot * 1.4, 60
+    prev_s = prev_n = None
+    for i in range(steps + 1):
+        S = lo + (hi - lo) * i / steps
+        n = net_at(S)
+        if prev_n is not None and ((prev_n < 0 <= n) or (prev_n > 0 >= n)) and n != prev_n:
+            flip = round(prev_s + (S - prev_s) * (0 - prev_n) / (n - prev_n), 2)
+            break
+        prev_s, prev_n = S, n
+
+    # Gamma walls: strikes with the most gamma×OI (call above spot, put below).
+    cg: dict[float, float] = {}
+    pg: dict[float, float] = {}
+    for c in rows:
+        g = _bs_gamma(spot, c["strike"], max(c["dte"], 1) / 365.0, c["iv"]) * c["oi"]
+        (cg if c["type"] == "call" else pg)[c["strike"]] = \
+            (cg if c["type"] == "call" else pg).get(c["strike"], 0.0) + g
+    call_wall = max((k for k in cg if k > spot), key=lambda k: cg[k], default=None)
+    put_wall = max((k for k in pg if k < spot), key=lambda k: pg[k], default=None)
+
+    return {"gex_musd": gex_musd, "regime": regime, "flip": flip,
+            "call_wall": round(call_wall, 2) if call_wall else None,
+            "put_wall": round(put_wall, 2) if put_wall else None}
+
+
+def _term_structure(contracts: list[dict], spot: float) -> dict | None:
+    """IV term structure: front-expiry ATM IV vs a ~45-day back-expiry ATM IV.
+    Backwardation (front > back) = near-term event/stress priced in (leading)."""
+    by_dte: dict[int, list] = {}
+    for c in contracts:
+        if c["iv"] > 0:
+            by_dte.setdefault(c["dte"], []).append(c)
+    dtes = sorted(by_dte)
+    if len(dtes) < 2:
+        return None
+
+    def atm_iv(rows):
+        return min(rows, key=lambda r: abs(r["strike"] - spot))["iv"]
+
+    front_dte = dtes[0]
+    back_dte = min((d for d in dtes if d > front_dte), key=lambda d: abs(d - 45), default=None)
+    if back_dte is None:
+        return None
+    fiv, biv = atm_iv(by_dte[front_dte]), atm_iv(by_dte[back_dte])
+    if fiv <= 0 or biv <= 0:
+        return None
+    ratio = round(fiv / biv, 2)
+    state = "backwardation" if ratio >= 1.05 else "contango" if ratio <= 0.95 else "flat"
+    return {"front_dte": front_dte, "front_iv": round(fiv * 100, 1),
+            "back_dte": back_dte, "back_iv": round(biv * 100, 1),
+            "ratio": ratio, "state": state}
+
+
 def _interpret_points(o: dict, spot: float) -> list[dict]:
     """Per-metric plain-English interpretation as labelled bullets — each reads the
     metric's value AND explains what it means for this stock. Skips metrics the data
@@ -227,6 +313,37 @@ def _interpret_points(o: dict, spot: float) -> list[dict]:
     elif aci is None:
         pts.append({"label": "Open-interest metrics", "detail":
             "P/C OI, max pain, ACI and OI walls aren't available from the current fallback data source (they need open interest)."})
+
+    gex = o.get("gex")
+    if gex:
+        if gex["regime"] == "positive":
+            d = ("Dealer gamma is positive — dealers are long gamma, so they sell rallies and buy dips, which dampens "
+                 "moves and tends to pin the price (mean-reverting, vol suppressed).")
+        else:
+            d = ("Dealer gamma is negative — dealers are short gamma, so they buy rallies and sell dips, which amplifies "
+                 "moves (trend / volatility expansion — breakouts tend to run further).")
+        if gex.get("flip"):
+            d += f" The zero-gamma flip is ${gex['flip']}: above it dealers stabilise, below it they accelerate — watch that line."
+        walls = []
+        if gex.get("call_wall"):
+            walls.append(f"call-gamma wall ${gex['call_wall']} (overhead pin/resistance)")
+        if gex.get("put_wall"):
+            walls.append(f"put-gamma wall ${gex['put_wall']} (downside pin/support)")
+        if walls:
+            d += " Gamma magnets: " + "; ".join(walls) + "."
+        pts.append({"label": "Dealer gamma (GEX)", "detail": d})
+
+    term = o.get("term_structure")
+    if term:
+        d = (f"IV term structure: front {term['front_dte']}d at {term['front_iv']}% vs {term['back_dte']}d at "
+             f"{term['back_iv']}% — {term['state']}.")
+        if term["state"] == "backwardation":
+            d += " Near-term IV is bid above longer-dated, so the market is pricing an imminent event/catalyst — expect a move soon."
+        elif term["state"] == "contango":
+            d += " Normal upward slope — no near-term event premium; calmer regime."
+        else:
+            d += " Roughly flat — no strong near-term event signal."
+        pts.append({"label": "IV term structure", "detail": d})
 
     pts.append({"label": "Bottom line", "detail":
         f"Net, options lean {lean} — but this is confluence, not a signal. Confirm direction with price and the firing "
@@ -444,6 +561,8 @@ def _compute_yf(symbol: str, spot: float, max_days: int, hv30: float | None = No
 
     return {
         "source":          "yfinance",
+        "gex":             None,          # GEX/term-structure computed on the CBOE path
+        "term_structure":  None,
         "nearest_expiry":  nearest,
         "dte":             dte,
         "expiries_used":   len(near),
@@ -601,6 +720,8 @@ def _compute_alpaca(symbol: str, spot: float, max_days: int, hv30: float | None 
 
     return {
         "source":          "alpaca",
+        "gex":             None,          # needs OI + gamma; CBOE-path only
+        "term_structure":  None,
         "nearest_expiry":  nearest.isoformat(),
         "dte":             dte,
         "expiries_used":   len(exps),
@@ -746,6 +867,11 @@ def _compute_cboe(symbol: str, spot: float, max_days: int, hv30: float | None = 
     max_pain = _max_pain(call_oi_strikes, put_oi_strikes)
     max_pain_dist = round((max_pain - spot) / spot * 100, 1) if max_pain and spot > 0 else None
 
+    # Gamma exposure + IV term structure (use the full chain incl. weeklies — gamma
+    # peaks near expiry and term structure needs the front week).
+    gex = _gex(contracts, spot)
+    term = _term_structure(contracts, spot)
+
     lean, tell_bits = "neutral", []
     call_heavy = pc_vol is not None and pc_vol < 0.7
     put_heavy = pc_vol is not None and pc_vol > 1.2
@@ -764,10 +890,16 @@ def _compute_cboe(symbol: str, spot: float, max_days: int, hv30: float | None = 
         tell_bits.append(f"delta-adj OI {aci_label} ({aci_score:+})")
     if max_pain is not None and max_pain_dist is not None:
         tell_bits.append(f"max pain ${max_pain:g} ({abs(max_pain_dist)}% {'above' if max_pain_dist > 0 else 'below'})")
+    if gex:
+        tell_bits.append(f"{gex['regime']} dealer gamma" + (f" (flip ${gex['flip']:g})" if gex.get('flip') else ""))
+    if term and term["state"] != "flat":
+        tell_bits.append(f"IV {term['state']} ({term['front_iv']}%→{term['back_iv']}%)")
     tell = "; ".join(tell_bits) if tell_bits else "balanced positioning, nothing unusual"
 
     return {
         "source":          "cboe",
+        "gex":             gex,
+        "term_structure":  term,
         "nearest_expiry":  anchor.isoformat(),
         "dte":             dte,
         "expiries_used":   len(near_exps),
