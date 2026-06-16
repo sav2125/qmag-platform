@@ -108,6 +108,24 @@ def market_positioning(refresh: bool = False):
         raise HTTPException(500, str(e))
 
 
+@app.get("/market/breadth")
+def market_breadth():
+    """Market breadth — % of large caps above 50/200-DMA, new highs vs lows,
+    advance/decline, with a divergence check vs SPY. A leading gauge of the
+    momentum environment. Computed over a ~100-name S&P sample, cached 6h."""
+    from scanner.breadth import get_breadth
+    try:
+        data = get_breadth()
+        if data is None:
+            raise HTTPException(503, "Breadth data unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Breadth error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/analyze/{symbol}")
 def analyze(symbol: str):
     """Full single-symbol analysis: all 7 setups, RSI/MACD/ADX, MA stack,

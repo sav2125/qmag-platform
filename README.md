@@ -56,6 +56,7 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **SPY put/call ratio** — computed from Alpaca options data across near-dated expirations (daily); fear ≥2.0 / complacency ≤1.1
 - **NAAIM Exposure Index** — active-manager equity exposure scraped from naaim.org (weekly); washed-out <30 / fully-invested >90
 - **Contrarian regime dial** — each source votes at extremes (fear = +1, crowded = −1); dial −3…+3 shown on the Dashboard as a sizing/aggression gate. Cached 12h. `GET /market/positioning`
+- **Market breadth** — leading "momentum environment" gauge over a ~100-name large-cap sample: % above 50/200-DMA, new highs−lows, advance/decline, a 0–100 breadth score + state (strong → risk-off), and a **divergence flag** (SPY near highs but breadth thin = narrowing advance). Plain-English read on the Dashboard. Cached 6h. `GET /market/breadth`
 
 ### Frontend
 - **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, a **"Why this score" per-driver P Score breakdown** (plain-English bullets — what's pushing the grade up/down, conviction, regime, penalty), early warnings, **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls), and a **Fibonacci grid** (retracement ladder + golden pocket + extension targets, anchored to the dominant ~6-month swing)
@@ -308,6 +309,7 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | `POST` | `/scan/refresh` | Force-rebuild today's snapshot for a given universe (`{"universe": "sp500"}`) |
 | `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 7 setups, RSI/MACD/ADX, checklist, warnings, trend-template criteria, multi-timeframe alignment, Fibonacci grid (`fibonacci`), options snapshot (`options`) |
 | `GET` | `/market/positioning` | Market positioning panel: CFTC COT, SPY put/call, NAAIM + contrarian regime dial. Cached 12h; `?refresh=true` to force |
+| `GET` | `/market/breadth` | Market breadth: % above 50/200-DMA, new highs−lows, A/D, breadth score + state + divergence flag. Cached 6h |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
 | `GET` | `/watchlist` | Get saved watchlist symbols |
 | `POST` | `/watchlist` | Add symbol to watchlist |
@@ -350,6 +352,7 @@ qmag-platform/
 │   │   ├── fib.py               Fibonacci grid (retracements + extensions + golden pocket), swing-anchored
 │   │   ├── options.py           Per-symbol options: IV, expected move, skew, P/C ratios, unusual activity (leading)
 │   │   ├── positioning.py       Market positioning: CFTC COT, SPY put/call, NAAIM + regime dial
+│   │   ├── breadth.py           Market breadth: %>50/200-DMA, new highs−lows, A/D + divergence (leading)
 │   │   └── engine.py            Scan orchestration, filters, enrichment, quality grading
 │   └── notifier/
 │       └── email_sender.py      HTML email digest builder + SMTP sender

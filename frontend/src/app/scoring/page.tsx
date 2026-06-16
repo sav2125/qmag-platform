@@ -62,6 +62,7 @@ const TOC = [
   { id: "fibonacci",    label: "Analysis: Fibonacci Grid" },
   { id: "options",      label: "Analysis: Options (Leading)" },
   { id: "positioning",  label: "Market Positioning Dial" },
+  { id: "breadth",      label: "Market Breadth" },
   { id: "philosophy",   label: "Design Philosophy" },
 ];
 
@@ -1115,6 +1116,28 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
           <strong> Deferred (Phase 2):</strong> the ACI <em>change</em> (ΔDAOI over 1/5/30 days) and a live EHD hedging-demand both need
           daily OI/Greeks <em>persistence</em> (the chain API only ever returns "now"); IV <em>percentile</em> vs the 52-week range needs IV history;
           and optionally feeding an options vote into the P Score once validated.
+        </p>
+      </Section>
+
+      {/* Market Breadth */}
+      <Section id="breadth" title="📊 Market Breadth">
+        <p>
+          Breadth measures how many stocks <em>participate</em> in a move — and it&apos;s <strong>leading</strong>,
+          because it narrows <em>before</em> the index tops (fewer names hold up while the headline grinds higher).
+          For a momentum trader it&apos;s the &quot;should I be aggressive right now?&quot; dial, not a per-stock signal.
+        </p>
+        <CodeBlock>{`# Computed over a ~100-name large-cap S&P sample, cached 6h
+% > 50-DMA   = share of names above their 50-day moving average   # participation
+% > 200-DMA  = share above their 200-day                          # primary-trend health
+new H − L    = (names at/near 52-wk highs) − (near 52-wk lows)     # thrust / contraction
+advancers    = up today − down today                              # day's tilt
+breadth_score = (%>50DMA + %>200DMA) / 2     →  strong ≥65, healthy ≥50, mixed ≥40, weak ≥30, risk-off <30
+divergence   = SPY near 52-wk high  AND  %>200-DMA < 50           # narrow, fragile advance (leading caution)`}
+        </CodeBlock>
+        <p className="mt-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          The most important read is the <strong>divergence flag</strong>: when the index is near highs but breadth is
+          thin, the advance is being carried by a handful of names — historically a precursor to tops. The panel turns
+          that into plain-English guidance (be aggressive / be selective / reduce size / stand aside).
         </p>
       </Section>
 

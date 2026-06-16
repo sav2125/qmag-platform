@@ -100,7 +100,26 @@ export const api = {
     }),
 
   positioning: () => req<MarketPositioning>("/market/positioning"),
+  breadth: () => req<MarketBreadth>("/market/breadth"),
 };
+
+// ── Market breadth ────────────────────────────────────────────────────────────
+
+export interface MarketBreadth {
+  pct_above_50dma:  number;
+  pct_above_200dma: number;
+  new_highs:        number;
+  new_lows:         number;
+  net_highs_lows:   number;
+  advancers:        number;
+  decliners:        number;
+  net_advancers:    number;
+  universe_size:    number;
+  breadth_score:    number;   // 0–100
+  state:            "strong" | "healthy" | "mixed" | "weak" | "risk-off";
+  divergent:        boolean;
+  interpretation_points: { label: string; detail: string }[];
+}
 
 // ── Market positioning types ──────────────────────────────────────────────────
 

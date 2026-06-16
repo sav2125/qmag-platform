@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { api, type Setup, type ScanParams } from "@/lib/api";
 import { SetupTable } from "@/components/SetupTable";
 import MarketPositioningPanel from "@/components/MarketPositioning";
+import MarketBreadthPanel from "@/components/MarketBreadth";
 
 const UNIVERSES = [
   { value: "all",        label: "All US Equities (~7 000 stocks)" },
@@ -128,6 +129,9 @@ export default function Dashboard() {
 
       {/* Market positioning — forward-looking regime dial */}
       <MarketPositioningPanel />
+
+      {/* Market breadth — leading momentum-environment gauge */}
+      <MarketBreadthPanel />
 
       {/* Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
