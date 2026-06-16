@@ -734,21 +734,21 @@ function AnalyzeInner() {
                         "Put volume ÷ call volume (today's flow). <0.7 = call-heavy (bullish lean); >1.2 = put-heavy. Sentiment gauge — contrarian at extremes.")}
                   {stat("P/C open int.", o.put_call_oi != null ? o.put_call_oi.toFixed(2) : "—",
                         `${o.call_oi.toLocaleString()}C / ${o.put_oi.toLocaleString()}P`, undefined,
-                        "Put ÷ call open interest — the resting positioning that's already on the book. Slower-moving and less noisy than the volume ratio. (Unavailable on the Alpaca live feed.)")}
+                        "Put ÷ call open interest — the resting positioning that's already on the book. Slower-moving and less noisy than the volume ratio. (Unavailable on the Alpaca fallback, which is only used if CBOE & yfinance are unreachable.)")}
                   {stat("Volume / OI", o.vol_oi_ratio != null ? o.vol_oi_ratio.toFixed(2) : "—",
                         o.unusual_activity ? "fresh positioning" : "normal",
                         o.unusual_activity ? "text-amber-700" : undefined,
-                        "Today's total option volume ÷ open interest. ≥0.5 flags fresh positioning ('unusual activity') being put on today, rather than old resting bets. (Needs OI — unavailable on the Alpaca live feed.)")}
+                        "Today's total option volume ÷ open interest. ≥0.5 flags fresh positioning ('unusual activity') being put on today, rather than old resting bets. (Needs OI — unavailable on the Alpaca fallback, which is only used if CBOE & yfinance are unreachable.)")}
                   {stat("Max pain",
                         o.max_pain != null ? `$${o.max_pain.toFixed(2)}` : "—",
                         o.max_pain_dist_pct != null ? `${o.max_pain_dist_pct > 0 ? "+" : ""}${o.max_pain_dist_pct}% from price` : "pin price",
                         o.max_pain_dist_pct == null ? undefined : Math.abs(o.max_pain_dist_pct) <= 3 ? "text-amber-700" : "text-gray-800",
-                        "The strike where option holders lose the most / writers pay the least — price tends to gravitate (pin) toward it into expiry. A short-horizon magnet; weak for multi-week swings. (Needs OI — unavailable on the Alpaca live feed.)")}
+                        "The strike where option holders lose the most / writers pay the least — price tends to gravitate (pin) toward it into expiry. A short-horizon magnet; weak for multi-week swings. (Needs OI — unavailable on the Alpaca fallback, which is only used if CBOE & yfinance are unreachable.)")}
                   {stat("ACI (delta-adj OI)",
                         o.aci_score != null ? `${o.aci_score > 0 ? "+" : ""}${o.aci_score}` : "—",
                         o.aci_score == null ? undefined : `${o.aci_label} · ${o.bull_daoi.toLocaleString()}↑ / ${o.bear_daoi.toLocaleString()}↓`,
                         o.aci_label === "bullish" ? "text-green-700" : o.aci_label === "bearish" ? "text-red-600" : "text-gray-800",
-                        "Accumulation lean: call-side minus put-side open interest, each weighted by Black-Scholes delta (so a far-OTM lottery strike counts far less than an at-the-money one). +1 = fully bullish positioning, −1 = bearish. (Needs OI — unavailable on the Alpaca live feed.)")}
+                        "Accumulation lean: call-side minus put-side open interest, each weighted by Black-Scholes delta (so a far-OTM lottery strike counts far less than an at-the-money one). +1 = fully bullish positioning, −1 = bearish. (Needs OI — unavailable on the Alpaca fallback, which is only used if CBOE & yfinance are unreachable.)")}
                 </div>
 
                 {(o.oi_support.length > 0 || o.oi_resistance.length > 0) && (
