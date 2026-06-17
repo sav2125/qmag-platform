@@ -104,6 +104,7 @@ export const api = {
   sectors: () => req<SectorRotation>("/market/sectors"),
   factors: () => req<FactorLeadership>("/market/factors"),
   regime: () => req<MarketRegime>("/market/regime"),
+  gip: () => req<MacroQuad>("/market/gip"),
   shortVolume: (symbol: string) => req<ShortVolume>(`/short-volume/${symbol}`),
   insider: (symbol: string) => req<Insider>(`/insider/${symbol}`),
 };
@@ -199,6 +200,33 @@ export interface MarketRegime {
   as_of:     string;
   monthly:   QuadRead | null;   // weather — intermediate-term (~1mo) tactical overlay
   quarterly: QuadRead | null;   // climate — longer-term (~3mo) dominant regime
+  aligned:   boolean;
+  interpretation_points: { label: string; detail: string }[];
+}
+
+// ── Fundamental GIP Quad (FRED GDP/CPI/IP rate-of-change — the DATA read) ──────
+
+export interface FundamentalQuadRead {
+  quad:               number;
+  quad_name:          string;
+  quad_tag:           string;
+  growth:             string;   // accelerating / decelerating
+  growth_delta_bps:   number;
+  growth_metric:      string;   // "Real GDP YoY" / "Industrial Production YoY"
+  growth_yoy:         number;
+  growth_yoy_prev:    number;
+  growth_date:        string;
+  inflation:          string;
+  inflation_delta_bps: number;
+  cpi_yoy:            number;
+  cpi_yoy_prev:       number;
+  cpi_date:           string;
+}
+
+export interface MacroQuad {
+  as_of:     string;
+  quarterly: FundamentalQuadRead | null;   // climate — Real GDP
+  monthly:   FundamentalQuadRead | null;   // weather — Industrial Production
   aligned:   boolean;
   interpretation_points: { label: string; detail: string }[];
 }

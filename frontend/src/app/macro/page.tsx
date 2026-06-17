@@ -1,4 +1,5 @@
 import MarketRegimePanel from "@/components/MarketRegime";
+import FundamentalQuadPanel from "@/components/FundamentalQuad";
 import MarketPositioningPanel from "@/components/MarketPositioning";
 import MarketBreadthPanel from "@/components/MarketBreadth";
 import SectorRotationPanel from "@/components/SectorRotation";
@@ -15,14 +16,19 @@ export default function MacroPage() {
           The market-context layer — the regime a momentum trader is operating inside. Everything here is{" "}
           <strong>context for sizing and where to hunt</strong>, not a per-stock signal: it tells you whether to be
           aggressive or defensive, and which groups and factors are leading. Inspired by Hedgeye&apos;s GIP process,
-          built entirely on free data. See{" "}
+          built entirely on free data. The regime is shown two ways — the <strong>price-implied Quad</strong> (what the
+          tape is trading) and the <strong>fundamental Quad</strong> (what the GDP/CPI data say); when they
+          <strong> diverge</strong>, the market is pricing one regime while the data turns toward another. See{" "}
           <a href="/scoring#regime" className="text-indigo-500 hover:underline">Scoring → Market-Implied Quad</a>{" "}
           for the methodology.
         </p>
       </div>
 
-      {/* Capstone: dual-horizon Quad regime (climate + weather) */}
+      {/* Capstone: dual-horizon Quad regime (climate + weather) — the TAPE */}
       <MarketRegimePanel />
+
+      {/* Fundamental Quad — the DATA (GDP/CPI), with tape-vs-data divergence */}
+      <FundamentalQuadPanel />
 
       {/* Supporting context, finest → coarsest */}
       <MarketPositioningPanel />

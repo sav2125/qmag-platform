@@ -181,6 +181,25 @@ def market_regime():
         raise HTTPException(500, str(e))
 
 
+@app.get("/market/gip")
+def market_gip():
+    """Fundamental GIP Quad — the macro DATA read (FRED GDP/CPI/Industrial-Production
+    rate-of-change, Hedgeye-style). Dual horizon: quarterly (climate, GDP) + monthly
+    (weather, IP), both with Headline CPI. The complement to /market/regime (the
+    price-implied read) — divergence = the tape and the data disagree. Cached 12h."""
+    from scanner.macro_quad import get_macro_quad
+    try:
+        data = get_macro_quad()
+        if data is None:
+            raise HTTPException(503, "Macro data unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("GIP error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/short-volume/{symbol}")
 def short_volume(symbol: str):
     """Per-symbol short-sale-volume pressure from FINRA's daily Reg SHO files — a free

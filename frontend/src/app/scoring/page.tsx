@@ -67,6 +67,7 @@ const TOC = [
   { id: "sectors",      label: "Sector RS Rotation" },
   { id: "factors",      label: "Style-Factor Leadership" },
   { id: "regime",       label: "Market-Implied Quad" },
+  { id: "gip",          label: "Fundamental Quad (GDP/CPI)" },
   { id: "shortvol",     label: "Short-Volume Pressure" },
   { id: "insider",      label: "Insider Activity (Form 4)" },
   { id: "philosophy",   label: "Design Philosophy" },
@@ -1321,6 +1322,37 @@ energy/materials    3-month relative                 1-month relative`}</CodeBlo
           nowcast; the inflation axis is the weaker-inferred one (few clean free signals). Every vote is shown in the
           panel&apos;s &quot;signals that voted&quot; expander so you can judge it yourself. Context for sizing and
           where to hunt — <strong>not a P Score input</strong>.
+        </p>
+      </Section>
+
+      {/* Fundamental Quad (GDP/CPI) */}
+      <Section id="gip" title="📐 Fundamental Quad (GDP / CPI — the DATA)">
+        <p>
+          The Market-Implied Quad above reads the <em>tape</em> (price action). This one reads the <strong>data</strong> —
+          the actual macro numbers, exactly the way Hedgeye&apos;s GIP model classifies regimes: by the <strong>first
+          difference of year-over-year Growth and Inflation</strong> (is each accelerating or decelerating). Built on
+          free FRED series (no key).
+        </p>
+        <CodeBlock>{`Growth — climate (quarterly)  = Real GDP YoY (FRED GDPC1), this quarter vs last
+Growth — weather (monthly)    = Industrial Production YoY (FRED INDPRO), 3-mo change   [timelier proxy]
+Inflation — both              = Headline CPI YoY (FRED CPIAUCSL)
+
+quad:  G accel & I decel → 1 Goldilocks   |   G accel & I accel → 2 Reflation
+       G decel & I accel → 3 Stagflation  |   G decel & I decel → 4 Deflation
+# climate aligns CPI to the GDP quarter (clean single-period read);
+# weather uses the freshest monthly data (catches turns early).`}</CodeBlock>
+        <h3 className="font-semibold text-gray-800 mt-3">Tape vs Data — the whole point</h3>
+        <p>
+          Showing both side by side is the payoff. The <strong>tape</strong> (price-implied) and the <strong>data</strong>
+          (GDP/CPI) usually agree — but when they <em>diverge</em>, the market is pricing one regime while the
+          fundamentals are turning toward another. That gap is the early warning Hedgeye captures with
+          <em> &quot;Quad&nbsp;1 is bullish until it isn&apos;t&quot;</em>: the tape can keep trading risk-on for a while
+          after the data has rolled into a higher-inflation or lower-growth quad. The panel flags the split automatically.
+        </p>
+        <p className="mt-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          <strong>Trailing, not a forecast.</strong> This is the latest <em>released</em> data (GDP lags ~1 quarter,
+          CPI/IP ~2–6 weeks) — a real, reproducible read, but it can lag a fast inflection. It is not Hedgeye&apos;s
+          proprietary forward nowcast, and it is <strong>not a P Score input</strong> — it&apos;s top-down context.
         </p>
       </Section>
 
