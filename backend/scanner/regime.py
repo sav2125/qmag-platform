@@ -57,6 +57,89 @@ def get_regime() -> dict | None:
     return data
 
 
+# Per-horizon config: which lookback key each input uses.
+#   monthly  = intermediate-term "weather"  (~1-month signals, 50-DMA breadth, 1mo credit change)
+#   quarterly= longer-term "climate"         (~3-month signals, 200-DMA breadth, credit z-level)
+_HORIZONS = {
+    "monthly":   {"sector_key": "m1", "factor_key": "m1", "breadth_field": "pct_above_50dma",
+                  "breadth_lbl": "50-DMA", "credit_field": "change_1m"},
+    "quarterly": {"sector_key": "m3", "factor_key": "m3", "breadth_field": "pct_above_200dma",
+                  "breadth_lbl": "200-DMA", "credit_field": "z"},
+}
+_HZ_LBL = {"monthly": "1-month", "quarterly": "3-month"}
+
+
+def _score_horizon(hz: str, sectors, factors, breadth, credit) -> dict | None:
+    cfg = _HORIZONS[hz]
+    sk, fk = cfg["sector_key"], cfg["factor_key"]
+    hzlbl = _HZ_LBL[hz]
+    g_votes, i_votes, evidence = [], [], []
+
+    def vote(axis, label, detail, v):
+        (g_votes if axis == "growth" else i_votes).append(v)
+        evidence.append({"axis": axis, "label": label, "detail": detail, "vote": v})
+
+    rel = {}
+    if sectors:
+        rel = {r["symbol"]: (r.get("rel") or {}) for r in sectors["sectors"]}
+        cyc = [rel[s][sk] for s in _CYCLICAL if rel.get(s, {}).get(sk) is not None]
+        dfv = [rel[s][sk] for s in _DEFENSIVE if rel.get(s, {}).get(sk) is not None]
+        if cyc and dfv:
+            tilt = sum(cyc) / len(cyc) - sum(dfv) / len(dfv)
+            vote("growth", "Sector leadership",
+                 f"Cyclicals {'leading' if tilt >= 0 else 'lagging'} defensives by {tilt:+.1f}pp ({hzlbl} RS).",
+                 1 if tilt >= 0 else -1)
+    if factors:
+        fmap = {f["factor"]: f for f in factors["factors"]}
+        for fname, lbl, up, dn in [("Beta", "Risk appetite (Beta)", "high-beta leading", "low-beta leading"),
+                                   ("Momentum", "Momentum factor", "in gear", "out of favor")]:
+            sp = fmap.get(fname, {}).get("spread", {}).get(fk)
+            if sp is not None:
+                vote("growth", lbl, f"{(up if sp >= 0 else dn).capitalize()} ({sp:+}% {hzlbl}).", 1 if sp >= 0 else -1)
+    if breadth and breadth.get(cfg["breadth_field"]) is not None:
+        pv = breadth[cfg["breadth_field"]]
+        vote("growth", "Market breadth",
+             f"{pv}% of large caps above their {cfg['breadth_lbl']} — participation {'healthy' if pv >= 50 else 'thin'}.",
+             1 if pv >= 50 else -1)
+    if credit and credit.get(cfg["credit_field"]) is not None:
+        cv = credit[cfg["credit_field"]]
+        if hz == "monthly":
+            vote("growth", "Credit (HY OAS, 1mo)",
+                 f"HY spreads {'tightening' if cv <= 0 else 'widening'} {cv:+}pp over the month.", 1 if cv <= 0 else -1)
+        else:
+            vote("growth", "Credit (HY OAS, z-score)",
+                 f"HY spreads {'below' if cv <= 0 else 'above'} their multi-year average (z {cv:+}).", 1 if cv <= 0 else -1)
+
+    # Inflation axis
+    if rel:
+        infl = [rel[s][sk] for s in _INFLATION if rel.get(s, {}).get(sk) is not None]
+        if infl:
+            avg = sum(infl) / len(infl)
+            vote("inflation", "Energy/Materials leadership",
+                 f"Energy + Materials {'leading' if avg >= 0 else 'lagging'} the market ({avg:+.1f}pp {hzlbl}).",
+                 1 if avg >= 0 else -1)
+        xle, xlk = rel.get("XLE", {}).get(sk), rel.get("XLK", {}).get(sk)
+        if xle is not None and xlk is not None:
+            d = xle - xlk
+            vote("inflation", "Real assets vs growth",
+                 f"Energy {'outperforming' if d >= 0 else 'underperforming'} Tech by {d:+.1f}pp ({hzlbl}).",
+                 1 if d >= 0 else -1)
+
+    if not g_votes:
+        return None
+    g, i = sum(g_votes), (sum(i_votes) if i_votes else 0)
+    quad = 1 if (g > 0 and i <= 0) else 2 if (g > 0 and i > 0) else 3 if (g <= 0 and i > 0) else 4
+    pb = _PLAYBOOK[quad]
+    return {
+        "quad": quad, "quad_name": pb["name"], "quad_tag": pb["tag"],
+        "growth": "accelerating" if g > 0 else "decelerating", "growth_score": g,
+        "inflation": "accelerating" if i > 0 else "decelerating", "inflation_score": i,
+        "conviction": "high" if abs(g) >= 3 else "moderate" if abs(g) >= 2 else "low",
+        "playbook": {k: pb[k] for k in ("best_sectors", "best_factors", "best_assets", "momentum_note")},
+        "evidence": evidence,
+    }
+
+
 def _compute() -> dict | None:
     from .sectors import get_sector_rotation
     from .factors import get_factor_leadership
@@ -67,110 +150,55 @@ def _compute() -> dict | None:
     factors = get_factor_leadership()
     if sectors is None and factors is None:
         return None
-
-    g_votes, i_votes, evidence = [], [], []
-
-    def vote(axis, label, detail, v):
-        (g_votes if axis == "growth" else i_votes).append(v)
-        evidence.append({"axis": axis, "label": label, "detail": detail, "vote": v})
-
-    # ── Growth axis ──────────────────────────────────────────────────────────
-    if sectors:
-        rs = {r["symbol"]: r["rs_strength"] for r in sectors["sectors"]}
-        cyc = [rs[s] for s in _CYCLICAL if s in rs]
-        def_ = [rs[s] for s in _DEFENSIVE if s in rs]
-        if cyc and def_:
-            tilt = sum(cyc) / len(cyc) - sum(def_) / len(def_)
-            vote("growth", "Sector leadership",
-                 f"Cyclicals {'leading' if tilt >= 0 else 'lagging'} defensives by {tilt:+.1f}pp (3-mo RS).",
-                 1 if tilt >= 0 else -1)
-    if factors:
-        fmap = {f["factor"]: f for f in factors["factors"]}
-        if "Beta" in fmap and fmap["Beta"]["spread"].get("m1") is not None:
-            s = fmap["Beta"]["spread"]["m1"]
-            vote("growth", "Risk appetite (Beta factor)",
-                 f"High-beta {'leading' if s >= 0 else 'lagging'} low-beta by {s:+}% (1M).", 1 if s >= 0 else -1)
-        if "Momentum" in fmap and fmap["Momentum"]["spread"].get("m1") is not None:
-            s = fmap["Momentum"]["spread"]["m1"]
-            vote("growth", "Momentum factor",
-                 f"Momentum {'in gear' if s >= 0 else 'out of favor'} ({s:+}% 1M).", 1 if s >= 0 else -1)
-
     breadth = get_breadth()
-    if breadth and breadth.get("breadth_score") is not None:
-        bs = breadth["breadth_score"]
-        vote("growth", "Market breadth",
-             f"Breadth score {bs}/100 — participation {'healthy' if bs >= 50 else 'thin'}.", 1 if bs >= 50 else -1)
-
     try:
         credit = fetch_credit_spread()
     except Exception:
         credit = None
-    if credit and credit.get("vote") is not None and credit["vote"] != 0:
-        vote("growth", "Credit (HY OAS)",
-             f"HY spreads {'tightening (risk-on)' if credit['vote'] > 0 else 'widening (risk-off)'} at {credit.get('oas')}%.",
-             1 if credit["vote"] > 0 else -1)
 
-    # ── Inflation axis ───────────────────────────────────────────────────────
-    if sectors:
-        infl = [rs[s] for s in _INFLATION if s in rs]
-        if infl:
-            avg = sum(infl) / len(infl)
-            vote("inflation", "Energy/Materials leadership",
-                 f"Energy + Materials {'leading' if avg >= 0 else 'lagging'} the market ({avg:+.1f}pp 3-mo RS).",
-                 1 if avg >= 0 else -1)
-            # Energy vs Tech: real-asset vs growth tilt
-            if "XLE" in rs and "XLK" in rs:
-                d = rs["XLE"] - rs["XLK"]
-                vote("inflation", "Real assets vs growth",
-                     f"Energy {'outperforming' if d >= 0 else 'underperforming'} Tech by {d:+.1f}pp.",
-                     1 if d >= 0 else -1)
-
-    if not g_votes:
+    monthly = _score_horizon("monthly", sectors, factors, breadth, credit)
+    quarterly = _score_horizon("quarterly", sectors, factors, breadth, credit)
+    if monthly is None and quarterly is None:
         return None
-    g_score = sum(g_votes)
-    i_score = sum(i_votes) if i_votes else 0
 
-    growth_up = g_score > 0
-    infl_up = i_score > 0
-    if growth_up and not infl_up:
-        quad = 1
-    elif growth_up and infl_up:
-        quad = 2
-    elif not growth_up and infl_up:
-        quad = 3
-    else:
-        quad = 4
-
-    pb = _PLAYBOOK[quad]
-    conviction = "high" if abs(g_score) >= 3 else "moderate" if abs(g_score) >= 2 else "low"
-
+    aligned = bool(monthly and quarterly and monthly["quad"] == quarterly["quad"])
     out = {
         "as_of": (sectors or factors)["as_of"],
-        "quad": quad, "quad_name": pb["name"], "quad_tag": pb["tag"],
-        "growth": "accelerating" if growth_up else "decelerating", "growth_score": g_score,
-        "inflation": "accelerating" if infl_up else "decelerating", "inflation_score": i_score,
-        "conviction": conviction,
-        "playbook": {k: pb[k] for k in ("best_sectors", "best_factors", "best_assets", "momentum_note")},
-        "evidence": evidence,
+        "monthly": monthly,        # weather — intermediate-term tactical
+        "quarterly": quarterly,    # climate — longer-term dominant regime
+        "aligned": aligned,
     }
     out["interpretation_points"] = _interpret(out)
     return out
 
 
 def _interpret(o):
-    pb = _PLAYBOOK[o["quad"]]
-    pts = [
-        {"label": f"Market-implied Quad {o['quad']}: {o['quad_name']}", "detail":
-            f"Cross-asset behaviour is trading like {pb['tag']} ({o['conviction']} conviction). "
-            "This is inferred from how the market is positioned — not a GDP/CPI nowcast."},
-        {"label": "Growth", "detail":
-            f"Growth signals net {o['growth']} (score {o['growth_score']:+}) — from sector leadership, the beta/momentum "
-            "factors, breadth and credit."},
-        {"label": "Inflation", "detail":
-            f"Inflation signals net {o['inflation']} (score {o['inflation_score']:+}) — inferred from energy/materials "
-            "leadership (the weaker-inferred axis on free data)."},
-        {"label": "Playbook", "detail":
-            f"Favor {', '.join(pb['best_sectors'][:4])}; factors {', '.join(pb['best_factors'][:3])}."},
-        {"label": "For a momentum trader", "detail": pb["momentum_note"]},
-    ]
+    m, q = o.get("monthly"), o.get("quarterly")
+    pts = []
+    if q:
+        pts.append({"label": f"Climate — Quarterly Quad {q['quad']}: {q['quad_name']}", "detail":
+            f"The dominant ~3-month regime is trading like {q['quad_tag']} ({q['conviction']} conviction). "
+            "This is the bigger backdrop — it sets your default posture."})
+    if m:
+        pts.append({"label": f"Weather — Monthly Quad {m['quad']}: {m['quad_name']}", "detail":
+            f"The intermediate ~1-month overlay is {m['quad_tag']} ({m['conviction']} conviction). "
+            "This is the tactical, faster-moving read for timing exposure."})
+    if m and q:
+        if o["aligned"]:
+            pts.append({"label": "Aligned", "detail":
+                f"Weather and climate agree on Quad {m['quad']} — a high-confidence regime; lean into its playbook."})
+        else:
+            pts.append({"label": "Diverging — regime in transition", "detail":
+                f"The monthly (weather) has shifted to Quad {m['quad']} while the quarterly (climate) is still Quad "
+                f"{q['quad']}. Watch for a regime change; respect the climate but size to the weather."})
+    # Tactical playbook from the monthly read (fall back to quarterly)
+    drive = m or q
+    if drive:
+        pb = drive["playbook"]
+        pts.append({"label": "Playbook (tactical)", "detail":
+            f"Favor {', '.join(pb['best_sectors'][:4])}; factors {', '.join(pb['best_factors'][:3])}."})
+        pts.append({"label": "For a momentum trader", "detail": pb["momentum_note"]})
+    pts.append({"label": "Honest caveat", "detail":
+        "Market-implied — inferred from how the tape is positioned, not a GDP/CPI nowcast. The inflation axis is the "
+        "weaker-inferred one on free data."})
     return pts

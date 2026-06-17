@@ -180,8 +180,7 @@ export interface FactorLeadership {
 
 // ── Market-implied Quad regime ────────────────────────────────────────────────
 
-export interface MarketRegime {
-  as_of:           string;
+export interface QuadRead {
   quad:            number;
   quad_name:       string;
   quad_tag:        string;
@@ -194,6 +193,13 @@ export interface MarketRegime {
     best_sectors: string[]; best_factors: string[]; best_assets: string[]; momentum_note: string;
   };
   evidence: { axis: string; label: string; detail: string; vote: number }[];
+}
+
+export interface MarketRegime {
+  as_of:     string;
+  monthly:   QuadRead | null;   // weather — intermediate-term (~1mo) tactical overlay
+  quarterly: QuadRead | null;   // climate — longer-term (~3mo) dominant regime
+  aligned:   boolean;
   interpretation_points: { label: string; detail: string }[];
 }
 

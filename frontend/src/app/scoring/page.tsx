@@ -1284,7 +1284,7 @@ Factors (only those derivable from free data):
         <CodeBlock>{`growth_score  = sign votes from:
    cyclical sectors (XLK/XLY/XLI/XLF/XLC) vs defensives (XLP/XLU/XLV/XLRE)
    Beta factor (high-beta leading?)   +  Momentum factor (in gear?)
-   breadth score ≥ 50                 +  HY credit tightening (+) / widening (−)
+   breadth participation ≥ 50%        +  HY credit risk-on (tightening / below-average)
 
 inflation_score = sign votes from:
    Energy + Materials (XLE/XLB) leadership   +   Energy vs Tech (real assets vs growth)
@@ -1292,11 +1292,29 @@ inflation_score = sign votes from:
 Quad:  G>0 & I≤0 → 1 Goldilocks   |   G>0 & I>0 → 2 Reflation
        G≤0 & I>0 → 3 Stagflation  |   G≤0 & I≤0 → 4 Deflation
 conviction = |growth_score|  (≥3 high · 2 moderate · else low)`}</CodeBlock>
+
+        <h3 className="font-semibold text-gray-800 mt-3">Two horizons — Climate vs Weather</h3>
+        <p>
+          Following Hedgeye&apos;s own split (Quarterly Quad = the dominant regime / &quot;climate&quot;; Monthly Quad
+          = the shorter-term overlay / &quot;weather&quot;), we compute the same scorecard at <strong>two
+          horizons</strong> by swapping the lookback each input uses:
+        </p>
+        <CodeBlock>{`                    CLIMATE (Quarterly, ~3mo)        WEATHER (Monthly, ~1mo)
+sector tilt         3-month relative return          1-month relative return
+Beta / Momentum     3-month High−Low spread          1-month High−Low spread
+breadth             % above 200-DMA                  % above 50-DMA
+credit              HY OAS z-score (vs ~3yr)         HY OAS 1-month change
+energy/materials    3-month relative                 1-month relative`}</CodeBlock>
+        <p>
+          The <strong>climate</strong> (quarterly) is your default posture; the <strong>weather</strong> (monthly) is
+          the faster, tactical read for timing exposure. When they <em>agree</em> it&apos;s a high-confidence regime;
+          when they <em>diverge</em>, the regime may be transitioning — respect the climate but size to the weather.
+        </p>
         <p className="mt-2 text-sm bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-indigo-900">
-          This is the <strong>capstone</strong> that ties the other context panels together. For a momentum trader
-          the punchline is simple: <strong>Quad 1 &amp; 2 are the green light</strong> (high-beta momentum leadership —
-          press breakouts, full size on A-setups), while <strong>Quad 3 &amp; 4 say defend</strong> (breakouts fail
-          more — smaller size, cleaner setups, or stand aside).
+          This is the <strong>capstone</strong> of the Macro dashboard. For a momentum trader the punchline is simple:
+          <strong> Quad 1 &amp; 2 are the green light</strong> (high-beta momentum leadership — press breakouts, full
+          size on A-setups), while <strong>Quad 3 &amp; 4 say defend</strong> (breakouts fail more — smaller size,
+          cleaner setups, or stand aside).
         </p>
         <p className="mt-2 text-xs text-gray-600">
           <strong>Honest about the limits:</strong> it&apos;s a heuristic <em>market-implied</em> read, not a GDP/CPI

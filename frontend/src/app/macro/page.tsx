@@ -1,0 +1,40 @@
+import MarketRegimePanel from "@/components/MarketRegime";
+import MarketPositioningPanel from "@/components/MarketPositioning";
+import MarketBreadthPanel from "@/components/MarketBreadth";
+import SectorRotationPanel from "@/components/SectorRotation";
+import FactorLeadershipPanel from "@/components/FactorLeadership";
+
+export const metadata = { title: "Macro · Qullamaggie Platform" };
+
+export default function MacroPage() {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Macro Dashboard</h1>
+        <p className="text-sm text-gray-500 mt-1 max-w-3xl">
+          The market-context layer — the regime a momentum trader is operating inside. Everything here is{" "}
+          <strong>context for sizing and where to hunt</strong>, not a per-stock signal: it tells you whether to be
+          aggressive or defensive, and which groups and factors are leading. Inspired by Hedgeye&apos;s GIP process,
+          built entirely on free data. See{" "}
+          <a href="/scoring#regime" className="text-indigo-500 hover:underline">Scoring → Market-Implied Quad</a>{" "}
+          for the methodology.
+        </p>
+      </div>
+
+      {/* Capstone: dual-horizon Quad regime (climate + weather) */}
+      <MarketRegimePanel />
+
+      {/* Supporting context, finest → coarsest */}
+      <MarketPositioningPanel />
+      <MarketBreadthPanel />
+      <SectorRotationPanel />
+      <FactorLeadershipPanel />
+
+      <p className="text-[11px] text-gray-400 leading-relaxed">
+        The Quad synthesizes the panels below it (sector leadership + style factors + credit + breadth). None of these
+        feed the per-stock P&nbsp;Score — they are a separate, top-down regime read. All sources are free and cached
+        (6–12h); see each panel&apos;s &quot;How this works&quot; link for the exact methodology.
+      </p>
+    </div>
+  );
+}
