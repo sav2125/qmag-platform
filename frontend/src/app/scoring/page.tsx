@@ -65,6 +65,8 @@ const TOC = [
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "breadth",      label: "Market Breadth" },
   { id: "sectors",      label: "Sector RS Rotation" },
+  { id: "factors",      label: "Style-Factor Leadership" },
+  { id: "regime",       label: "Market-Implied Quad" },
   { id: "shortvol",     label: "Short-Volume Pressure" },
   { id: "insider",      label: "Insider Activity (Form 4)" },
   { id: "philosophy",   label: "Design Philosophy" },
@@ -1239,6 +1241,68 @@ lagging    = strength < 0  AND  momentum < 0     # behind and still fading      
           between <em>absolute</em> returns and <em>relative-to-SPY</em> (the leadership view) — the same
           read Hedgeye&apos;s sector tables give, so you can see whether leadership is fresh (short horizons
           green) or stale (only the long horizons green).
+        </p>
+      </Section>
+
+      {/* Style-Factor Leadership */}
+      <Section id="factors" title="🧬 Style-Factor Leadership">
+        <p>
+          Inspired by Hedgeye&apos;s Style Factor table — it answers <strong>&quot;what is the market paying for
+          right now?&quot;</strong> For a momentum trader the decisive reads are whether <em>Momentum</em> is in
+          gear (trend-following has a tailwind) and whether <em>High Beta</em> is leading (risk-on). When both
+          are positive, Qullamaggie breakouts work; when they roll over, breakouts fail and you should shrink.
+        </p>
+        <CodeBlock>{`# Over the ~100-name large-cap universe, cached 6h. For each factor:
+rank by the factor metric → High-quartile basket vs Low-quartile basket
+spread[horizon] = mean(High basket return) − mean(Low basket return)   # 1D/1W/1M/3M/YTD
+leader = "high" if spread(1M) ≥ 0 else "low"
+
+Factors (only those derivable from free data):
+  Momentum        rank by 6-mo return        High-mo vs Low-mo
+  Beta            rank by beta vs SPY (120d)  High-beta vs Low-beta     ← risk appetite
+  Volatility      rank by 63-d realised vol    High-vol vs Low-vol
+  Short Interest  rank by avg short-volume %   High-SI vs Low-SI         ← squeeze regime`}</CodeBlock>
+        <p className="mt-2 text-xs text-gray-600">
+          <strong>Honest caveats:</strong> Sales/EPS-growth, yield and debt factors need fundamentals (not free on
+          our host) so they&apos;re omitted. The Momentum factor&apos;s longer-horizon spreads (3M/YTD) are partly
+          self-referential (it&apos;s ranked on a 6-month lookback) — the <strong>1M</strong> spread is the cleaner
+          read and the one used for the &quot;in gear / out of favor&quot; call. Short-Interest uses FINRA
+          short-<em>volume</em> as the proxy. Context layer, <strong>not a P Score input</strong>.
+        </p>
+      </Section>
+
+      {/* Market-Implied Quad */}
+      <Section id="regime" title="🌐 Market-Implied Quad (Regime Capstone)">
+        <p>
+          Hedgeye&apos;s GIP framework classifies the macro regime by the <em>rate of change</em> of Growth and
+          Inflation into four Quads — <strong>1 Goldilocks</strong> (G↑ I↓), <strong>2 Reflation</strong> (G↑ I↑),
+          <strong> 3 Stagflation</strong> (G↓ I↑), <strong>4 Deflation</strong> (G↓ I↓) — each with a distinct
+          asset/sector/factor playbook. Their real model nowcasts GDP &amp; CPI, which we can&apos;t do on free
+          data. So we infer the Quad the <strong>market is trading</strong> from the cross-asset behaviour we
+          already compute, and attach the matching playbook.
+        </p>
+        <CodeBlock>{`growth_score  = sign votes from:
+   cyclical sectors (XLK/XLY/XLI/XLF/XLC) vs defensives (XLP/XLU/XLV/XLRE)
+   Beta factor (high-beta leading?)   +  Momentum factor (in gear?)
+   breadth score ≥ 50                 +  HY credit tightening (+) / widening (−)
+
+inflation_score = sign votes from:
+   Energy + Materials (XLE/XLB) leadership   +   Energy vs Tech (real assets vs growth)
+
+Quad:  G>0 & I≤0 → 1 Goldilocks   |   G>0 & I>0 → 2 Reflation
+       G≤0 & I>0 → 3 Stagflation  |   G≤0 & I≤0 → 4 Deflation
+conviction = |growth_score|  (≥3 high · 2 moderate · else low)`}</CodeBlock>
+        <p className="mt-2 text-sm bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-indigo-900">
+          This is the <strong>capstone</strong> that ties the other context panels together. For a momentum trader
+          the punchline is simple: <strong>Quad 1 &amp; 2 are the green light</strong> (high-beta momentum leadership —
+          press breakouts, full size on A-setups), while <strong>Quad 3 &amp; 4 say defend</strong> (breakouts fail
+          more — smaller size, cleaner setups, or stand aside).
+        </p>
+        <p className="mt-2 text-xs text-gray-600">
+          <strong>Honest about the limits:</strong> it&apos;s a heuristic <em>market-implied</em> read, not a GDP/CPI
+          nowcast; the inflation axis is the weaker-inferred one (few clean free signals). Every vote is shown in the
+          panel&apos;s &quot;signals that voted&quot; expander so you can judge it yourself. Context for sizing and
+          where to hunt — <strong>not a P Score input</strong>.
         </p>
       </Section>
 

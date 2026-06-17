@@ -59,6 +59,8 @@ Each result shows: **Entry · Stop · T1 · T2 · R:R · RS · P Grade + P Score
 - **Contrarian regime dial** — each source votes at extremes (fear = +1, crowded = −1; credit directional); dial shown on the Dashboard as a sizing/aggression gate. Cached 12h. `GET /market/positioning`
 - **Market breadth** — leading "momentum environment" gauge over a ~100-name large-cap sample: % above 50/200-DMA, new highs−lows, advance/decline, a 0–100 breadth score + state (strong → risk-off), and a **divergence flag** (SPY near highs but breadth thin = narrowing advance). Plain-English read on the Dashboard. Cached 6h. `GET /market/breadth`
 - **Sector RS rotation** — leading "where is leadership?" gauge: the 11 SPDR sectors ranked by relative strength vs SPY (3-month RS level) and whether that RS is **accelerating** (RRG-style momentum = this month's relative return − last month's), classified into four quadrants (Leading / Weakening / Improving / Lagging). Also includes a **multi-horizon heatmap** (1D/1W/1M/3M/YTD, toggleable absolute vs relative-to-SPY — Hedgeye-style sector tables). Tells a momentum trader which groups to hunt in. Plain-English read on the Dashboard. Cached 6h. `GET /market/sectors`
+- **Style-factor leadership** (Hedgeye-style) — "what is the market paying for right now?" Over the ~100-name large-cap universe, the High-quartile vs Low-quartile return spread for **Momentum, Beta, Volatility, and Short-Interest** (FINRA proxy) across 1D/1W/1M/3M/YTD. The Momentum + Beta rows tell a Qullamaggie trader whether the regime supports breakouts (in gear → press) or fights them (out of favor → shrink). Fundamentals-gated factors (sales/EPS growth, yield, debt) are omitted as not free on Render. Cached 6h. `GET /market/factors`
+- **Market-implied Quad (regime capstone)** — inspired by Hedgeye's GIP framework: infers the Growth/Inflation regime the *market is trading* (Quad 1 Goldilocks / 2 Reflation / 3 Stagflation / 4 Deflation) from sector leadership + style factors + credit + breadth, with the matching sector/factor/asset **playbook** and a transparent list of which signals voted. A heuristic market-implied read, **not** a GDP/CPI nowcast. Quad 1/2 = green light for momentum; 3/4 = defend. Cached 6h. `GET /market/regime`
 
 ### Frontend
 - **Analyze page** — Deep-dive for any individual stock: all 7 setups, RSI/MACD/ADX, MA stack, Weinstein stage, ICS, A/D Net, 10-item signal checklist (incl. Minervini Trend Template), Minervini Trend Template criteria card, a **"Why this score" per-driver P Score breakdown** (plain-English bullets — what's pushing the grade up/down, conviction, regime, penalty), early warnings, **multi-timeframe alignment** (daily + weekly + monthly, no extra API calls), and a **Fibonacci grid** (retracement ladder + golden pocket + extension targets, anchored to the dominant ~6-month swing)
@@ -315,7 +317,9 @@ Use `min_rs=70` (or the slider) to filter to stocks clearly outperforming the ma
 | `GET` | `/analyze/{symbol}` | Full single-stock analysis: all 7 setups, RSI/MACD/ADX, checklist, warnings, trend-template criteria, multi-timeframe alignment, Fibonacci grid (`fibonacci`), options snapshot (`options`) |
 | `GET` | `/market/positioning` | Market positioning panel: CFTC COT, SPY put/call, NAAIM + contrarian regime dial. Cached 12h; `?refresh=true` to force |
 | `GET` | `/market/breadth` | Market breadth: % above 50/200-DMA, new highs−lows, A/D, breadth score + state + divergence flag. Cached 6h |
-| `GET` | `/market/sectors` | Sector RS rotation: 11 SPDR sectors ranked by RS vs SPY + RS acceleration, RRG quadrants (leading/weakening/improving/lagging). Cached 6h |
+| `GET` | `/market/sectors` | Sector RS rotation: 11 SPDR sectors ranked by RS vs SPY + RS acceleration, RRG quadrants (leading/weakening/improving/lagging) + multi-horizon heatmap. Cached 6h |
+| `GET` | `/market/factors` | Style-factor leadership: High vs Low quartile return spread for Momentum/Beta/Volatility/Short-Interest across 1D/1W/1M/3M/YTD. Cached 6h |
+| `GET` | `/market/regime` | Market-implied Quad: Growth/Inflation regime (Goldilocks/Reflation/Stagflation/Deflation) from sectors+factors+credit+breadth, with playbook. Cached 6h |
 | `GET` | `/short-volume/{symbol}` | FINRA Reg SHO daily short-sale-volume: level + trend + price-context read (squeeze fuel vs bearish confirmation). Cached 12h |
 | `GET` | `/insider/{symbol}` | SEC EDGAR Form 4 open-market insider buys (P) vs sales (S) over ~120d, with cluster-buy detection. Cached 12h |
 | `GET` | `/debug/fetch` | Test Alpaca data fetch for a single symbol |
@@ -361,7 +365,10 @@ qmag-platform/
 │   │   ├── options.py           Per-symbol options: IV, expected move, skew, P/C ratios, unusual activity (leading)
 │   │   ├── positioning.py       Market positioning: CFTC COT, SPY put/call, NAAIM + regime dial
 │   │   ├── breadth.py           Market breadth: %>50/200-DMA, new highs−lows, A/D + divergence (leading)
-│   │   ├── sectors.py           Sector RS rotation: 11 SPDR sectors vs SPY, RRG quadrants (leading)
+│   │   ├── sectors.py           Sector RS rotation: 11 SPDR sectors vs SPY, RRG quadrants + multi-horizon (leading)
+│   │   ├── factors.py           Style-factor leadership: Momentum/Beta/Vol/Short-Interest High−Low spreads (leading)
+│   │   ├── regime.py            Market-implied Quad: Growth/Inflation regime + playbook (capstone)
+│   │   ├── risk_range.py        Risk Range + TRADE/TREND/TAIL: volatility-bounded levels (per-stock)
 │   │   ├── short_volume.py      Short-volume pressure: FINRA Reg SHO daily, level+trend+price (leading)
 │   │   ├── insider.py           Insider activity: SEC EDGAR Form 4 open-market buys vs sells (leading)
 │   │   └── engine.py            Scan orchestration, filters, enrichment, quality grading

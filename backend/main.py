@@ -145,6 +145,42 @@ def market_sectors():
         raise HTTPException(500, str(e))
 
 
+@app.get("/market/factors")
+def market_factors():
+    """Style-factor leadership — High vs Low quartile return spreads for Momentum,
+    Beta, Volatility and Short-Interest across 1D/1W/1M/3M/YTD. Tells you whether the
+    regime favors the momentum/high-beta factors Qullamaggie setups need. Cached 6h."""
+    from scanner.factors import get_factor_leadership
+    try:
+        data = get_factor_leadership()
+        if data is None:
+            raise HTTPException(503, "Factor data unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Factors error")
+        raise HTTPException(500, str(e))
+
+
+@app.get("/market/regime")
+def market_regime():
+    """Market-implied Quad — a heuristic Growth/Inflation regime read (Goldilocks /
+    Reflation / Stagflation / Deflation) inferred from sector leadership, style
+    factors, credit and breadth, with the matching playbook. Cached 6h."""
+    from scanner.regime import get_regime
+    try:
+        data = get_regime()
+        if data is None:
+            raise HTTPException(503, "Regime data unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Regime error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/short-volume/{symbol}")
 def short_volume(symbol: str):
     """Per-symbol short-sale-volume pressure from FINRA's daily Reg SHO files — a free

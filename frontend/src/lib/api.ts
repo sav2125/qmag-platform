@@ -102,6 +102,8 @@ export const api = {
   positioning: () => req<MarketPositioning>("/market/positioning"),
   breadth: () => req<MarketBreadth>("/market/breadth"),
   sectors: () => req<SectorRotation>("/market/sectors"),
+  factors: () => req<FactorLeadership>("/market/factors"),
+  regime: () => req<MarketRegime>("/market/regime"),
   shortVolume: (symbol: string) => req<ShortVolume>(`/short-volume/${symbol}`),
   insider: (symbol: string) => req<Insider>(`/insider/${symbol}`),
 };
@@ -155,6 +157,43 @@ export interface SectorRow {
 export interface SectorRotation {
   as_of:   string;
   sectors: SectorRow[];
+  interpretation_points: { label: string; detail: string }[];
+}
+
+// ── Style-factor leadership ───────────────────────────────────────────────────
+
+export interface FactorRow {
+  factor:      string;
+  high_label:  string;
+  low_label:   string;
+  spread:      SectorPerf;       // High − Low return spread by horizon
+  leader:      "high" | "low";
+  basket_size: number;
+}
+
+export interface FactorLeadership {
+  as_of:    string;
+  universe: number;
+  factors:  FactorRow[];
+  interpretation_points: { label: string; detail: string }[];
+}
+
+// ── Market-implied Quad regime ────────────────────────────────────────────────
+
+export interface MarketRegime {
+  as_of:           string;
+  quad:            number;
+  quad_name:       string;
+  quad_tag:        string;
+  growth:          string;
+  growth_score:    number;
+  inflation:       string;
+  inflation_score: number;
+  conviction:      string;
+  playbook: {
+    best_sectors: string[]; best_factors: string[]; best_assets: string[]; momentum_note: string;
+  };
+  evidence: { axis: string; label: string; detail: string; vote: number }[];
   interpretation_points: { label: string; detail: string }[];
 }
 

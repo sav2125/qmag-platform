@@ -6,6 +6,8 @@ import { SetupTable } from "@/components/SetupTable";
 import MarketPositioningPanel from "@/components/MarketPositioning";
 import MarketBreadthPanel from "@/components/MarketBreadth";
 import SectorRotationPanel from "@/components/SectorRotation";
+import FactorLeadershipPanel from "@/components/FactorLeadership";
+import MarketRegimePanel from "@/components/MarketRegime";
 
 const UNIVERSES = [
   { value: "all",        label: "All US Equities (~7 000 stocks)" },
@@ -128,6 +130,9 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Market-implied Quad — regime capstone (synthesizes the panels below) */}
+      <MarketRegimePanel />
+
       {/* Market positioning — forward-looking regime dial */}
       <MarketPositioningPanel />
 
@@ -136,6 +141,9 @@ export default function Dashboard() {
 
       {/* Sector rotation — where leadership is concentrated */}
       <SectorRotationPanel />
+
+      {/* Style-factor leadership — what the market is paying for */}
+      <FactorLeadershipPanel />
 
       {/* Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
