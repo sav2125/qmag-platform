@@ -821,6 +821,83 @@ function AnalyzeInner() {
             );
           })()}
 
+          {/* ── Row 3b: Risk Range + TRADE/TREND/TAIL ── */}
+          {data.risk_range && (() => {
+            const rr = data.risk_range!;
+            const im = rr.immediate;
+            const marker = Math.max(2, Math.min(98, im.position_pct));
+            const tttCfg: Record<string, { t: string; c: string }> = {
+              bullish_all:         { t: "Bullish · all durations",  c: "bg-green-100 text-green-700" },
+              bullish_trade_trend: { t: "Bullish · TRADE+TREND",    c: "bg-green-100 text-green-700" },
+              mixed:               { t: "Mixed durations",          c: "bg-amber-100 text-amber-700" },
+              rolling_over:        { t: "Rolling over (lost TRADE)", c: "bg-amber-100 text-amber-700" },
+              bearish_all:         { t: "Bearish · all durations",  c: "bg-red-100 text-red-700" },
+            };
+            const tc = tttCfg[rr.ttt_state] ?? tttCfg.mixed;
+            return (
+              <Card title="Risk Range & Durations (TRADE / TREND / TAIL)">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${tc.c}`}>{tc.t}</span>
+                  <span className="text-gray-400">immediate-term band · {im.horizon_days}-day horizon · volatility-bounded</span>
+                </div>
+
+                {/* Range bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-[11px] font-mono mb-1">
+                    <span className="text-green-700">low ${im.low}</span>
+                    <span className="text-gray-400">center ${im.center}</span>
+                    <span className="text-red-600">high ${im.high}</span>
+                  </div>
+                  <div className="relative h-3 rounded-full" style={{ background: "linear-gradient(to right,#bbf7d0,#f3f4f6,#fecaca)" }}>
+                    <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-gray-900 border-2 border-white shadow"
+                         style={{ left: `${marker}%` }} title={`price $${rr.price} · ${im.position_pct}% of range`} />
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-1 text-center">
+                    price <span className="font-mono font-semibold text-gray-800">${rr.price}</span> · {im.position_pct}% of range (±{(im.width_pct / 2).toFixed(1)}%)
+                  </div>
+                </div>
+
+                {/* Durations */}
+                <div className="grid grid-cols-3 gap-2">
+                  {rr.durations.map((d) => (
+                    <div key={d.name} className="bg-gray-50 rounded-lg px-3 py-2">
+                      <div className="text-[10px] uppercase tracking-wide text-gray-500">
+                        {d.name} <span className="normal-case text-gray-400">{d.label}</span>
+                      </div>
+                      {d.level == null ? (
+                        <div className="text-sm text-gray-300">n/a</div>
+                      ) : (
+                        <>
+                          <div className="font-mono font-semibold text-gray-800">${d.level}</div>
+                          <div className={`text-[10px] ${d.above ? "text-green-600" : "text-red-500"}`}>
+                            {d.above ? "▲ bullish above" : "▼ bearish below"}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 bg-indigo-50/60 border border-indigo-100 rounded-lg px-3 py-2.5">
+                  <div className="font-semibold text-indigo-700 text-[12.5px] mb-1.5">What this is saying</div>
+                  <ul className="space-y-1.5">
+                    {rr.interpretation_points.map((p) => (
+                      <li key={p.label} className="text-[12.5px] text-gray-700 leading-relaxed flex gap-2">
+                        <span className="text-indigo-400 select-none mt-px">•</span>
+                        <span><span className="font-semibold text-gray-800">{p.label}:</span> {p.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
+                  <strong>Hedgeye-style:</strong> the <strong>Risk Range</strong> is a volatility-bounded probable band (momentum names ride the
+                  top; the low end is the lower-risk pullback entry). <strong>TRADE/TREND/TAIL</strong> are three trend durations, each with the
+                  explicit level that flips it bullish/bearish. Context for entries/stops — <strong>not a P Score input</strong>.
+                </p>
+              </Card>
+            );
+          })()}
+
           {/* ── Row 3c: Short-volume + insider (lazy leading layers) ── */}
           <div className="grid md:grid-cols-2 gap-4">
             <ShortVolumeCard symbol={data.symbol} />

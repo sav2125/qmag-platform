@@ -60,6 +60,7 @@ const TOC = [
   { id: "exhaustion",   label: "Signal: Bull Exhaustion Warning" },
   { id: "wys",          label: "Setup: Wyckoff Spring (WYS)" },
   { id: "fibonacci",    label: "Analysis: Fibonacci Grid" },
+  { id: "riskrange",    label: "Analysis: Risk Range (TRADE/TREND/TAIL)" },
   { id: "options",      label: "Analysis: Options (Leading)" },
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "breadth",      label: "Market Breadth" },
@@ -1076,6 +1077,44 @@ in_golden_pocket = golden.low <= price <= golden.high`}
         </p>
       </Section>
 
+      {/* Risk Range + TRADE/TREND/TAIL */}
+      <Section id="riskrange" title="🎯 Risk Range + TRADE / TREND / TAIL">
+        <p>
+          Borrowed from Hedgeye&apos;s process and rebuilt on free price/volatility data, this answers two
+          questions a momentum trader asks constantly: <em>where is the lower-risk entry</em>, and <em>which
+          way is the trend on each duration</em>. Two parts, both on the Analyze page.
+        </p>
+        <h3 className="font-semibold text-gray-800 mt-3">1) The Risk Range — a volatility-bounded probable band</h3>
+        <CodeBlock>{`sigma_d  = stdev(daily log returns, ~30d)          # realised daily volatility
+center   = EMA(20)                                 # immediate-term mean
+move     = z · sigma_d · sqrt(horizon)             # z=1 (~1σ), horizon=10 trading days
+low      = center · (1 − move)
+high     = center · (1 + move)
+position = (price − low) / (high − low)            # where price sits in the band`}</CodeBlock>
+        <p>
+          The width scales with the stock&apos;s own volatility — a quiet name gets a tight band, a high-beta
+          momentum name a wide one. The key read is <strong>position in the range</strong>: momentum leaders
+          ride the <em>top</em> (≥85% = extended, wait/trim), and the <em>low end</em> (≤25%) is the lower-risk
+          pullback entry while the trend holds — which is exactly how Qullamaggie buys pullbacks to the rising
+          EMA.
+        </p>
+        <h3 className="font-semibold text-gray-800 mt-3">2) TRADE / TREND / TAIL — three durations with explicit levels</h3>
+        <CodeBlock>{`TRADE  = ~3 weeks    level = SMA(21)    bullish ABOVE / bearish BELOW
+TREND  = ~3 months   level = SMA(63)    bullish ABOVE / bearish BELOW
+TAIL   = ~1 year     level = SMA(200)   bullish ABOVE / bearish BELOW
+
+state: bullish_all · bullish_trade_trend · mixed · rolling_over (lost TRADE) · bearish_all`}</CodeBlock>
+        <p>
+          The value-add over a plain MA-stack is the <strong>explicit line</strong>: not just &quot;the trend is
+          up&quot; but &quot;the intermediate trend breaks on a close below $X.&quot; That level is the stop/risk
+          reference for the duration you&apos;re trading.
+        </p>
+        <p className="mt-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          Context for entries and stops — <strong>not a P Score input</strong>. The Risk Range is a probable band,
+          not a guarantee; gaps and catalysts blow through it.
+        </p>
+      </Section>
+
       {/* Options (leading) */}
       <Section id="options" title="Analysis: Options (Leading)">
         <p>
@@ -1194,6 +1233,12 @@ lagging    = strength < 0  AND  momentum < 0     # behind and still fading      
           Trade <em>with</em> the rotation: favour breakouts in <strong>Leading</strong> and emerging
           <strong> Improving</strong> groups, treat <strong>Lagging</strong> breakouts with suspicion, and watch
           <strong> Weakening</strong> leaders for signs the move is rotating away from them.
+        </p>
+        <p className="mt-2 text-xs text-gray-600">
+          The panel also shows a <strong>multi-horizon heatmap</strong> (1D / 1W / 1M / 3M / YTD), toggleable
+          between <em>absolute</em> returns and <em>relative-to-SPY</em> (the leadership view) — the same
+          read Hedgeye&apos;s sector tables give, so you can see whether leadership is fresh (short horizons
+          green) or stale (only the long horizons green).
         </p>
       </Section>
 

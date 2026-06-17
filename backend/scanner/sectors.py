@@ -44,19 +44,40 @@ def _pct(rel, a: int, b: int):
     return float(rel.iloc[-a] / rel.iloc[-b] - 1) * 100
 
 
+def _ret_n(close, n: int):
+    """Simple % return over the last n trading bars."""
+    return round(float(close.iloc[-1] / close.iloc[-1 - n] - 1) * 100, 1) if len(close) > n else None
+
+
+def _ret_ytd(df):
+    """% return year-to-date (from the first trading bar of the current calendar year)."""
+    yr = df.index[-1].year
+    ytd = df[df.index.year == yr]
+    if len(ytd) < 2:
+        return None
+    return round(float(ytd["close"].iloc[-1] / ytd["close"].iloc[0] - 1) * 100, 1)
+
+
 def _compute() -> dict | None:
-    spy = fetch_ohlcv("SPY", period_days=220)
+    spy = fetch_ohlcv("SPY", period_days=400)
     if spy is None or len(spy) < 70:
         return None
     spx = spy["close"]
+    # SPY horizons (for the relative-to-SPY columns)
+    spy_h = {"d1": _ret_n(spx, 1), "w1": _ret_n(spx, 5), "m1": _ret_n(spx, 21),
+             "m3": _ret_n(spx, 63), "ytd": _ret_ytd(spy)}
+
+    def _rel(a, b):
+        return round(a - b, 1) if (a is not None and b is not None) else None
 
     rows = []
     for sym, name in _SECTORS:
-        df = fetch_ohlcv(sym, period_days=220)
+        df = fetch_ohlcv(sym, period_days=400)
         if df is None or len(df) < 70:
             continue
+        c = df["close"]
         # Align sector and SPY on common dates, then form the relative-strength ratio.
-        pair = pd.concat([df["close"], spx], axis=1, join="inner").dropna()
+        pair = pd.concat([c, spx], axis=1, join="inner").dropna()
         if len(pair) < 65:
             continue
         rel = pair.iloc[:, 0] / pair.iloc[:, 1]   # sector / SPY — RRG RS-ratio
@@ -72,8 +93,15 @@ def _compute() -> dict | None:
             quad = "improving"
         else:
             quad = "lagging"
+
+        # Multi-horizon performance — absolute and relative-to-SPY (Hedgeye sector tables)
+        absr = {"d1": _ret_n(c, 1), "w1": _ret_n(c, 5), "m1": _ret_n(c, 21),
+                "m3": _ret_n(c, 63), "ytd": _ret_ytd(df)}
+        relr = {k: _rel(absr[k], spy_h[k]) for k in absr}
+
         rows.append({"symbol": sym, "name": name, "rs_strength": rs_strength,
-                     "rs_momentum": rs_momentum, "quadrant": quad})
+                     "rs_momentum": rs_momentum, "quadrant": quad,
+                     "abs": absr, "rel": relr})
     if len(rows) < 5:
         return None
     rows.sort(key=lambda r: -r["rs_strength"])

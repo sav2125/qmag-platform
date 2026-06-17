@@ -138,12 +138,18 @@ export interface Insider {
 
 // ── Sector RS rotation ────────────────────────────────────────────────────────
 
+export interface SectorPerf {
+  d1: number | null; w1: number | null; m1: number | null; m3: number | null; ytd: number | null;
+}
+
 export interface SectorRow {
   symbol:      string;
   name:        string;
   rs_strength: number;   // 3-mo relative perf vs SPY (%)
   rs_momentum: number;   // RS acceleration (recent month − prior month, %)
   quadrant:    "leading" | "weakening" | "improving" | "lagging";
+  abs:         SectorPerf;   // absolute returns by horizon
+  rel:         SectorPerf;   // relative-to-SPY returns by horizon
 }
 
 export interface SectorRotation {
@@ -263,6 +269,20 @@ export interface MAStack {
   ema21:               number;
   ema50:               number;
   sma150:              number | null;
+}
+
+export interface RiskRange {
+  price: number;
+  immediate: {
+    low: number; high: number; center: number;
+    position_pct: number; width_pct: number; horizon_days: number;
+  };
+  durations: {
+    name: string; label: string; level: number | null;
+    above: boolean | null; slope: string | null; insufficient?: boolean;
+  }[];
+  ttt_state: "bullish_all" | "bullish_trade_trend" | "mixed" | "rolling_over" | "bearish_all";
+  interpretation_points: { label: string; detail: string }[];
 }
 
 export interface TrendTemplateCriterion {
@@ -429,4 +449,5 @@ export interface SymbolAnalysis {
   timeframe_alignment: MTFAlignment;
   fibonacci:           FibGrid | null;
   options:             OptionsSnapshot | null;
+  risk_range:          RiskRange | null;
 }
