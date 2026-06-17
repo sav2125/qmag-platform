@@ -64,6 +64,8 @@ const TOC = [
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "breadth",      label: "Market Breadth" },
   { id: "sectors",      label: "Sector RS Rotation" },
+  { id: "shortvol",     label: "Short-Volume Pressure" },
+  { id: "insider",      label: "Insider Activity (Form 4)" },
   { id: "philosophy",   label: "Design Philosophy" },
 ];
 
@@ -1192,6 +1194,61 @@ lagging    = strength < 0  AND  momentum < 0     # behind and still fading      
           Trade <em>with</em> the rotation: favour breakouts in <strong>Leading</strong> and emerging
           <strong> Improving</strong> groups, treat <strong>Lagging</strong> breakouts with suspicion, and watch
           <strong> Weakening</strong> leaders for signs the move is rotating away from them.
+        </p>
+      </Section>
+
+      {/* Short-Volume Pressure */}
+      <Section id="shortvol" title="🩳 Short-Volume Pressure">
+        <p>
+          A per-stock leading layer on the Analyze page (loaded lazily so it never slows the main analysis).
+          FINRA publishes a <strong>consolidated daily short-sale-volume file</strong> for every listed name —
+          free, no key, datacenter-friendly so it works on Render. For each symbol it reports how much of the
+          day&apos;s volume was sold short.
+        </p>
+        <CodeBlock>{`# Last ~10 trading days of FINRA Reg SHO daily files, cached 12h
+short_pct   = ShortVolume / TotalVolume                # per day
+avg_pct     = mean(short_pct over window)              # the level
+trend       = mean(recent half) − mean(earlier half)   # rising / easing pressure (pp)
+
+level:  very_high ≥60%   elevated ≥53%   normal   low ≤40%
+# read WITH price (5d / 20d change) to make it directional:
+elevated short %  +  price UP    →  squeeze fuel (shorts pressing into strength)
+elevated short %  +  price DOWN  →  bearish confirmation (shorts on the right side)`}
+        </CodeBlock>
+        <p className="mt-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          <strong>Important — this is short-sale <em>volume</em>, not short <em>interest</em>.</strong> True short interest
+          (shares short ÷ avg volume = days-to-cover) is reported only twice a month and isn&apos;t free in real time.
+          Short volume includes routine market-maker hedging, so a ~45-50% baseline is normal — the signal is the
+          <strong> deviation and trend</strong>, read against price. It&apos;s a confluence layer, <strong>not a P Score input</strong>.
+        </p>
+      </Section>
+
+      {/* Insider Activity */}
+      <Section id="insider" title="🧑‍💼 Insider Activity (Form 4)">
+        <p>
+          The other genuinely forward-looking per-stock layer. Insiders sell for many reasons (diversification,
+          taxes, comp) but they <strong>buy on the open market for exactly one</strong>: they think the stock is
+          going up. We read each company&apos;s recent <strong>SEC EDGAR Form 4</strong> filings (free, no key,
+          datacenter-friendly) and isolate open-market purchases from sales.
+        </p>
+        <CodeBlock>{`# Ticker → CIK (cached 24h) → submissions → Form 4 filings in last ~120 days (cached 12h)
+# Parse each Form 4 XML; keep only open-market transactions:
+code "P" = open-market PURCHASE   →  buys   (the bullish conviction signal)
+code "S" = open-market SALE       →  sells  (down-weighted: noisy)
+# excluded: A (grants), M (option exercise), F (tax withhold), G (gift) — not conviction
+
+signal:  cluster_buying  (≥2 distinct insiders bought)   ← strongest
+         buying          (1 insider bought)
+         selling         (sales only, no buys)            ← mild caution at most
+         none            (quiet)`}
+        </CodeBlock>
+        <h3 className="font-semibold text-gray-800 mt-3">Why buys ≫ sells</h3>
+        <p>
+          The academic and practitioner literature is consistent: <strong>open-market insider buying — especially
+          cluster buying</strong> — has predictive power, while insider <em>selling</em> is mostly noise. So the card
+          surfaces buys prominently (with the buyer&apos;s name, title, size and date) and treats selling as, at most,
+          a mild caveat. It&apos;s a confluence layer, <strong>not a P Score input</strong> — corroborate with the
+          setup and the tape.
         </p>
       </Section>
 

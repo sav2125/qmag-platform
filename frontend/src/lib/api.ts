@@ -102,7 +102,39 @@ export const api = {
   positioning: () => req<MarketPositioning>("/market/positioning"),
   breadth: () => req<MarketBreadth>("/market/breadth"),
   sectors: () => req<SectorRotation>("/market/sectors"),
+  shortVolume: (symbol: string) => req<ShortVolume>(`/short-volume/${symbol}`),
+  insider: (symbol: string) => req<Insider>(`/insider/${symbol}`),
 };
+
+// ── Short-volume pressure (FINRA Reg SHO) ─────────────────────────────────────
+
+export interface ShortVolume {
+  symbol:        string;
+  latest_pct:    number;
+  avg_pct:       number;
+  trend:         number;   // recent-half avg − earlier-half avg (pp)
+  level:         "very_high" | "elevated" | "normal" | "low";
+  days:          number;
+  series:        { date: string; short_pct: number }[];
+  price_chg_5d:  number | null;
+  price_chg_20d: number | null;
+  interpretation_points: { label: string; detail: string }[];
+}
+
+// ── Insider activity (SEC EDGAR Form 4) ───────────────────────────────────────
+
+export interface Insider {
+  symbol:        string;
+  signal:        "cluster_buying" | "buying" | "selling" | "none";
+  buy_value:     number;
+  sell_value:    number;
+  net_value:     number;
+  buyers:        number;
+  sellers:       number;
+  lookback_days: number;
+  top_buys:      { owner: string; title: string; shares: number; value: number; date: string }[];
+  interpretation_points: { label: string; detail: string }[];
+}
 
 // ── Sector RS rotation ────────────────────────────────────────────────────────
 

@@ -145,6 +145,42 @@ def market_sectors():
         raise HTTPException(500, str(e))
 
 
+@app.get("/short-volume/{symbol}")
+def short_volume(symbol: str):
+    """Per-symbol short-sale-volume pressure from FINRA's daily Reg SHO files — a free
+    proxy for short positioning (% of daily volume sold short, level + trend + price
+    context). Lazy/standalone so it never slows /analyze. Cached 12h."""
+    from scanner.short_volume import get_short_volume
+    try:
+        data = get_short_volume(symbol)
+        if data is None:
+            raise HTTPException(404, f"No short-volume data for {symbol}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Short-volume error")
+        raise HTTPException(500, str(e))
+
+
+@app.get("/insider/{symbol}")
+def insider(symbol: str):
+    """Per-symbol insider activity from SEC EDGAR Form 4 — open-market purchases (P)
+    vs sales (S) over the last ~120 days, with cluster-buy detection. Buys are the
+    leading signal; sells are down-weighted. Lazy/standalone. Cached 12h."""
+    from scanner.insider import get_insider
+    try:
+        data = get_insider(symbol)
+        if data is None:
+            raise HTTPException(404, f"No insider data for {symbol}")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Insider error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/analyze/{symbol}")
 def analyze(symbol: str):
     """Full single-symbol analysis: all 7 setups, RSI/MACD/ADX, MA stack,

@@ -4,6 +4,8 @@ import { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, type SymbolAnalysis, type ActiveSetup, type ChecklistItem, type Warning, type TimeframeSignal } from "@/lib/api";
 import { SetupBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
+import ShortVolumeCard from "@/components/ShortVolumeCard";
+import InsiderCard from "@/components/InsiderCard";
 
 // ── Small reusable UI pieces ──────────────────────────────────────────────────
 
@@ -818,6 +820,12 @@ function AnalyzeInner() {
               </Card>
             );
           })()}
+
+          {/* ── Row 3c: Short-volume + insider (lazy leading layers) ── */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <ShortVolumeCard symbol={data.symbol} />
+            <InsiderCard symbol={data.symbol} />
+          </div>
 
           {/* ── Row 4: Active setups ── */}
           <Card title={`Active Setups (${data.active_setups.length} firing)`}>
