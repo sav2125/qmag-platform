@@ -175,9 +175,9 @@ SP500_SAMPLE = [
     "NFLX", "AMD", "QCOM", "TXN", "INTC", "HON", "PM", "CAT", "GE", "BA",
     "INTU", "AMAT", "LRCX", "NOW", "PANW", "SNPS", "KLAC", "MRVL", "ON", "FTNT",
     "ORCL", "IBM", "CSCO", "DELL", "HPQ", "MU", "WDC", "STX", "KEYS", "TRMB",
-    "UNP", "CSX", "FDX", "UPS", "DAL", "UAL", "LUV", "AAL", "JBLU", "SAVE",
+    "UNP", "CSX", "FDX", "UPS", "DAL", "UAL", "LUV", "AAL", "JBLU", "NSC",
     "GS", "MS", "BAC", "C", "WFC", "AXP", "BLK", "SCHW", "COF", "USB",
-    "CVS", "WBA", "MCK", "ABC", "CAH", "HUM", "CI", "MOH", "CNC", "ELV",
+    "CVS", "PFE", "MCK", "COR", "CAH", "HUM", "CI", "MOH", "CNC", "ELV",
     "NEE", "DUK", "SO", "D", "EXC", "AEP", "SRE", "XEL", "WEC", "ES",
 ]
 
