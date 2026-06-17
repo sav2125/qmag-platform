@@ -1250,6 +1250,20 @@ signal:  cluster_buying  (≥2 distinct insiders bought)   ← strongest
           a mild caveat. It&apos;s a confluence layer, <strong>not a P Score input</strong> — corroborate with the
           setup and the tape.
         </p>
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <h3 className="font-semibold text-gray-800 text-sm mb-1">
+            What about earnings-estimate revisions?
+          </h3>
+          <p className="text-xs text-gray-600">
+            Rising analyst EPS estimates are a classic leading signal — but the real revision data is vendor-only
+            (Zacks/Refinitiv), and every &quot;free&quot; provider needs an API key while the keyless sources
+            (yfinance, Nasdaq) are blocked on our datacenter host. Rather than bolt on a key or ship a low-quality
+            approximation, we lean on the forward signals we <em>already</em> compute for free, which carry much of the
+            same information: <strong>IV term-structure backwardation + the options expected move</strong> (the market
+            pricing an imminent catalyst and its size) and <strong>RS rank</strong> (the names whose estimates are being
+            revised up are, almost by definition, the relative-strength leaders). A deliberate omission, not a gap.
+          </p>
+        </div>
       </Section>
 
       {/* Market Positioning Dial */}
