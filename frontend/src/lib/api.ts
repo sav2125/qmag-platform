@@ -109,7 +109,13 @@ export const api = {
   gip: () => req<MacroQuad>("/market/gip"),
   shortVolume: (symbol: string) => req<ShortVolume>(`/short-volume/${symbol}`),
   insider: (symbol: string) => req<Insider>(`/insider/${symbol}`),
+  bars: (symbol: string, days = 180) => req<{ symbol: string; bars: Bar[] }>(`/bars/${symbol}?days=${days}`),
 };
+
+export interface Bar {
+  time: string;   // yyyy-mm-dd
+  open: number; high: number; low: number; close: number; volume: number;
+}
 
 // ── Short-volume pressure (FINRA Reg SHO) ─────────────────────────────────────
 

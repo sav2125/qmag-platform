@@ -6,6 +6,7 @@ import { api, type SymbolAnalysis, type ActiveSetup, type ChecklistItem, type Wa
 import { SetupBadge, ProbGradeBadge, RRBadge, StageBadge, ADNetBadge, ICSBadge, RVOLLabel } from "@/components/SetupBadge";
 import ShortVolumeCard from "@/components/ShortVolumeCard";
 import InsiderCard from "@/components/InsiderCard";
+import PriceChart from "@/components/PriceChart";
 
 // ── Small reusable UI pieces ──────────────────────────────────────────────────
 
@@ -522,6 +523,9 @@ function AnalyzeInner() {
               </div>
             </Card>
           </div>
+
+          {/* ── Row 1b: Price chart (candles + EMAs + trade levels) ── */}
+          <PriceChart data={data} />
 
           {/* ── Row 2: MA stack + Institutional ── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -183,6 +183,25 @@ def market_regime():
         raise HTTPException(500, str(e))
 
 
+@app.get("/bars/{symbol}")
+def bars(symbol: str, days: int = Query(180, ge=30, le=500)):
+    """Recent daily OHLCV for charting (lightweight-charts format). Cached via the
+    shared fetch cache — cheap."""
+    from scanner.fetcher import fetch_ohlcv
+    df = fetch_ohlcv(symbol.upper().strip(), period_days=max(days + 40, 220))
+    if df is None or df.empty:
+        raise HTTPException(404, f"No bars for {symbol}")
+    tail = df.tail(days)
+    out = [
+        {"time": idx.strftime("%Y-%m-%d"),
+         "open": round(float(r["open"]), 2), "high": round(float(r["high"]), 2),
+         "low": round(float(r["low"]), 2), "close": round(float(r["close"]), 2),
+         "volume": int(r["volume"])}
+        for idx, r in tail.iterrows()
+    ]
+    return {"symbol": symbol.upper().strip(), "bars": out}
+
+
 @app.get("/market/gip")
 def market_gip():
     """Fundamental GIP Quad — the macro DATA read (FRED GDP/CPI/Industrial-Production
