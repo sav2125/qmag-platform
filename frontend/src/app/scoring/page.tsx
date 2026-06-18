@@ -1518,11 +1518,26 @@ dial = sum(votes)        # −3 … +3
           −2 deserves a starter position and a tighter leash. The dial deliberately does NOT feed the
           P Score — it describes the market, not the stock.
         </Note>
+        <h3 className="font-semibold text-gray-800 mt-4">CTA trigger levels — where do trend-followers flip?</h3>
+        <p>
+          The COT card above is the closest free proxy for <em>how much</em> CTAs hold; this adds <em>where</em> they
+          flip. CTAs (systematic trend-followers) trigger long/short mechanically around moving averages, so the
+          panel shows SPY&apos;s distance to its <strong>50 / 100 / 200-day</strong> SMAs:
+        </p>
+        <CodeBlock>{`above all 3 MAs   → CTAs positioned long;  nearest MA below = first DE-GROSS trigger
+above 1–2 MAs     → partially de-grossed;  the broken MA is the swing line
+below all 3 MAs   → CTAs positioned short; nearest MA above = RE-GROSS / short-cover trigger`}</CodeBlock>
+        <p className="text-xs text-gray-600">
+          When price breaks a key MA, trend-followers sell (or buy) <em>mechanically and in size</em>, which is why
+          those levels act as accelerants. This is a free <strong>moving-average proxy</strong>, not the proprietary
+          CTA models the sell-side (Nomura/GS/JPM) publish — treat it as "roughly where the trigger is," not an exact
+          flow number.
+        </p>
         <Warn>
           <strong>Caveats:</strong> COT data is as-of Tuesday published Friday (3-day lag); NAAIM is a
           survey of a subset of managers; the SPY P/C proxy uses static thresholds until enough
-          history accumulates to use percentiles. Positioning extremes can stay extreme for weeks —
-          they are context, not timing triggers.
+          history accumulates to use percentiles; CTA trigger levels are an MA proxy, not real CTA-model
+          positioning. Positioning extremes can stay extreme for weeks — they are context, not timing triggers.
         </Warn>
       </Section>
 

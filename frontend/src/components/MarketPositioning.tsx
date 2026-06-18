@@ -181,6 +181,45 @@ export default function MarketPositioningPanel() {
           )}
         </SourceCard>
       </div>
+
+      {/* CTA trigger levels — rough "where do trend-followers flip" gauge */}
+      {data.cta && (() => {
+        const cta = data.cta!;
+        const stCfg: Record<string, { t: string; c: string }> = {
+          trend_long:  { t: "CTAs trend-long",  c: "bg-green-100 text-green-700" },
+          long:        { t: "CTAs long",         c: "bg-green-100 text-green-700" },
+          de_grossing: { t: "CTAs de-grossing",  c: "bg-amber-100 text-amber-700" },
+          short:       { t: "CTAs short",        c: "bg-red-100 text-red-700" },
+        };
+        const sc = stCfg[cta.state] ?? stCfg.de_grossing;
+        return (
+          <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+            <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+              <span className="group relative text-[11px] font-semibold text-gray-600 uppercase tracking-wide cursor-help">
+                CTA trigger levels · {cta.symbol}
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-72 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
+                  Trend-followers (CTAs) flip long/short around moving averages. Distance to the 50/100/200-day is a rough proxy for where mechanical buying/selling kicks in. Above all three = positioned long; nearest MA below = first de-gross trigger. A proxy, not the real model.
+                </span>
+              </span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.c}`}>{sc.t}</span>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-1.5">
+              {cta.levels.map((l) => (
+                <span key={l.ma} className="text-[11px] font-mono px-2 py-0.5 rounded bg-white border border-gray-200">
+                  {l.ma}d ${l.value}{" "}
+                  <span className={l.above ? "text-green-600" : "text-red-500"}>
+                    {l.dist_pct >= 0 ? "+" : ""}{l.dist_pct}%
+                  </span>
+                </span>
+              ))}
+              <span className="text-[11px] text-gray-500 self-center">
+                flip ≈ <span className="font-mono font-semibold text-gray-700">${cta.flip_value}</span> ({cta.flip_ma}d)
+              </span>
+            </div>
+            <p className="text-[11.5px] text-gray-600 leading-relaxed">{cta.interpretation}</p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

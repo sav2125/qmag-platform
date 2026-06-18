@@ -290,8 +290,53 @@ def fetch_credit_spread() -> dict | None:
             "date": rows[-1][0], "state": state, "vote": vote}
 
 
+def compute_cta_levels(symbol: str = "SPY") -> dict | None:
+    """Rough 'where do trend-followers (CTAs) flip' gauge.
+
+    CTAs are systematic trend-followers whose long/short triggers are moving-average
+    based. We can't see their proprietary models, but the index's distance to its
+    50/100/200-day SMAs is a free proxy: above all three = CTAs positioned long; the
+    nearest MA below price is the rough first de-gross trigger; below all three = short.
+    """
+    from .fetcher import fetch_ohlcv
+    df = fetch_ohlcv(symbol, period_days=340)
+    if df is None or len(df) < 200:
+        return None
+    c = df["close"]
+    price = float(c.iloc[-1])
+    levels = []
+    for ma in (50, 100, 200):
+        v = float(c.rolling(ma).mean().iloc[-1])
+        levels.append({"ma": ma, "value": round(v, 2),
+                       "dist_pct": round((price / v - 1) * 100, 1), "above": price > v})
+    above = sum(1 for l in levels if l["above"])
+    state = {3: "trend_long", 2: "long", 1: "de_grossing", 0: "short"}[above]
+    below_lv = [l for l in levels if l["above"]]
+    above_lv = [l for l in levels if not l["above"]]
+    if below_lv:                              # nearest MA below price = first de-gross trigger
+        flip = min(below_lv, key=lambda l: price - l["value"])
+    else:                                     # below all → nearest MA above = re-gross trigger
+        flip = min(above_lv, key=lambda l: l["value"] - price)
+
+    if state == "trend_long":
+        interp = (f"{symbol} is above its 50/100/200-day — trend-followers are positioned long. First de-gross "
+                  f"trigger ≈ ${flip['value']} (the {flip['ma']}-day, {abs(round((price/flip['value']-1)*100,1))}% below); "
+                  "a break there starts mechanical selling.")
+    elif state == "short":
+        interp = (f"{symbol} is below all three MAs — CTAs are positioned short. A reclaim of ≈ ${flip['value']} "
+                  f"(the {flip['ma']}-day) starts mechanical buying / short-covering.")
+    else:
+        interp = (f"{symbol} is above {above} of the three MAs — CTAs are partially de-grossed. The {flip['ma']}-day "
+                  f"≈ ${flip['value']} is the swing trigger.")
+
+    return {"symbol": symbol, "price": round(price, 2), "levels": levels,
+            "above_count": above, "state": state,
+            "flip_ma": flip["ma"], "flip_value": flip["value"], "interpretation": interp}
+
+
 def _build() -> dict:
     cot = pc = naaim = credit = None
+    cta = None
     try:
         cot = fetch_cot()
     except Exception as e:
@@ -308,6 +353,10 @@ def _build() -> dict:
         credit = fetch_credit_spread()
     except Exception as e:
         logger.warning("credit spread fetch failed: %s", e)
+    try:
+        cta = compute_cta_levels()
+    except Exception as e:
+        logger.warning("CTA levels failed: %s", e)
 
     votes = [c["vote"] for c in (cot, pc, naaim, credit) if c]
     score = sum(votes)
@@ -318,6 +367,7 @@ def _build() -> dict:
         "put_call": pc,
         "naaim": naaim,
         "credit": credit,
+        "cta": cta,
         "sources_available": len(votes),
         "dial": {"score": score, "label": label, "detail": detail},
     }

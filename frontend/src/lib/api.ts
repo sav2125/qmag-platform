@@ -318,6 +318,16 @@ export interface MarketPositioning {
     state: "widening" | "tightening" | "neutral";
     vote: number;
   } | null;
+  cta?: {
+    symbol: string;
+    price: number;
+    levels: { ma: number; value: number; dist_pct: number; above: boolean }[];
+    above_count: number;
+    state: "trend_long" | "long" | "de_grossing" | "short";
+    flip_ma: number;
+    flip_value: number;
+    interpretation: string;
+  } | null;
   sources_available: number;
   dial: { score: number; label: string; detail: string };
 }
