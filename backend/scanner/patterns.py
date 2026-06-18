@@ -32,6 +32,8 @@ class Setup:
     weekly_dir: str = "neutral"  # Weekly TF direction: "bullish" | "neutral" | "bearish"
     prob_score: float = 0.0      # P Score: probability-weighted signal voting (0–100) — the single score
     prob_grade: str = "D"        # P Score grade: A≥75 / B≥60 / C≥45 / D<45
+    regime_verdict: str = ""     # macro fit: "tailwind" | "neutral" | "headwind" (top-N only)
+    regime_sector: str = ""      # the stock's sector (from regime fit), "" if unmapped
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

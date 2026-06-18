@@ -75,6 +75,8 @@ def setup_to_dict(s: Any) -> dict[str, Any]:
         "rvol":            s.rvol,
         "isc_score":       s.isc_score,
         "weekly_dir":      getattr(s, "weekly_dir", "neutral"),
+        "regime_verdict":  getattr(s, "regime_verdict", ""),
+        "regime_sector":   getattr(s, "regime_sector", ""),
     }
 
 

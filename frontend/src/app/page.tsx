@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [minRs, setMinRs] = useState(50);
   const [minScore, setMinScore] = useState(0);   // P Score threshold (0–100)
   const [gradeFilter, setGradeFilter] = useState<"" | "A" | "AB">(""); // post-scan client filter
+  const [regimeTail, setRegimeTail] = useState(false);                 // show only macro-tailwind setups
   const [top, setTop] = useState(20);
   const [minAdr, setMinAdr] = useState(0);
   const [minPctChange, setMinPctChange] = useState(0);
@@ -105,10 +106,13 @@ export default function Dashboard() {
     }
   }, [universe, canSnapshot]);
 
-  // Client-side P-grade filter applied after scan results arrive
-  const visibleSetups = gradeFilter === "A"  ? setups.filter((s) => s.prob_grade === "A")
+  // Client-side P-grade + regime filters applied after scan results arrive
+  const gradeFiltered = gradeFilter === "A"  ? setups.filter((s) => s.prob_grade === "A")
                       : gradeFilter === "AB" ? setups.filter((s) => s.prob_grade === "A" || s.prob_grade === "B")
                       : setups;
+  const visibleSetups = regimeTail
+    ? gradeFiltered.filter((s) => s.regime_verdict === "tailwind")
+    : gradeFiltered;
 
   const counts = {
     A: setups.filter((s) => s.prob_grade === "A").length,
@@ -175,6 +179,13 @@ export default function Dashboard() {
             <input type="number" min={5} max={50} value={top}
               onChange={(e) => setTop(Number(e.target.value))}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Regime</label>
+            <label className="flex items-center gap-2 text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={regimeTail} onChange={(e) => setRegimeTail(e.target.checked)} className="accent-indigo-500" />
+              Tailwind only
+            </label>
           </div>
           {/* Snapshot toggle + refresh */}
           <div className="flex flex-col gap-1.5">

@@ -27,6 +27,8 @@ export interface Setup {
   rvol: number;               // Relative Volume: today / 20-day avg
   isc_score: number;          // Institutional Composite Score: OBV+CMF+A/D+MFI → 0-100
   weekly_dir: "bullish" | "neutral" | "bearish"; // Weekly TF direction (free resample)
+  regime_verdict?: "tailwind" | "neutral" | "headwind" | ""; // macro fit (top-N)
+  regime_sector?: string;     // the stock's sector (regime fit)
 }
 
 export interface ScanParams {
@@ -523,4 +525,20 @@ export interface SymbolAnalysis {
   fibonacci:           FibGrid | null;
   options:             OptionsSnapshot | null;
   risk_range:          RiskRange | null;
+  regime_fit:          RegimeFit | null;
+}
+
+export interface RegimeFit {
+  symbol:          string;
+  verdict:         "tailwind" | "neutral" | "headwind";
+  score:           number;
+  sector:          string | null;
+  sector_etf:      string | null;
+  sector_quadrant: string | null;
+  sector_rs:       number | null;
+  quad:            number | null;
+  quad_name:       string | null;
+  posture:         string | null;
+  momentum_on:     boolean | null;
+  interpretation_points: { label: string; detail: string }[];
 }

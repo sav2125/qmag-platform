@@ -76,6 +76,24 @@ function ActionHint({ state, entry, price }: { state: string; entry: number; pri
   );
 }
 
+// ── Regime fit badge ───────────────────────────────────────────────────────────
+
+function RegimeBadge({ verdict, sector }: { verdict?: string; sector?: string }) {
+  if (!verdict) return <span className="text-gray-300 text-xs">—</span>;
+  const cfg: Record<string, { t: string; c: string }> = {
+    tailwind: { t: "↑ tail", c: "bg-green-100 text-green-700" },
+    neutral:  { t: "– neut", c: "bg-gray-100 text-gray-500" },
+    headwind: { t: "↓ head", c: "bg-amber-100 text-amber-700" },
+  };
+  const x = cfg[verdict] ?? cfg.neutral;
+  return (
+    <span className="inline-block">
+      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${x.c}`}>{x.t}</span>
+      {sector && <span className="block text-[9px] text-gray-400 mt-0.5 max-w-[72px] truncate mx-auto">{sector}</span>}
+    </span>
+  );
+}
+
 // ── Main table ────────────────────────────────────────────────────────────────
 
 export function SetupTable({ setups, loading }: Props) {
@@ -120,6 +138,14 @@ export function SetupTable({ setups, loading }: Props) {
             <th className="text-right py-3 px-3 text-green-600">T2</th>
             <th className="text-right py-3 px-3">R:R</th>
             <th className="text-right py-3 px-3">RS</th>
+            <th className="text-center py-3 px-3">
+              <span className="group relative cursor-help">
+                Regime
+                <span className="pointer-events-none absolute left-0 top-full mt-1 z-50 w-64 rounded-lg bg-gray-900 text-white text-xs p-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity shadow-xl font-normal normal-case tracking-normal">
+                  <strong>Regime fit</strong> — does the macro wind back this setup? Combines the stock&apos;s sector leadership, the live Quad posture (1/2 = green light), and the momentum factor. Tailwind / neutral / headwind. Context only — <strong>not</strong> part of the P Score.
+                </span>
+              </span>
+            </th>
             <th className="text-center py-3 px-3">
               <span className="group relative cursor-help">
                 Score
@@ -222,6 +248,11 @@ export function SetupTable({ setups, loading }: Props) {
                 {/* RS score */}
                 <td className="py-3 px-3 text-right text-gray-700 font-mono">
                   {s.rs_score.toFixed(0)}
+                </td>
+
+                {/* Regime fit */}
+                <td className="py-3 px-3 text-center">
+                  <RegimeBadge verdict={s.regime_verdict} sector={s.regime_sector} />
                 </td>
 
                 {/* Score (P Score) + Weekly dir */}

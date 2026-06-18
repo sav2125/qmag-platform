@@ -29,6 +29,7 @@ from .rs_rank import rs_score, rs_label
 from .prob_scorer import compute_prob_score, _trend_template
 from .fib import compute_fibonacci
 from .risk_range import compute_risk_range
+from .regime_fit import regime_fit
 from .options import compute_options
 
 logger = logging.getLogger(__name__)
@@ -607,6 +608,12 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
     except Exception:
         risk_range = None
 
+    # ── Regime fit (macro tailwind/headwind for this stock) ────────────────────
+    try:
+        regime_fit_data = regime_fit(symbol)
+    except Exception:
+        regime_fit_data = None
+
     # ── Serialise setups ──────────────────────────────────────────────────────
     def _sd(s) -> dict:
         return {
@@ -662,6 +669,8 @@ def analyze_symbol(symbol: str, spy_close: pd.Series | None = None) -> dict[str,
         "options": options,
         # Risk Range + TRADE/TREND/TAIL (volatility-bounded levels)
         "risk_range": risk_range,
+        # Regime fit (does this stock have the macro wind at its back?)
+        "regime_fit": regime_fit_data,
         # P Score
         "prob_score":         ps_result["prob_score"],
         "prob_grade":         ps_result["prob_grade"],

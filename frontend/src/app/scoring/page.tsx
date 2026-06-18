@@ -68,6 +68,7 @@ const TOC = [
   { id: "factors",      label: "Style-Factor Leadership" },
   { id: "regime",       label: "Market-Implied Quad" },
   { id: "gip",          label: "Fundamental Quad (GDP/CPI)" },
+  { id: "regimefit",    label: "Regime Fit (per-stock)" },
   { id: "shortvol",     label: "Short-Volume Pressure" },
   { id: "insider",      label: "Insider Activity (Form 4)" },
   { id: "philosophy",   label: "Design Philosophy" },
@@ -1353,6 +1354,34 @@ quad:  G accel & I decel → 1 Goldilocks   |   G accel & I accel → 2 Reflatio
           <strong>Trailing, not a forecast.</strong> This is the latest <em>released</em> data (GDP lags ~1 quarter,
           CPI/IP ~2–6 weeks) — a real, reproducible read, but it can lag a fast inflection. It is not Hedgeye&apos;s
           proprietary forward nowcast, and it is <strong>not a P Score input</strong> — it&apos;s top-down context.
+        </p>
+      </Section>
+
+      {/* Regime Fit (per-stock) */}
+      <Section id="regimefit" title="🎯 Regime Fit (per-stock macro bridge)">
+        <p>
+          The macro panels answer &quot;what regime are we in?&quot; — <strong>Regime Fit</strong> brings that down to a
+          single stock: <em>does this setup have the macro wind at its back?</em> It shows on the Analyze page and as a
+          column on the scanner, and it&apos;s pure compute off the already-cached macro modules (cheap; the scanner
+          enriches only the top-N shortlist).
+        </p>
+        <CodeBlock>{`score (−3 … +3) = sum of three signals:
+  Sector leadership   ticker → GICS sector → SPDR ETF → its rotation quadrant
+                        leading/improving +1 · weakening 0 · lagging −1
+  Tape Quad posture   live Market-Implied weather Quad:  Quad 1/2 +1 · Quad 3/4 −1
+  Momentum factor     Style-Factor "Momentum" 1-month spread:  in gear +1 · out of favor −1
+
+verdict:  tailwind (score ≥ 2) · neutral (0–1) · headwind (< 0)`}</CodeBlock>
+        <p>
+          A Qullamaggie breakout in a <strong>leading sector</strong>, while the tape is in <strong>Quad 1/2</strong> and
+          <strong> momentum is in gear</strong>, has the wind at its back — press it. The same breakout in a lagging
+          sector during a Quad 3/4 / momentum-out-of-favor regime is fighting the tape — demand an A+ setup, size down,
+          or wait. The scanner&apos;s <em>&quot;Tailwind only&quot;</em> filter narrows the list to setups the regime supports.
+        </p>
+        <p className="mt-2 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
+          Sector mapping covers the <strong>S&amp;P 500</strong> (GICS sectors from the constituents file); names outside
+          it (recent IPOs, smaller caps) score on Quad + momentum only and show &quot;sector n/a.&quot; Context for
+          conviction and sizing — <strong>not a P Score input</strong>, so it never silently changes a grade.
         </p>
       </Section>
 

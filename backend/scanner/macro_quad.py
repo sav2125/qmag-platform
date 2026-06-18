@@ -19,11 +19,10 @@ from __future__ import annotations
 import logging
 import time
 
-import requests
+import httpx
 
 logger = logging.getLogger(__name__)
 
-_UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
 _FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
 
 # Quad metadata (mirrors the GIP playbook)
@@ -39,13 +38,17 @@ _TTL = 12 * 3600
 
 
 def _fred(sid: str):
-    """Fetch a FRED series as ascending [(date, value)], skipping missing '.' rows."""
+    """Fetch a FRED series as ascending [(date, value)], skipping missing '.' rows.
+
+    Uses httpx (the project's HTTP client — `requests` is not a dependency) to match
+    the credit-spread fetch that is proven to reach FRED from Render.
+    """
     try:
-        r = requests.get(_FRED.format(sid=sid), headers=_UA, timeout=20)
-        if r.status_code != 200:
-            return None
-    except Exception:
-        logger.exception("FRED fetch failed: %s", sid)
+        with httpx.Client() as client:
+            r = client.get(_FRED.format(sid=sid), timeout=20)
+        r.raise_for_status()
+    except Exception as e:
+        logger.info("FRED fetch failed %s: %s", sid, e)
         return None
     rows = []
     for line in r.text.strip().splitlines()[1:]:

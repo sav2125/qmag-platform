@@ -898,6 +898,44 @@ function AnalyzeInner() {
             );
           })()}
 
+          {/* ── Row 3b2: Regime fit (macro tailwind/headwind for this stock) ── */}
+          {data.regime_fit && (() => {
+            const rf = data.regime_fit!;
+            const vCfg: Record<string, { t: string; c: string; bar: string }> = {
+              tailwind: { t: "Macro tailwind", c: "bg-green-100 text-green-700", bar: "bg-green-50 border-green-200" },
+              neutral:  { t: "Macro neutral",  c: "bg-gray-100 text-gray-600",   bar: "bg-gray-50 border-gray-200" },
+              headwind: { t: "Macro headwind", c: "bg-amber-100 text-amber-700", bar: "bg-amber-50 border-amber-200" },
+            };
+            const vc = vCfg[rf.verdict] ?? vCfg.neutral;
+            return (
+              <Card title="Regime Fit (macro context)">
+                <div className={`rounded-lg border px-3 py-2 mb-3 ${vc.bar}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${vc.c}`}>{vc.t}</span>
+                    <span className="text-xs text-gray-600">
+                      {rf.sector ? `${rf.sector}${rf.sector_quadrant ? ` · ${rf.sector_quadrant}` : ""}` : "sector n/a"}
+                      {rf.quad ? ` · tape Quad ${rf.quad} ${rf.quad_name}` : ""}
+                      {rf.momentum_on != null ? ` · momentum ${rf.momentum_on ? "on" : "off"}` : ""}
+                    </span>
+                  </div>
+                </div>
+                <ul className="space-y-1.5">
+                  {rf.interpretation_points.map((p) => (
+                    <li key={p.label} className="text-[12.5px] text-gray-700 leading-relaxed flex gap-2">
+                      <span className="text-indigo-400 select-none mt-px">•</span>
+                      <span><span className="font-semibold text-gray-800">{p.label}:</span> {p.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
+                  Does this stock have the macro wind at its back? Combines its <strong>sector leadership</strong>, the
+                  live <strong>Quad</strong> posture, and the <strong>momentum factor</strong> regime. Context for
+                  conviction/sizing — <strong>not a P Score input</strong>. <a href="/macro" className="text-indigo-400 hover:underline">See Macro →</a>
+                </p>
+              </Card>
+            );
+          })()}
+
           {/* ── Row 3c: Short-volume + insider (lazy leading layers) ── */}
           <div className="grid md:grid-cols-2 gap-4">
             <ShortVolumeCard symbol={data.symbol} />

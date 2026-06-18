@@ -61,6 +61,8 @@ class ScanResult(BaseModel):
     rvol: float = 1.0             # Relative Volume: today / 20-day avg
     isc_score: float = 0.0        # Institutional Composite Score (OBV+CMF+A/D+MFI → 0-100)
     weekly_dir: str = "neutral"   # Weekly TF direction: bullish | neutral | bearish
+    regime_verdict: str = ""      # macro fit: tailwind | neutral | headwind (top-N)
+    regime_sector: str = ""       # the stock's sector (regime fit)
 
 
 class WatchlistItem(BaseModel):
@@ -355,6 +357,15 @@ def scan(
                         results.append(hit)
             results.sort(key=lambda s: -s.prob_score)
             results = results[:top]
+            try:
+                from scanner.regime_fit import regime_fit
+                for s in results:
+                    rf = regime_fit(s.symbol)
+                    if rf:
+                        s.regime_verdict = rf["verdict"]
+                        s.regime_sector = rf["sector"] or ""
+            except Exception:
+                pass
         else:
             results = run_scan(
                 universe=universe,

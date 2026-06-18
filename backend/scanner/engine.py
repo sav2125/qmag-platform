@@ -232,4 +232,18 @@ def scan(
 
     # Sort by P Score descending — the single score (probability-weighted signal voting)
     results.sort(key=lambda s: -s.prob_score)
-    return results[:top_n]
+    top = results[:top_n]
+
+    # Enrich the shortlist with macro regime fit (macro modules are cached, so this is
+    # only top_n cheap lookups — does the setup have the macro wind at its back?).
+    try:
+        from .regime_fit import regime_fit
+        for s in top:
+            rf = regime_fit(s.symbol)
+            if rf:
+                s.regime_verdict = rf["verdict"]
+                s.regime_sector = rf["sector"] or ""
+    except Exception as e:
+        logger.debug("regime_fit enrichment skipped: %s", e)
+
+    return top
