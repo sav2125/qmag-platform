@@ -107,6 +107,7 @@ export const api = {
   factors: () => req<FactorLeadership>("/market/factors"),
   regime: () => req<MarketRegime>("/market/regime"),
   gip: () => req<MacroQuad>("/market/gip"),
+  gamma: () => req<MarketGamma>("/market/gamma"),
   shortVolume: (symbol: string) => req<ShortVolume>(`/short-volume/${symbol}`),
   insider: (symbol: string) => req<Insider>(`/insider/${symbol}`),
   bars: (symbol: string, days = 180) => req<{ symbol: string; bars: Bar[] }>(`/bars/${symbol}?days=${days}`),
@@ -236,6 +237,27 @@ export interface MacroQuad {
   quarterly: FundamentalQuadRead | null;   // climate — Real GDP
   monthly:   FundamentalQuadRead | null;   // weather — Industrial Production
   aligned:   boolean;
+  interpretation_points: { label: string; detail: string }[];
+}
+
+// ── Market gamma (index dealer-gamma regime: SPY + QQQ) ───────────────────────
+
+export interface GammaIndex {
+  symbol:     string;
+  name:       string;
+  spot:       number;
+  gex_musd:   number;
+  regime:     "positive" | "negative";
+  flip:       number | null;
+  above_flip: boolean;
+  call_wall:  number | null;
+  put_wall:   number | null;
+  source:     string | null;
+}
+
+export interface MarketGamma {
+  as_of:   string;
+  indices: GammaIndex[];
   interpretation_points: { label: string; detail: string }[];
 }
 

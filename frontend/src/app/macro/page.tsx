@@ -1,5 +1,6 @@
 import MarketRegimePanel from "@/components/MarketRegime";
 import FundamentalQuadPanel from "@/components/FundamentalQuad";
+import MarketGammaPanel from "@/components/MarketGamma";
 import MarketPositioningPanel from "@/components/MarketPositioning";
 import MarketBreadthPanel from "@/components/MarketBreadth";
 import SectorRotationPanel from "@/components/SectorRotation";
@@ -29,6 +30,9 @@ export default function MacroPage() {
 
       {/* Fundamental Quad — the DATA (GDP/CPI), with tape-vs-data divergence */}
       <FundamentalQuadPanel />
+
+      {/* Market gamma — index dealer-gamma regime (SPY/QQQ) */}
+      <MarketGammaPanel />
 
       {/* Supporting context, finest → coarsest */}
       <MarketPositioningPanel />

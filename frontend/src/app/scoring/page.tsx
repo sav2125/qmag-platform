@@ -1161,6 +1161,11 @@ bearish  if put-heavy flow  (P/C vol > 1.2) or fear skew     (skew > +3)`}
           <li><strong>Smart-money positioning</strong> (unusual activity, OI build) — sometimes informed, but noisy (could be hedges/spreads), so treated as a flag, not a signal.</li>
           <li><strong>Dealer flow</strong> (max pain + GEX shipped) — max pain is OI gravity into expiry; <strong>gamma exposure</strong> shows whether dealers are pinning (positive) or amplifying (negative) moves, with a zero-gamma flip level. Leading more for short horizons than multi-week swings.</li>
         </ul>
+        <p className="mt-2 text-xs text-gray-600">
+          The same GEX math powers the <strong>Market Gamma</strong> tile on the <a href="/macro" className="text-indigo-500 hover:underline">Macro page</a>:
+          it auto-runs SPY + QQQ so you get the <em>index</em> dealer-gamma regime (positive = calm/pinning, negative =
+          amplifying) and the flip level without analyzing them by hand — context for whether breakouts are likely to run or fade.
+        </p>
 
         <p className="mt-3 text-sm bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900">
           <strong>Leading ≠ crystal ball.</strong> Options tell you what the market <em>expects</em> and how it&apos;s

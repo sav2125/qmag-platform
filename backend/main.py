@@ -183,6 +183,24 @@ def market_regime():
         raise HTTPException(500, str(e))
 
 
+@app.get("/market/gamma")
+def market_gamma():
+    """Index dealer-gamma regime — SPY + QQQ GEX (sign, zero-gamma flip, call/put walls)
+    so you don't have to run them through Analyze. Positive = calm/pinning, negative =
+    amplifying. Cached 15min."""
+    from scanner.gamma import get_market_gamma
+    try:
+        data = get_market_gamma()
+        if data is None:
+            raise HTTPException(503, "Market gamma unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Market gamma error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/bars/{symbol}")
 def bars(symbol: str, days: int = Query(180, ge=30, le=500)):
     """Recent daily OHLCV for charting (lightweight-charts format). Cached via the
