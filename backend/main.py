@@ -183,6 +183,24 @@ def market_regime():
         raise HTTPException(500, str(e))
 
 
+@app.get("/market/themes")
+def market_themes():
+    """Theme rotation — curated thematic baskets (cyber, agentic AI, AI infra, quantum,
+    space, robotics, power/grid, biotech) scored by RS vs SPY + RS acceleration into RRG
+    quadrants, with the top-RS names to focus on within each theme. Cached 6h."""
+    from scanner.themes import get_theme_rotation
+    try:
+        data = get_theme_rotation()
+        if data is None:
+            raise HTTPException(503, "Theme data unavailable")
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Themes error")
+        raise HTTPException(500, str(e))
+
+
 @app.get("/market/gamma")
 def market_gamma():
     """Index dealer-gamma regime — SPY + QQQ GEX (sign, zero-gamma flip, call/put walls)

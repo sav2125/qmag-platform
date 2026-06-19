@@ -4,6 +4,7 @@ import MarketGammaPanel from "@/components/MarketGamma";
 import MarketPositioningPanel from "@/components/MarketPositioning";
 import MarketBreadthPanel from "@/components/MarketBreadth";
 import SectorRotationPanel from "@/components/SectorRotation";
+import ThemeRotationPanel from "@/components/ThemeRotation";
 import FactorLeadershipPanel from "@/components/FactorLeadership";
 
 export const metadata = { title: "Macro · Qullamaggie Platform" };
@@ -38,6 +39,7 @@ export default function MacroPage() {
       <MarketPositioningPanel />
       <MarketBreadthPanel />
       <SectorRotationPanel />
+      <ThemeRotationPanel />
       <FactorLeadershipPanel />
 
       <p className="text-[11px] text-gray-400 leading-relaxed">

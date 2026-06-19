@@ -108,6 +108,7 @@ export const api = {
   regime: () => req<MarketRegime>("/market/regime"),
   gip: () => req<MacroQuad>("/market/gip"),
   gamma: () => req<MarketGamma>("/market/gamma"),
+  themes: () => req<ThemeRotation>("/market/themes"),
   shortVolume: (symbol: string) => req<ShortVolume>(`/short-volume/${symbol}`),
   insider: (symbol: string) => req<Insider>(`/insider/${symbol}`),
   bars: (symbol: string, days = 180) => req<{ symbol: string; bars: Bar[] }>(`/bars/${symbol}?days=${days}`),
@@ -237,6 +238,32 @@ export interface MacroQuad {
   quarterly: FundamentalQuadRead | null;   // climate — Real GDP
   monthly:   FundamentalQuadRead | null;   // weather — Industrial Production
   aligned:   boolean;
+  interpretation_points: { label: string; detail: string }[];
+}
+
+// ── Theme rotation ────────────────────────────────────────────────────────────
+
+export interface ThemeLeader {
+  symbol: string;
+  rel_m3: number | null;
+  rel_m1: number | null;
+}
+
+export interface ThemeRow {
+  key:         string;
+  name:        string;
+  source:      string;
+  count:       number;
+  rs_strength: number | null;
+  rs_momentum: number | null;
+  quadrant:    "leading" | "weakening" | "improving" | "lagging";
+  rel:         SectorPerf;
+  leaders:     ThemeLeader[];
+}
+
+export interface ThemeRotation {
+  as_of:  string;
+  themes: ThemeRow[];
   interpretation_points: { label: string; detail: string }[];
 }
 

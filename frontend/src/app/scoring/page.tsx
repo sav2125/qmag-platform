@@ -65,6 +65,7 @@ const TOC = [
   { id: "positioning",  label: "Market Positioning Dial" },
   { id: "breadth",      label: "Market Breadth" },
   { id: "sectors",      label: "Sector RS Rotation" },
+  { id: "themes",       label: "Theme Rotation" },
   { id: "factors",      label: "Style-Factor Leadership" },
   { id: "regime",       label: "Market-Implied Quad" },
   { id: "gip",          label: "Fundamental Quad (GDP/CPI)" },
@@ -1248,6 +1249,35 @@ lagging    = strength < 0  AND  momentum < 0     # behind and still fading      
           between <em>absolute</em> returns and <em>relative-to-SPY</em> (the leadership view) — the same
           read Hedgeye&apos;s sector tables give, so you can see whether leadership is fresh (short horizons
           green) or stale (only the long horizons green).
+        </p>
+      </Section>
+
+      {/* Theme Rotation */}
+      <Section id="themes" title="🧵 Theme Rotation">
+        <p>
+          GICS sectors miss the cross-cutting <em>themes</em> that actually drive a momentum book. This panel carries
+          curated baskets for eight themes — Cybersecurity, Agentic AI / Software, AI Infrastructure / Semis, Robotics &amp;
+          Automation, Quantum Computing, Space &amp; Defense Tech, Power / Grid / Nuclear, and Biotech / GLP-1 — and answers
+          the two questions directly: <strong>when is a theme rotating</strong>, and <strong>what names to focus on</strong>.
+        </p>
+        <CodeBlock>{`# Baskets seeded from the canonical thematic indices, then de-duped to liquid US names:
+#   CIBR/BUG · IGV+agentic · SMH/SOXX · BOTZ/ROBO · QTUM · UFO/ARKX · GRID+IPPs/uranium · XBI/IBB
+# Per theme (constituent medians, robust to single blow-ups):
+rs_strength = median( each name's 3-mo return − SPY )        # the theme's RS LEVEL
+rs_momentum = median( each name's RS acceleration )           # recent month RS − prior month RS
+quadrant    = Leading / Weakening / Improving / Lagging       # from (level, momentum) — RRG
+# Within each theme:
+leaders     = constituents ranked by 3-mo RS vs SPY (top 6)   # "what to focus on now"`}</CodeBlock>
+        <p className="mt-2 text-sm bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-indigo-900">
+          Workflow: hunt new longs in the <strong>Leading</strong> and emerging <strong>Improving</strong> themes,
+          starting with each theme&apos;s top-RS names (click a theme to expand them → jump to Analyze), and treat
+          <strong> Lagging</strong>-theme breakouts with suspicion. Then confirm the individual name with its{" "}
+          <a href="#regimefit" className="text-indigo-500 hover:underline">Regime Fit</a> and setup.
+        </p>
+        <p className="mt-2 text-xs text-gray-600">
+          Baskets use the constituent <strong>median</strong> (not mean) so one moonshot doesn&apos;t make a whole theme
+          look like it&apos;s leading. They&apos;re a curated starting universe, not exhaustive — editable in{" "}
+          <code>scanner/themes.py</code>. Context for where to hunt, <strong>not a P Score input</strong>.
         </p>
       </Section>
 
